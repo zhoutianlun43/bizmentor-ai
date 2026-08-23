@@ -4,7 +4,9 @@
  */
 import type { AiResult, AiTask } from "../../ai/types";
 import type { RunAiFn } from "../ai-call";
-import type { ResearchInput } from "../types";
+import type { PipelineOptions } from "../pipeline";
+import type { ExternalResearchFn } from "../external/types";
+import type { ResearchInput, SourceDocument } from "../types";
 
 export function makeAiResult(
   content: string,
@@ -102,7 +104,11 @@ export const plannerJson = () =>
       id: `t${i + 1}`,
       area,
       question: `研究：${area}`,
-      dataSource: "AI_RESEARCH" as const,
+      dataSource: (["demandStrength", "market", "competition", "willingnessToPay"].includes(area)
+        ? "EXTERNAL_WEB"
+        : ["targetUser"].includes(area)
+          ? "USER_PROVIDED"
+          : "AI_RESEARCH") as "EXTERNAL_WEB" | "USER_PROVIDED" | "AI_RESEARCH",
       required: true,
     })),
   });
@@ -130,6 +136,24 @@ export const synthesisJson = () =>
         { claim: `${area} 综合结论`, evidenceClass: "AI_INFERENCE", confidence: 0.5, sourceRef: null },
       ],
     })),
+    competitors: [
+      {
+        name: "竞品A",
+        url: "https://example.com/competition",
+        description: "头部竞品",
+        evidence: [
+          { claim: "竞品A 是头部玩家", evidenceClass: "FACT", confidence: 0.7, sourceRef: { sourceType: "EXTERNAL_WEB", sourceId: "doc-competition" } },
+        ],
+      },
+    ],
+    competitorMatrix: {
+      competitors: ["竞品A", "竞品B"],
+      dimensions: ["价格", "目标用户"],
+      rows: [
+        { competitor: "竞品A", cells: [{ dimension: "价格", value: "中", sourceRef: null }, { dimension: "目标用户", value: "中小卖家", sourceRef: null }] },
+        { competitor: "竞品B", cells: [{ dimension: "价格", value: "低", sourceRef: null }, { dimension: "目标用户", value: "个人卖家", sourceRef: null }] },
+      ],
+    },
   });
 
 export const SCORE_DIMS = [
@@ -176,7 +200,7 @@ export function happyContentFor(task: AiTask): string | undefined {
     case "research_planner":
       return plannerJson();
     case "research_task":
-      return findingJson("targetUser");
+      return findingExternalJson("market", "doc-market");
     case "research_synthesis":
       return synthesisJson();
     case "opportunity_scoring":
@@ -193,4 +217,58 @@ export function happyContentFor(task: AiTask): string | undefined {
 /** 标准 fake：所有阶段返回合法 JSON，无降级 */
 export function createHappyRunAi(): FakeRunAi {
   return createFakeRunAi({ contentFor: happyContentFor });
+}
+/** 带外部来源的 finding（FACT 绑定 doc id） */
+export function findingExternalJson(area: string, sourceId: string): string {
+  return JSON.stringify({
+    taskId: "t1",
+    area,
+    summary: `关于 ${area} 的带来源结论`,
+    evidence: [
+      {
+        claim: `${area} 的市场数据：规模约 100 亿元，年增长率 15%（来自真实来源）`,
+        evidenceClass: "FACT",
+        confidence: 0.7,
+        sourceRef: { sourceType: "EXTERNAL_WEB", sourceId },
+      },
+    ],
+    confidence: 0.6,
+    unknowns: [],
+  });
+}
+
+/** fake 外部研究：为每个领域返回一个真实来源文档（确定性） */
+export function createFakeExternalResearch(opts: { failAreas?: string[] } = {}): ExternalResearchFn {
+  return async (input) => {
+    if (opts.failAreas?.includes(input.area)) {
+      return { searches: [{ taskId: "", area: input.area, query: input.query, results: [], documents: [] }], documents: [] };
+    }
+    const doc: SourceDocument = {
+      id: `doc-${input.area}`,
+      title: `${input.area} 外部资料（example.com）`,
+      sourceType: "EXTERNAL_WEB",
+      content: `${input.area} 的真实来源内容：市场规模约 100 亿元，年增长率 15%，头部玩家 3 家。`,
+      url: `https://example.com/${input.area}`,
+      publisher: "example.com",
+      retrievedAt: "2026-08-23T00:00:00.000Z",
+      createdAt: "2026-08-23T00:00:00.000Z",
+    };
+    return {
+      searches: [
+        {
+          taskId: "",
+          area: input.area,
+          query: input.query,
+          results: [{ title: doc.title, url: doc.url ?? "https://example.com", snippet: doc.content, publisher: "example.com", sourceType: "EXTERNAL_WEB", retrievedAt: doc.retrievedAt ?? "2026-08-23T00:00:00.000Z" }],
+          documents: [doc],
+        },
+      ],
+      documents: [doc],
+    };
+  };
+}
+
+/** 组装 PipelineOptions（默认 fake 外部研究） */
+export function makeOptions(runAi: RunAiFn, external?: ExternalResearchFn): PipelineOptions {
+  return { runAi, externalResearch: external ?? createFakeExternalResearch() };
 }

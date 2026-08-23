@@ -26,7 +26,9 @@ loadEnvLocal();
 
 async function main(): Promise<void> {
   const { runAI } = await import("../../ai/gateway");
-  const { runResearchPipeline } = await import("../pipeline");
+  const { runResearchPipeline, TOTAL_STAGES } = await import("../pipeline");
+  const { getExternalProvider } = await import("../external/providers");
+  const provider = getExternalProvider();
 
   const input = {
     opportunity: {
@@ -43,9 +45,21 @@ async function main(): Promise<void> {
 
   const run = await runResearchPipeline(input, {
     runAi: (task) => runAI(task),
+    externalResearch: async (req) => {
+      const results = await provider.search(req.query, { limit: 5 });
+      const documents = [];
+      for (const r of results.slice(0, 2)) {
+        try {
+          documents.push(await provider.read(r.url));
+        } catch {
+          // 单个网页失败跳过
+        }
+      }
+      return { searches: [{ taskId: "", area: req.area, query: req.query, results, documents }], documents };
+    },
     onStage: (stage, index) => {
       console.log(
-        `[${index + 1}/7] ${stage.stage}: ${stage.status} | provider=${stage.provider} | degraded=${stage.provider_degraded} | tokens=${stage.inputTokens + stage.outputTokens} | cost=$${stage.estimatedCost.toFixed(6)}`,
+        `[${index + 1}/${TOTAL_STAGES}] ${stage.stage}: ${stage.status} | provider=${stage.provider} | degraded=${stage.provider_degraded} | tokens=${stage.inputTokens + stage.outputTokens} | cost=$${stage.estimatedCost.toFixed(6)}`,
       );
     },
   });

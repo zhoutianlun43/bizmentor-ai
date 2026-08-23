@@ -19,7 +19,9 @@ export type EvidenceClass = "FACT" | "AI_INFERENCE" | "ASSUMPTION" | "NEEDS_VALI
 export type ResearchStageName =
   | "analyzer"
   | "planner"
-  | "executor"
+  | "external-research"
+  | "evidence-extraction"
+  | "evidence-validation"
   | "synthesis"
   | "scoring"
   | "validation-plan"
@@ -75,14 +77,27 @@ export type ResearchSourceType =
   | "PLATFORM_DATA"
   | "UPLOADED_DOCUMENT";
 
-/** 来源文档（用户资料 / 未来外部抓取 / 平台数据等） */
+/** 来源文档（用户资料 / 外部抓取 / 平台数据等） */
 export interface SourceDocument {
   id: string;
   title: string;
   sourceType: ResearchSourceType;
   content: string;
   url?: string;
+  /** 发布者（外部网页由系统写入；AI 无法伪造） */
+  publisher?: string;
+  /** 抓取时间（外部网页由系统写入） */
+  retrievedAt?: string;
   createdAt: string;
+  /** 来源可信度（由系统确定性计算） */
+  credibility?: SourceCredibility;
+}
+
+/** 来源可信度（确定性计算；官方 > 平台 > 百科/一般网站 > 博客） */
+export interface SourceCredibility {
+  score: number;
+  level: "official" | "high" | "medium" | "low" | "unknown";
+  reason: string;
 }
 
 /** 证据的来源引用：FACT 必须携带可验证来源 */
@@ -90,9 +105,15 @@ export interface SourceReference {
   sourceType: ResearchSourceType;
   /** 指向 SourceDocument.id（USER_PROVIDED / OFFICIAL_SOURCE / PLATFORM_DATA / UPLOADED_DOCUMENT） */
   sourceId?: string;
-  /** EXTERNAL_WEB 证据需要真实 url */
+  /** EXTERNAL_WEB 证据需要真实 url（由系统从文档写入，AI 无法伪造） */
   url?: string;
   title?: string;
+  /** 发布者（由系统从文档写入） */
+  publisher?: string;
+  /** 抓取时间（由系统从文档写入） */
+  retrievedAt?: string;
+  /** 来源可信度（由系统计算） */
+  credibility?: SourceCredibility;
 }
 /** 一条证据：必须可追溯到 SourceReference */
 export interface EvidenceItem {
@@ -110,8 +131,8 @@ export interface ResearchTask {
   id: string;
   area: ResearchArea;
   question: string;
-  /** USER_PROVIDED：用用户资料回答；AI_RESEARCH：AI 推理；EXTERNAL_NEEDED：需要外部数据（未来） */
-  dataSource: "USER_PROVIDED" | "AI_RESEARCH" | "EXTERNAL_NEEDED";
+  /** USER_PROVIDED：用用户资料回答；AI_RESEARCH：AI 推理；EXTERNAL_WEB：需要真实外部来源；EXTERNAL_NEEDED：外部数据暂不可得 */
+  dataSource: "USER_PROVIDED" | "AI_RESEARCH" | "EXTERNAL_WEB" | "EXTERNAL_NEEDED";
   required: boolean;
 }
 
@@ -169,6 +190,43 @@ export interface ScoreResult extends ScoreVersion {
   evidence: EvidenceItem[];
 }
 
+/** 竞品发现（外部来源） */
+export interface CompetitorFinding {
+  name: string;
+  url?: string;
+  description: string;
+  evidence: EvidenceItem[];
+}
+
+/** 竞品矩阵单元格 */
+export interface CompetitorMatrixCell {
+  dimension: string;
+  value: string;
+  sourceRef?: SourceReference;
+}
+
+/** 竞品矩阵 */
+export interface CompetitorMatrix {
+  competitors: string[];
+  dimensions: string[];
+  rows: Array<{ competitor: string; cells: CompetitorMatrixCell[] }>;
+}
+
+/** 多来源证据冲突 */
+export interface EvidenceConflict {
+  area: ResearchArea;
+  type: "numeric" | "factual";
+  description: string;
+  claims: string[];
+  sources: string[];
+}
+
+/** 多来源交叉验证结果 */
+export interface CrossValidationResult {
+  conflicts: EvidenceConflict[];
+  crossValidatedAreas: ResearchArea[];
+  insufficientEvidence: string[];
+}
 /** 验证方案条目 */
 export interface ValidationPlanItem {
   assumption: string;
@@ -198,6 +256,18 @@ export interface ResearchReport {
   score: ScoreResult;
   validationPlan: ValidationPlanItem[];
   nextActions: string[];
+  /** 真实来源列表（含元数据与可信度） */
+  sources: SourceDocument[];
+  /** 多来源冲突 */
+  conflicts: EvidenceConflict[];
+  /** 交叉验证覆盖的领域 */
+  crossValidatedAreas: ResearchArea[];
+  /** 证据不足提示 */
+  insufficientEvidence: string[];
+  /** 竞品发现（自动发现） */
+  competitors: CompetitorFinding[];
+  /** 竞品矩阵 */
+  competitorMatrix?: CompetitorMatrix;
   meta: ReportMeta;
 }
 
@@ -205,7 +275,8 @@ export interface ResearchReport {
 export interface StageRun {
   stage: ResearchStageName;
   status: StageRunStatus;
-  provider: AiProviderName;
+  /** openai / deepseek / external（外部研究阶段无 AI Provider） */
+  provider: AiProviderName | "external";
   provider_degraded: boolean;
   inputTokens: number;
   outputTokens: number;
@@ -227,8 +298,10 @@ export interface ResearchRun {
   findings: ResearchFinding[];
   /** 评分版本历史（Score v1/v2/v3…） */
   scoreHistory: ScoreVersion[];
-  /** 本次研究的来源文档（用户资料转成 SourceDocument） */
+  /** 本次研究的来源文档（用户资料 + 外部网页） */
   sourceDocuments: SourceDocument[];
+  /** 多来源交叉验证结果 */
+  evidenceValidation?: CrossValidationResult;
   report?: ResearchReport;
   error?: { stage: string; type: string; message: string };
 }

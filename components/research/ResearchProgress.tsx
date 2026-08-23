@@ -5,7 +5,9 @@ import type { ResearchStageName, StageRun } from "@/lib/research";
 const STAGE_LABELS: Record<ResearchStageName, string> = {
   analyzer: "商机分析",
   planner: "研究规划",
-  executor: "研究执行",
+  "external-research": "外部研究",
+  "evidence-extraction": "证据提取",
+  "evidence-validation": "证据验证",
   synthesis: "研究综合",
   scoring: "机会评分",
   "validation-plan": "验证方案",
@@ -14,7 +16,7 @@ const STAGE_LABELS: Record<ResearchStageName, string> = {
 
 /** 研究阶段进度列表（UI 运行中展示） */
 export function ResearchProgress({ stages }: { stages: StageRun[] }) {
-  const names: ResearchStageName[] = ["analyzer", "planner", "executor", "synthesis", "scoring", "validation-plan", "summary"];
+  const names: ResearchStageName[] = ["analyzer", "planner", "external-research", "evidence-extraction", "evidence-validation", "synthesis", "scoring", "validation-plan", "summary"];
   return (
     <ol className="space-y-1.5">
       {names.map((name, index) => {

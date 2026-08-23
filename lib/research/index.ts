@@ -8,6 +8,9 @@ export { LocalResearchRepository, createBrowserResearchStorage, createMemoryRese
 export type { ResearchRepository, ResearchStorage } from "./repository";
 export { createApiRunAi } from "./api-runai";
 export type { RunAiFn } from "./ai-call";
+export { createExternalResearchApi } from "./external/api";
+export * from "./external";
+export { bindAndEnforce } from "./evidence";
 export {
   NO_EXTERNAL_EVIDENCE_NOTICE,
   RESEARCH_SOURCE_TYPES,

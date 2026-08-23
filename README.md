@@ -192,3 +192,22 @@ const result = await runAI({
 pnpm test                 # 全部单元测试（AI + 研究引擎，无需 Key）
 pnpm test:research-live   # 真实端到端研究（需 .env.local Key；OpenAI 无余额自动降级 DeepSeek）
 ```
+
+## External Evidence / Web Research（V0.3-B）
+
+把 BizMentor 从「AI 商业分析」升级为「真实商业研究」：研究报告结论可追溯到真实网页来源。
+
+- Pipeline 升级为 9 阶段：Analyzer → Planner → **External Research** → **Evidence Extraction** → **Evidence Validation** → Synthesis → Scoring → Validation Plan → Summary
+- `lib/research/external/`：`ExternalResearchProvider` 抽象 + DuckDuckGo 搜索（HTML 解析）+ 通用网页读取（标题/正文/发布者/抓取时间）
+- Evidence First：搜索结果不是事实；网页内容不是自动可信；AI 不得编造来源/URL
+- 来源绑定：AI 只能引用真实文档 id，URL/title/publisher/retrievedAt/credibility 由系统从文档写入；伪造来源自动降级 NEEDS_VALIDATION
+- 来源可信度：官方 > 平台 > 百科/一般网站 > 博客（确定性计算）
+- 多来源交叉验证：同领域多来源一致 → cross-validated；数值不一致 → 显式冲突
+- 证据不足：无来源领域明确提示「证据不足」
+- 竞品自动发现 + 竞品矩阵（来源可追溯）
+- 外部请求走服务端 `/api/external-research`（本机需代理时设 `NODE_USE_ENV_PROXY=1 HTTPS_PROXY=...`）
+
+```bash
+pnpm test                 # 73 个测试（AI + 研究引擎 + 外部研究，无需 Key）
+pnpm test:research-live   # 真实端到端（真实搜索 + DeepSeek/OpenAI）
+```

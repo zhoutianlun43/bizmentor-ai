@@ -4,6 +4,7 @@
  * - 未来：repository 换成 SupabaseResearchRepository，UI 无需改动
  */
 import type { RunAiFn } from "./ai-call";
+import type { ExternalResearchFn } from "./external/types";
 import { runResearchPipeline } from "./pipeline";
 import { LocalResearchRepository } from "./repository";
 import type { ResearchRepository } from "./repository";
@@ -13,20 +14,24 @@ export interface ResearchServiceDeps {
   repository?: ResearchRepository;
   /** AI 调用函数（客户端必须传 createApiRunAi()，服务端可传 runAI，测试可传 fake） */
   runAi: RunAiFn;
+  /** 外部研究函数（客户端传 createExternalResearchApi()，测试可传 fake） */
+  externalResearch: ExternalResearchFn;
 }
 
 export class ResearchService {
   private readonly repository: ResearchRepository;
   private readonly runAi: RunAiFn;
+  private readonly externalResearch: ExternalResearchFn;
 
   constructor(deps: ResearchServiceDeps) {
     this.repository = deps.repository ?? new LocalResearchRepository();
     this.runAi = deps.runAi;
+    this.externalResearch = deps.externalResearch;
   }
 
   /** 执行一次完整研究并保存结果 */
   async startResearch(input: ResearchInput, onStage?: (stage: StageRun, index: number) => void): Promise<ResearchRun> {
-    const run = await runResearchPipeline(input, { runAi: this.runAi, onStage });
+    const run = await runResearchPipeline(input, { runAi: this.runAi, externalResearch: this.externalResearch, onStage });
     await this.repository.saveRun(run);
     return run;
   }

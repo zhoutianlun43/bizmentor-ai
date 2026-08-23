@@ -1,38 +1,47 @@
 /**
- * 商机研究流水线（V0.3-A）。
+ * 商机研究流水线（V0.3-B：External Evidence / Web Research Engine）。
  *
  * Opportunity
  *  → 1 Analyzer（商机/问题定义）
- *  → 2 Planner（研究任务）
- *  → 3 Research Tasks（逐任务 AI 研究，Finding→Evidence→Source 可追溯）
- *  → 4 Synthesis（15 项章节综合）
- *  → 5 Scoring（AI 提案 + 确定性聚合，Score v1）
- *  → 6 Validation Plan（验证方案）
- *  → 7 Final Summary（执行摘要 / MVP / 下一步）
- *  → ResearchReport
+ *  → 2 Planner（研究任务，含 EXTERNAL_WEB 任务）
+ *  → 3 External Research（真实搜索 + 网页读取 → SourceDocument）
+ *  → 4 Evidence Extraction（按任务从真实来源/AI 提取证据）
+ *  → 5 Evidence Validation（来源绑定/可信度/冲突/证据不足）
+ *  → 6 Synthesis（章节 + 竞品发现 + 竞品矩阵）
+ *  → 7 Scoring（AI 提案 + 确定性聚合，Score v1）
+ *  → 8 Validation Plan
+ *  → 9 Final Summary
+ *  → ResearchReport（来源可追溯）
  *
- * - 所有 AI 调用必须通过注入的 runAi（生产 = runAI / 客户端 = /api/ai 适配器 / 测试 = fake）
- * - JSON 解析/schema 失败自动重试一次，两次失败 → 阶段 failed（禁止伪造）
- * - 任意阶段 provider 降级 → 最终 status=degraded，报告明确显示
+ * 原则：搜索结果不是事实；网页内容不是自动可信；AI 不得编造来源/URL；
+ * 无来源结论保持 NEEDS_VALIDATION；多来源冲突必须显式显示；证据不足明确告知。
  */
 import type { AiProviderName } from "../ai/types";
 import type { RunAiFn } from "./ai-call";
 import { StageCallError } from "./ai-call";
 import type { ResearchContext } from "./context";
-import { NO_EXTERNAL_EVIDENCE_NOTICE, enforceEvidenceRules, toSourceDocuments } from "./sources";
+import { bindAndEnforce } from "./evidence";
+import { NO_EXTERNAL_EVIDENCE_NOTICE, toSourceDocuments } from "./sources";
+import { withEnforcedEvidence } from "./scoring";
+import { toEvidenceItems } from "./schema";
+import type { SummaryOutput, ValidationPlanOutput } from "./schema";
+import { computeSourceCredibility } from "./external/credibility";
+import type { ExternalResearchFn, ExternalResearchOutput } from "./external/types";
 import { runAnalyzerStage } from "./stages/analyzer";
 import { runPlannerStage } from "./stages/planner";
-import { runExecutorStage } from "./stages/executor";
+import { runExternalResearchStage } from "./stages/external-research";
+import { runEvidenceExtractionStage } from "./stages/evidence-extraction";
+import { runEvidenceValidationStage } from "./stages/evidence-validation";
 import { runSynthesisStage } from "./stages/synthesis";
 import { runScoringStage } from "./stages/scoring";
 import { runValidationPlanStage } from "./stages/validation-plan";
 import { runSummaryStage } from "./stages/summary";
-import { withEnforcedEvidence } from "./scoring";
-import { toEvidenceItems } from "./schema";
-import type { SummaryOutput, ValidationPlanOutput } from "./schema";
 import { uid } from "../store/storage";
 import type {
+  CompetitorFinding,
+  CompetitorMatrix,
   EvidenceItem,
+  SourceReference,
   ResearchFinding,
   ResearchInput,
   ResearchReport,
@@ -46,19 +55,18 @@ import type {
   UserMaterial,
 } from "./types";
 
-export const TOTAL_STAGES = 7;
+export const TOTAL_STAGES = 9;
 
-/** 归一化后的分析器输出（initialAssumptions 已应用 Evidence 规则） */
-export interface NormalizedSynthesis {
-  sections: Array<{
-    area: ResearchSection["area"];
-    title: string;
-    content: string;
-    confidence: number;
-    evidence: EvidenceItem[];
-  }>;
+export interface PipelineOptions {
+  /** AI 调用函数（必填：测试注入 fake；客户端传 /api/ai 适配器；服务端传 runAI） */
+  runAi: RunAiFn;
+  /** 外部研究函数（必填：客户端传 /api/external-research 适配器；测试注入 fake；服务端传真实 Provider） */
+  externalResearch: ExternalResearchFn;
+  /** 每完成一个阶段回调（UI 进度展示） */
+  onStage?: (stage: StageRun, index: number) => void;
 }
 
+/** 归一化后的分析器输出（initialAssumptions 已应用 Evidence 规则） */
 export interface NormalizedAnalyzer {
   definition: string;
   problem: string;
@@ -67,14 +75,19 @@ export interface NormalizedAnalyzer {
   unknowns: string[];
 }
 
-export interface PipelineOptions {
-  /** AI 调用函数（必填：测试注入 fake；客户端传 /api/ai 适配器；服务端传 runAI） */
-  runAi: RunAiFn;
-  /** 每完成一个阶段回调（UI 进度展示） */
-  onStage?: (stage: StageRun, index: number) => void;
+/** 归一化后的综合输出（evidence 已是 EvidenceItem[]） */
+export interface NormalizedSynthesis {
+  sections: Array<{
+    area: ResearchSection["area"];
+    title: string;
+    content: string;
+    confidence: number;
+    evidence: EvidenceItem[];
+  }>;
+  competitors: CompetitorFinding[];
+  competitorMatrix: CompetitorMatrix | undefined;
 }
 
-/** 综合阶段产出中允许的章节领域（其余由 Analyzer/Summary/Scoring/Validation 提供） */
 const SYNTHESIS_AREAS = new Set([
   "targetUser",
   "painPoint",
@@ -97,29 +110,74 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-/** 把证据数组应用 Evidence 规则 */
-function enforce(items: EvidenceItem[], docs: SourceDocument[]): EvidenceItem[] {
-  return enforceEvidenceRules(items, docs);
+/** 竞品矩阵单元格来源绑定（防 AI 伪造 URL）；sourceRef 为 null 时归一化 */
+function bindCellSources(
+  matrix:
+    | {
+        competitors?: string[];
+        dimensions?: string[];
+        rows?: Array<{ competitor: string; cells: Array<{ dimension: string; value: string; sourceRef?: SourceReference | null | string }> }>;
+      }
+    | undefined,
+  docs: SourceDocument[],
+): CompetitorMatrix | undefined {
+  if (!matrix) return undefined;
+  return {
+    competitors: matrix.competitors ?? [],
+    dimensions: matrix.dimensions ?? [],
+    rows: (matrix.rows ?? []).map((row) => ({
+      competitor: row.competitor,
+      cells: row.cells.map((cell) => {
+        const rawRef = cell.sourceRef;
+        const ref = typeof rawRef === "string" ? { sourceType: "EXTERNAL_WEB" as const, sourceId: rawRef } : (rawRef ?? undefined);
+        if (!ref) return { dimension: cell.dimension, value: cell.value };
+        const doc = ref.sourceId
+          ? docs.find((d) => d.id === ref.sourceId)
+          : ref.url
+            ? docs.find((d) => d.url === ref.url)
+            : undefined;
+        if (!doc) return { ...cell, sourceRef: undefined };
+        return {
+          ...cell,
+          sourceRef: {
+            sourceType: doc.sourceType,
+            sourceId: doc.id,
+            url: doc.url,
+            title: doc.title,
+            publisher: doc.publisher,
+            retrievedAt: doc.retrievedAt ?? doc.createdAt,
+          },
+        };
+      }),
+    })),
+  };
 }
 
 export async function runResearchPipeline(input: ResearchInput, options: PipelineOptions): Promise<ResearchRun> {
-  const { runAi, onStage } = options;
+  const { runAi, externalResearch, onStage } = options;
   const sourceDocuments = toSourceDocuments(input.materials ?? []);
-  const ctx: ResearchContext = { runAi, input, sourceDocuments };
+  const ctx: ResearchContext = { runAi, externalResearch, input, sourceDocuments };
 
   const runId = uid();
   const createdAt = new Date().toISOString();
   const stages: StageRun[] = [];
-  const findings: ResearchFinding[] = [];
+  let findings: ResearchFinding[] = [];
+  let externalOutput: ExternalResearchOutput = { searches: [], documents: [] };
+  let crossValidation: ResearchRun["evidenceValidation"];
   let status: ResearchRun["status"] = "running";
   let report: ResearchReport | undefined;
   let runError: ResearchRun["error"];
 
-  /** 运行一个阶段：成功记录 completed，失败记录 failed 并中止 */
-  async function runStage<T>(
-    stage: ResearchStageName,
-    fn: () => Promise<{ data: T; provider: AiProviderName; provider_degraded: boolean; inputTokens: number; outputTokens: number; estimatedCost: number; durationMs: number }>,
-  ): Promise<T> {
+  interface StageResultLike {
+    provider: AiProviderName | "external";
+    provider_degraded: boolean;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCost: number;
+    durationMs: number;
+  }
+
+  async function runStage<T>(stage: ResearchStageName, fn: () => Promise<{ data: T } & StageResultLike>): Promise<T> {
     const startedAt = Date.now();
     try {
       const result = await fn();
@@ -159,13 +217,15 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     const analyzerCall = await runStage("analyzer", () => runAnalyzerStage(ctx));
     const analyzer: NormalizedAnalyzer = {
       ...analyzerCall,
-      initialAssumptions: enforce(
-        (analyzerCall.initialAssumptions ?? []).map((a) => ({
-          claim: a.claim,
-          evidenceClass: a.evidenceClass,
-          confidence: a.confidence ?? 0.5,
-          sourceRef: a.sourceRef ?? undefined,
-        })),
+      initialAssumptions: bindAndEnforce(
+        toEvidenceItems(
+          (analyzerCall.initialAssumptions ?? []).map((a) => ({
+            claim: a.claim,
+            evidenceClass: a.evidenceClass,
+            confidence: a.confidence ?? 0.5,
+            sourceRef: a.sourceRef ?? undefined,
+          })),
+        ),
         sourceDocuments,
       ),
     };
@@ -173,46 +233,52 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     // 2) Planner
     const plan = await runStage("planner", () => runPlannerStage(ctx, analyzer));
 
-    // 3) Executor
-    const executor = await runStage("executor", () => runExecutorStage(ctx, plan.tasks));
-    for (const f of executor) {
-      findings.push({
-        taskId: f.taskId,
-        area: f.area,
-        summary: f.summary,
-        evidence: enforce(toEvidenceItems(f.evidence), sourceDocuments),
-        confidence: clamp01(f.confidence),
-        unknowns: f.unknowns,
-      });
-    }
+    // 3) External Research
+    externalOutput = await runStage("external-research", () => runExternalResearchStage(ctx, plan.tasks));
 
-    // 4) Synthesis
-    const synthesisCall = await runStage("synthesis", () => runSynthesisStage(ctx, analyzer, executor));
+    // 4) Evidence Extraction
+    const extraction = await runStage("evidence-extraction", () =>
+      runEvidenceExtractionStage(ctx, plan.tasks, externalOutput),
+    );
+
+    // 5) Evidence Validation（确定性）
+    const validation = await runStage("evidence-validation", () =>
+      runEvidenceValidationStage(ctx, extraction, plan.tasks, externalOutput),
+    );
+    findings = validation.findings;
+    crossValidation = validation.crossValidation;
+
+    // 6) Synthesis
+    const synthesisCall = await runStage("synthesis", () => runSynthesisStage(ctx, analyzer, findings));
     const synthesis: NormalizedSynthesis = {
       sections: synthesisCall.sections.map((s) => ({
         ...s,
         confidence: clamp01(s.confidence),
-        evidence: enforce(toEvidenceItems(s.evidence), sourceDocuments),
+        evidence: bindAndEnforce(toEvidenceItems(s.evidence), [...sourceDocuments, ...externalOutput.documents]),
       })),
+      competitors: (synthesisCall.competitors ?? []).map((c) => ({
+        ...c,
+        evidence: bindAndEnforce(toEvidenceItems(c.evidence), [...sourceDocuments, ...externalOutput.documents]),
+      })),
+      competitorMatrix: bindCellSources(synthesisCall.competitorMatrix, [...sourceDocuments, ...externalOutput.documents]),
     };
 
-    // 5) Scoring（确定性聚合）
+    // 7) Scoring（确定性聚合）
     const scoring = await runStage("scoring", () => runScoringStage(ctx, synthesis.sections));
+    const allDocs = [...sourceDocuments, ...externalOutput.documents];
     const score: ScoreResult = withEnforcedEvidence(
       scoring,
       scoring.score_breakdown.map((d) => ({
         ...d,
-        evidence: enforce(d.evidence, sourceDocuments),
+        evidence: bindAndEnforce(d.evidence, allDocs),
       })),
     );
 
-    // 6) Validation Plan
-    const validationCall = await runStage("validation-plan", () => runValidationPlanStage(ctx, score));
-    const validation: ValidationPlanOutput = validationCall;
+    // 8) Validation Plan
+    const validationPlan = await runStage("validation-plan", () => runValidationPlanStage(ctx, score));
 
-    // 7) Final Summary（reasoning；允许降级但报告必须显示 degraded）
-    const summaryCall = await runStage("summary", () => runSummaryStage(ctx, analyzer, synthesis, validation));
-    const summary: SummaryOutput = summaryCall;
+    // 9) Final Summary
+    const summary = await runStage("summary", () => runSummaryStage(ctx, analyzer, synthesis, validationPlan));
 
     // 组装报告
     report = buildReport({
@@ -220,9 +286,11 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
       analyzer,
       synthesis,
       score,
-      validation,
+      validationPlan,
       summary,
       sourceDocuments,
+      externalOutput,
+      crossValidation,
     });
     status = stages.some((s) => s.provider_degraded) ? "degraded" : "completed";
     report.meta = {
@@ -250,7 +318,8 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     stages,
     findings,
     scoreHistory: report ? [report.score] : [],
-    sourceDocuments,
+    sourceDocuments: [...sourceDocuments, ...externalOutput.documents],
+    evidenceValidation: crossValidation,
     report,
     error: runError,
   };
@@ -261,18 +330,20 @@ function buildReport(params: {
   analyzer: NormalizedAnalyzer;
   synthesis: NormalizedSynthesis;
   score: ScoreResult;
-  validation: ValidationPlanOutput;
+  validationPlan: ValidationPlanOutput;
   summary: SummaryOutput;
   sourceDocuments: SourceDocument[];
+  externalOutput: ExternalResearchOutput;
+  crossValidation: ResearchRun["evidenceValidation"];
 }): ResearchReport {
-  const { input, analyzer, synthesis, score, validation, summary, sourceDocuments } = params;
+  const { input, analyzer, synthesis, score, validationPlan, summary, sourceDocuments, externalOutput, crossValidation } = params;
   const sections: ResearchSection[] = [];
 
   sections.push({
     area: "definition",
     title: "商机定义",
     content: analyzer.definition,
-    evidence: enforce(analyzer.initialAssumptions, sourceDocuments),
+    evidence: analyzer.initialAssumptions,
     confidence: 0.9,
   });
   sections.push({
@@ -307,7 +378,7 @@ function buildReport(params: {
   sections.push({
     area: "validation",
     title: "验证方案",
-    content: validation.items
+    content: validationPlan.items
       .map((i) => `- 假设：${i.assumption}\n  方法：${i.method}\n  成功标准：${i.successCriteria}（effort: ${i.effort}）`)
       .join("\n\n"),
     evidence: [],
@@ -328,7 +399,8 @@ function buildReport(params: {
     confidence: 0.9,
   });
 
-  const hasExternalEvidence = sourceDocuments.some((d) => d.sourceType !== "USER_PROVIDED");
+  const allDocs = [...sourceDocuments, ...externalOutput.documents];
+  const hasExternalEvidence = externalOutput.documents.length > 0;
 
   return {
     opportunityId: input.opportunity.id,
@@ -336,21 +408,24 @@ function buildReport(params: {
     executiveSummary: summary.executiveSummary,
     sections,
     score,
-    validationPlan: validation.items,
+    validationPlan: validationPlan.items,
     nextActions: summary.nextActions,
+    sources: allDocs.map((d) => ({ ...d, credibility: computeSourceCredibility(d) })),
+    conflicts: crossValidation?.conflicts ?? [],
+    crossValidatedAreas: crossValidation?.crossValidatedAreas ?? [],
+    insufficientEvidence: crossValidation?.insufficientEvidence ?? [],
+    competitors: synthesis.competitors ?? [],
+    competitorMatrix: synthesis.competitorMatrix,
     meta: {
-      degraded: false, // 由 pipeline 在返回前覆盖（这里先占位，pipeline 会重新设置 status）
+      degraded: false,
       externalEvidenceAvailable: hasExternalEvidence,
-      notice: hasExternalEvidence ? "部分结论有来源支撑。" : `${NO_EXTERNAL_EVIDENCE_NOTICE}。本报告的市场/竞品/数据类结论为 AI 推断，未经真实来源验证。`,
+      notice: hasExternalEvidence
+        ? "部分结论来自真实外部来源；来源可信度与冲突已标注，请结合多来源判断。"
+        : `${NO_EXTERNAL_EVIDENCE_NOTICE}。本报告的市场/竞品/数据类结论为 AI 推断，未经真实来源验证。`,
       generatedAt: new Date().toISOString(),
       providers: {},
     },
   };
-}
-
-/** 供 UI 调用的轻量包装（客户端） */
-export function toResearchReport(run: ResearchRun): ResearchReport | undefined {
-  return run.report;
 }
 
 export type { UserMaterial, ResearchInput };

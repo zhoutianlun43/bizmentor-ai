@@ -2,13 +2,14 @@ import type { ResearchContext } from "../context";
 import { callAiStage } from "../ai-call";
 import { synthesisPrompt } from "../prompts";
 import { synthesisSchema } from "../schema";
-import type { AnalyzerOutput, ResearchFindingOutput, SynthesisOutput } from "../schema";
+import type { AnalyzerOutput, SynthesisOutput } from "../schema";
+import type { ResearchFinding } from "../types";
 
 /** 阶段 4：研究综合器（research）—— 汇总为结构化章节 */
 export async function runSynthesisStage(
   ctx: ResearchContext,
   analyzer: AnalyzerOutput,
-  findings: ResearchFindingOutput[],
+  findings: ResearchFinding[],
 ) {
   return callAiStage({
     runAi: ctx.runAi,

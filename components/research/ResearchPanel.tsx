@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { TextArea } from "@/components/ui/FormField";
 import { ResearchProgress } from "./ResearchProgress";
 import { ResearchReportView } from "./ResearchReportView";
-import { ResearchService, LocalResearchRepository, createApiRunAi } from "@/lib/research";
+import { ResearchService, LocalResearchRepository, createApiRunAi, createExternalResearchApi } from "@/lib/research";
 import type { ResearchRun, StageRun } from "@/lib/research";
 import type { Opportunity } from "@/lib/types";
 
@@ -32,6 +32,7 @@ export function ResearchPanel({ opportunity, run }: ResearchPanelProps) {
     const service = new ResearchService({
       repository: new LocalResearchRepository(),
       runAi: createApiRunAi(),
+      externalResearch: createExternalResearchApi(),
     });
     try {
       await service.startResearch(

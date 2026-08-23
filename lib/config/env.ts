@@ -41,6 +41,15 @@ export const env = {
   openaiReasoningInputPricePer1M: toNum(process.env.OPENAI_REASONING_INPUT_PRICE_PER_1M, 5),
   openaiReasoningOutputPricePer1M: toNum(process.env.OPENAI_REASONING_OUTPUT_PRICE_PER_1M, 15),
 
+  // ---------- 外部研究（V0.3-B Web Research） ----------
+  /** 外部研究 Provider（当前支持 duckduckgo） */
+  externalResearchProvider: process.env.EXTERNAL_RESEARCH_PROVIDER ?? "duckduckgo",
+  /** 每个查询取前 N 条搜索结果 */
+  externalSearchLimit: toNum(process.env.EXTERNAL_SEARCH_LIMIT, 5),
+  /** 每个查询实际读取的网页数（限制请求量） */
+  externalReadLimit: toNum(process.env.EXTERNAL_READ_LIMIT, 2),
+  /** 外部请求超时（ms） */
+  externalTimeoutMs: toNum(process.env.EXTERNAL_TIMEOUT_MS, 15000),
   // ---------- AI 用量落盘 ----------
   /** ai_usage JSONL 文件路径；留空则默认 .data/ai_usage.jsonl */
   aiUsageFile: process.env.AI_USAGE_FILE ?? "",

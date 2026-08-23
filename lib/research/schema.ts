@@ -23,11 +23,14 @@ export const sourceRefSchema = z
   .nullable()
   .optional();
 
+/** AI 可能把 sourceRef 写成字符串（文档 id）→ 允许，归一化后由绑定校验真实性 */
+export const sourceRefInputSchema = z.union([sourceRefSchema, z.string()]);
+
 export const evidenceItemSchema = z.object({
   claim: z.string().min(1),
   evidenceClass: evidenceClassSchema,
   confidence: z.number().min(0).max(1),
-  sourceRef: sourceRefSchema,
+  sourceRef: sourceRefInputSchema,
   note: z.string().optional(),
 });
 
@@ -40,7 +43,7 @@ export const analyzerOutputSchema = z.object({
       claim: z.string().min(1),
       evidenceClass: evidenceClassSchema,
       confidence: z.number().min(0).max(1).optional(),
-      sourceRef: sourceRefSchema,
+      sourceRef: sourceRefInputSchema,
     }),
   ),
   unknowns: z.array(z.string()),
@@ -66,7 +69,7 @@ export const researchTaskSchema = z.object({
     "nextAction",
   ]),
   question: z.string().min(1),
-  dataSource: z.enum(["USER_PROVIDED", "AI_RESEARCH", "EXTERNAL_NEEDED"]),
+  dataSource: z.enum(["USER_PROVIDED", "AI_RESEARCH", "EXTERNAL_WEB", "EXTERNAL_NEEDED"]),
   required: z.boolean(),
 });
 
@@ -99,6 +102,30 @@ export const findingSchema = z.object({
   unknowns: z.array(z.string()),
 });
 
+export const competitorFindingSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().optional(),
+  description: z.string().min(1),
+  evidence: z.array(evidenceItemSchema),
+});
+
+export const competitorMatrixSchema = z.object({
+  competitors: z.array(z.string()),
+  dimensions: z.array(z.string()),
+  rows: z.array(
+    z.object({
+      competitor: z.string(),
+      cells: z.array(
+        z.object({
+          dimension: z.string(),
+          value: z.string(),
+          sourceRef: sourceRefInputSchema,
+        }),
+      ),
+    }),
+  ),
+});
+
 export const synthesisSchema = z.object({
   sections: z.array(
     z.object({
@@ -125,6 +152,8 @@ export const synthesisSchema = z.object({
       evidence: z.array(evidenceItemSchema),
     }),
   ),
+  competitors: z.array(competitorFindingSchema).optional(),
+  competitorMatrix: competitorMatrixSchema.optional(),
 });
 
 export const scoreDimensionSchema = z.object({
@@ -177,7 +206,7 @@ export type ValidationPlanOutput = z.infer<typeof validationPlanSchema>;
 export type SummaryOutput = z.infer<typeof summarySchema>;
 
 export type ValidatedEvidenceItem = z.infer<typeof evidenceItemSchema>;
-export type ValidatedSourceRef = z.infer<typeof sourceRefSchema>;
+export type ValidatedSourceRef = z.infer<typeof sourceRefInputSchema>;
 export type ValidatedResearchTask = z.infer<typeof researchTaskSchema>;
 
 /** 校验任意 AI 输出 */
@@ -221,7 +250,7 @@ export function toEvidenceItem(raw: ValidatedEvidenceItem): EvidenceItem {
     claim: raw.claim,
     evidenceClass: raw.evidenceClass,
     confidence: raw.confidence,
-    sourceRef: raw.sourceRef ?? undefined,
+    sourceRef: normalizeSourceRef(raw.sourceRef),
     note: raw.note,
   };
 }
@@ -229,9 +258,12 @@ export function toEvidenceItem(raw: ValidatedEvidenceItem): EvidenceItem {
 export function toEvidenceItems(raw: ValidatedEvidenceItem[]): EvidenceItem[] {
   return raw.map(toEvidenceItem);
 }
-/** 把 AI 的 sourceRef（可能为 null）归一化为可选值 */
+/** 把 AI 的 sourceRef（字符串文档 id / 对象 / null）归一化为 SourceReference */
 export function normalizeSourceRef(ref: ValidatedSourceRef): SourceReference | undefined {
   if (!ref) return undefined;
+  if (typeof ref === "string") {
+    return { sourceType: "EXTERNAL_WEB", sourceId: ref };
+  }
   return {
     sourceType: ref.sourceType,
     sourceId: ref.sourceId,

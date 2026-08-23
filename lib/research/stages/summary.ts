@@ -2,13 +2,13 @@ import type { ResearchContext } from "../context";
 import { callAiStage } from "../ai-call";
 import { summaryPrompt } from "../prompts";
 import { summarySchema } from "../schema";
-import type { AnalyzerOutput, SummaryOutput, SynthesisOutput, ValidationPlanOutput } from "../schema";
+import type { SummaryOutput, ValidationPlanOutput } from "../schema";
 
 /** 阶段 7：最终报告器（reasoning / OpenAI，可降级但必须标记 degraded） */
 export async function runSummaryStage(
   ctx: ResearchContext,
-  analyzer: AnalyzerOutput,
-  synthesis: SynthesisOutput,
+  analyzer: { definition: string },
+  synthesis: { sections: Array<{ area: string; content: string }> },
   validationPlan: ValidationPlanOutput,
 ) {
   return callAiStage({
