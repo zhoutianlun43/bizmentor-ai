@@ -21,6 +21,10 @@ chown "$DEPLOY_USER:$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh/authorized_keys"
 chmod 600 "/home/$DEPLOY_USER/.ssh/authorized_keys"
 echo "    公钥已安装到 /home/$DEPLOY_USER/.ssh/authorized_keys"
 
+echo "==> [2b/6] 部署用户免密 sudo（用于管理 systemd / Caddy）"
+echo "$DEPLOY_USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/bizmentor
+chmod 440 /etc/sudoers.d/bizmentor
+
 echo "==> [3/6] 防火墙：仅 22/80/443"
 ufw allow OpenSSH
 ufw allow 80/tcp

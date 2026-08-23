@@ -32,9 +32,9 @@ ssh -i "$SSH_KEY" "$REMOTE" "cd $APP_DIR && pnpm install --frozen-lockfile 2>&1 
 ssh -i "$SSH_KEY" "$REMOTE" "cd $APP_DIR && pnpm build 2>&1 | tail -8"
 
 echo "==> [5/6] 安装 systemd 服务并启动"
-ssh -i "$SSH_KEY" "$REMOTE" "cp $APP_DIR/deploy/bizmentor.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now bizmentor && sleep 3 && systemctl is-active bizmentor"
+ssh -i "$SSH_KEY" "$REMOTE" "sudo cp $APP_DIR/deploy/bizmentor.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now bizmentor && sleep 3 && sudo systemctl is-active bizmentor"
 
 echo "==> [6/6] 配置 Caddy（替换域名占位符）"
-ssh -i "$SSH_KEY" "$REMOTE" "sed 's/DOMAIN_PLACEHOLDER/$DOMAIN/' $APP_DIR/deploy/Caddyfile > /etc/caddy/Caddyfile && systemctl reload caddy && sleep 3 && systemctl is-active caddy"
+ssh -i "$SSH_KEY" "$REMOTE" "sed 's/DOMAIN_PLACEHOLDER/$DOMAIN/' $APP_DIR/deploy/Caddyfile | sudo tee /etc/caddy/Caddyfile > /dev/null && sudo systemctl reload caddy && sleep 3 && sudo systemctl is-active caddy"
 
 echo "部署完成。验证: https://$DOMAIN"
