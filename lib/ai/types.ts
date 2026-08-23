@@ -33,6 +33,7 @@ export type AiTaskType =
   | "opportunity_scoring"
   | "validation_plan"
   | "final_summary"
+  | "decision_review"
   | "final_judgment"
   | "examiner"
   | "final_report"

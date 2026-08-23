@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
+import { DecisionPanel } from "@/components/decision/DecisionPanel";
 import { readResearchRunSync } from "@/lib/research";
 import { Card } from "@/components/ui/Card";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
@@ -110,6 +111,9 @@ export default function OpportunityDetailPage() {
 
       {/* 商机研究（V0.3-A）：结构化研究报告 */}
       <ResearchPanel opportunity={opportunity} run={researchRun} />
+
+      {/* 商业决策与验证闭环（V0.3-C） */}
+      <DecisionPanel opportunity={opportunity} run={researchRun} />
     </div>
   );
 }

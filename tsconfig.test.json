@@ -8,5 +8,5 @@
     "moduleResolution": "node10",
     "types": ["node"]
   },
-  "include": ["lib/ai/**/*.ts", "lib/research/**/*.ts"]
+  "include": ["lib/ai/**/*.ts", "lib/research/**/*.ts", "lib/decision/**/*.ts"]
 }

@@ -211,3 +211,21 @@ pnpm test:research-live   # 真实端到端研究（需 .env.local Key；OpenAI 
 pnpm test                 # 73 个测试（AI + 研究引擎 + 外部研究，无需 Key）
 pnpm test:research-live   # 真实端到端（真实搜索 + DeepSeek/OpenAI）
 ```
+
+## 商业决策与验证闭环（V0.3-C）
+
+把 BizMentor 从「商业研究系统」升级为「商业决策与验证闭环」：AI 研究 → 用户判断 → 真实验证 → AI 复盘。
+
+- `lib/decision/`：Decision / User Judgment / AI Examiner / Validation Plan / Validation Result / Score v2 / LearningEvent
+- 用户决策：proceed / validate / continue_research / pause / abandon（可「我有不同判断」并填写理由）
+- User Judgment：为什么做/不做、核心判断、关键证据、最大风险、最重要假设、预计结果
+- AI Examiner：结构化评审（优点/10 类弱点/逻辑缺口/缺少证据/建议/能力信号），记录 provider_degraded
+- Validation：验证任务（assumption/hypothesis/method/sample_size/success/failure/deadline/cost/owner）+ 状态流转（pending→running→completed/failed/cancelled）
+- Validation Result：实际样本/结果/反馈/转化率/收入/成本（仅用户输入，AI 不伪造）
+- Score v2：用真实验证结果确定性重算，保留 Score v1/v2/v3 + 变化前后/原因/新增证据/验证结果
+- LearningEvent：12 维能力画像预留（userId/opportunityId/decisionId/skill/signal/severity/evidence/createdAt）
+- 记录「AI 当时怎么判断」（aiScoreSnapshot）与「用户当时怎么判断」（judgment），未来可比较 AI vs User vs Actual
+
+```bash
+pnpm test   # 87 个测试（含决策闭环 14 个）
+```
