@@ -1,17 +1,27 @@
 /**
- * 未来 AI 模型路由配置（V0.1 仅占位，不调用任何真实模型）。
- * 设计原则：模型名称集中在环境变量 / 配置中，禁止硬编码进大量业务代码，便于未来随时替换。
- * 简单任务 → GPT-5.6 Luna；普通商业研究 → GPT-5.6 Terra；复杂商业推理 → GPT-5.6 Sol。
+ * 默认模型路由表（V0.2 多 Provider 架构）。
+ * 规则：模型名称必须来自环境变量 / 配置文件，禁止硬编码进业务代码，便于随时替换。
+ * simple → DeepSeek；research → OpenAI Research；reasoning → OpenAI Reasoning。
  */
-export type AiTaskTier = "simple" | "research" | "reasoning";
+import type { AiCapability, AiProviderName } from "../ai/types";
 
-export const aiModels = {
-  simple: process.env.AI_MODEL_SIMPLE ?? "gpt-5.6-luna",
-  research: process.env.AI_MODEL_RESEARCH ?? "gpt-5.6-terra",
-  reasoning: process.env.AI_MODEL_REASONING ?? "gpt-5.6-sol",
-} as const;
-
-/** 根据任务复杂度返回模型名（未来由 AI Router 调用） */
-export function resolveModel(tier: AiTaskTier): string {
-  return aiModels[tier];
+/** 一条模型路由：Provider + 具体模型 */
+export interface ModelRoute {
+  provider: AiProviderName;
+  model: string;
 }
+
+export const DEFAULT_MODEL_ROUTING: Record<AiCapability, ModelRoute> = {
+  simple: {
+    provider: "deepseek",
+    model: process.env.DEEPSEEK_MODEL ?? "deepseek-chat",
+  },
+  research: {
+    provider: "openai",
+    model: process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6-terra",
+  },
+  reasoning: {
+    provider: "openai",
+    model: process.env.OPENAI_REASONING_MODEL ?? "gpt-5.6-sol",
+  },
+};

@@ -72,10 +72,11 @@ cp .env.example .env.local
 
 ## 运行测试 / 质量检查
 
-V0.1 使用以下命令作为自动化质量检查（暂未引入单元测试框架，后续阶段补充）：
+自动化质量检查：
 
 ```bash
 pnpm lint    # ESLint
+pnpm test    # AI 网关单元测试（node:test，无需 API Key）
 pnpm build   # 生产构建（包含 TypeScript 类型检查）
 ```
 
@@ -140,3 +141,37 @@ bizmentor-ai/
 ## 版权 / 安全
 
 - 所有 API Key 只存在于服务器环境变量，禁止出现在前端代码或 Git 历史中。
+
+## AI 网关（V0.2）— 多 Provider 架构
+
+BizMentor 使用多模型 Provider 架构（OpenAI + DeepSeek），业务 Agent 禁止直接调用任何 SDK，
+统一通过 `lib/ai/gateway.ts` 的 `runAI()` 访问：
+
+```ts
+import { runAI } from "@/lib/ai/gateway";
+
+const result = await runAI({
+  capability: "simple",          // simple | research | reasoning
+  task: "整理这段商机描述…",
+  type: "opportunity_screening", // 任务类型（Router 可据此自动升级）
+  agent: "opportunity",
+});
+```
+
+路由规则（`lib/ai/router.ts`）：
+
+| 能力等级 | 默认 Provider | 默认模型（环境变量可覆盖） |
+| --- | --- | --- |
+| simple | DeepSeek | `DEEPSEEK_MODEL`（默认 deepseek-chat） |
+| research | OpenAI | `OPENAI_RESEARCH_MODEL`（默认 gpt-5.6-terra） |
+| reasoning | OpenAI | `OPENAI_REASONING_MODEL`（默认 gpt-5.6-sol） |
+
+- 自动升级：任务类型（如 `user_research` → research、`examiner` → reasoning）或显式 `escalate` 会抬升能力等级
+- Fallback：DeepSeek 失败 → OpenAI（标记 `provider_degraded=true`）；OpenAI 失败仅对允许低质量降级的任务回退 DeepSeek；
+  Examiner / 最终判断 / 最终报告禁止降级，失败会明确抛错
+- 成本：统一由 `lib/ai/usage.ts` 计算并记录 `ai_usage`（provider/model/task/agent/inputTokens/outputTokens/
+  estimatedCost/durationMs/success/createdAt + degraded/fallbackFrom/error），本地落盘 `.data/ai_usage.jsonl`
+- 新增 Provider：只需新增 `lib/ai/providers/xxx.ts` 并在 `providers/index.ts` 注册，不改 Router/Gateway/UI
+- 安全：`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` 仅服务端，严禁 `NEXT_PUBLIC_` 前缀
+
+详细说明见 `lib/ai/README.md`。

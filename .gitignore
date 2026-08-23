@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# test build output (tsc for node:test)
+/.test-dist/
+
+# local AI usage data
+/.data/
