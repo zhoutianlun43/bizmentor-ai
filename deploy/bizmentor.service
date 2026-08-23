@@ -1,0 +1,22 @@
+# BizMentor systemd 服务单元
+# 安装到服务器: sudo cp deploy/bizmentor.service /etc/systemd/system/ && sudo systemctl daemon-reload
+[Unit]
+Description=BizMentor AI (Next.js production)
+After=network.target
+
+[Service]
+Type=simple
+User=bizmentor
+WorkingDirectory=/opt/bizmentor
+EnvironmentFile=/opt/bizmentor/.env.production
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# 生产只监听 127.0.0.1:3000，由 Caddy 反向代理对外
+ExecStart=/usr/local/bin/pnpm start --hostname 127.0.0.1 --port 3000
+Restart=always
+RestartSec=5
+# 构建/启动耗时较长，给足超时
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target
