@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#brand)"/>
+  <!-- 白色「B」徽标 -->
+  <path fill="#ffffff" fill-rule="evenodd" d="
+    M150 128 H238
+    C302 128 322 168 322 210
+    C322 244 306 268 278 276
+    C310 286 326 312 326 348
+    C326 392 300 416 238 416
+    H150 V128 Z
+    M230 210 A32 32 0 1 0 294 210 A32 32 0 1 0 230 210 Z
+    M226 348 A36 36 0 1 0 298 348 A36 36 0 1 0 226 348 Z
+  "/>
+  <!-- 琥珀色灵感星 -->
+  <path fill="#fbbf24" d="M392 84 L406 118 L440 132 L406 146 L392 180 L378 146 L344 132 L378 118 Z"/>
+</svg>
