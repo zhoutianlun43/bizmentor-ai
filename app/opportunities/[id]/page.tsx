@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, FileText } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -9,28 +9,28 @@ import { Card } from "@/components/ui/Card";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useLocalData } from "@/lib/hooks/use-local-data";
 import { OPPORTUNITY_SOURCE_LABELS } from "@/lib/constants";
+import { mockOpportunities } from "@/lib/data/mock/opportunities";
 import { findOpportunity } from "@/lib/store/opportunity-store";
 import { formatDate } from "@/lib/utils/format";
-import type { Opportunity } from "@/lib/types";
 
 /** 商机详情 / 完整报告占位（V0.1 展示本地数据，AI 报告由未来 Agent 生成） */
 export default function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [opportunity, setOpportunity] = useState<Opportunity | null | undefined>(undefined);
+  const idStr = String(id);
 
-  useEffect(() => {
-    setOpportunity(findOpportunity(String(id)));
-  }, [id]);
+  const opportunity = useLocalData(
+    useCallback(() => findOpportunity(idStr), [idStr]),
+    mockOpportunities.find((o) => o.id === idStr),
+  );
 
-  if (opportunity === undefined) return null;
-
-  if (opportunity === null) {
+  if (!opportunity) {
     return (
       <div className="px-5 pb-4">
         <AppHeader title="商机详情" />
         <Card className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">
-          未找到该商机，可能已被删除。
+          未找到该商机。
           <Link href="/opportunities" className="mt-2 block text-indigo-600 dark:text-indigo-400">
             ← 返回商机列表
           </Link>

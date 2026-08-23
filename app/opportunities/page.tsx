@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useLocalData } from "@/lib/hooks/use-local-data";
+import { mockOpportunities } from "@/lib/data/mock/opportunities";
 import { loadOpportunities } from "@/lib/store/opportunity-store";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
@@ -34,17 +36,10 @@ function applyFilter(list: Opportunity[], filter: Filter): Opportunity[] {
 }
 
 export default function OpportunitiesPage() {
-  const [list, setList] = useState<Opportunity[] | null>(null);
+  const list = useLocalData(loadOpportunities, mockOpportunities);
   const [filter, setFilter] = useState<Filter>("all");
 
-  useEffect(() => {
-    setList(loadOpportunities());
-  }, []);
-
-  const filtered = useMemo(
-    () => (list ? applyFilter(list, filter) : []),
-    [list, filter],
-  );
+  const filtered = useMemo(() => applyFilter(list, filter), [list, filter]);
 
   return (
     <div className="px-5 pb-4">
@@ -80,7 +75,7 @@ export default function OpportunitiesPage() {
       </div>
 
       {/* 列表 */}
-      {list === null ? null : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="mt-6">
           <EmptyState
             icon={Sparkles}

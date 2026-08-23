@@ -42,6 +42,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
+        {/* 兼容旧版 iOS Safari 添加到主屏幕 */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <ThemeProvider>
           {/* 手机优先：内容居中并限制最大宽度，模拟 iPhone 屏幕 */}

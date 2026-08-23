@@ -5,7 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import { Moon, Sun } from "lucide-react";
 import type { ReactNode } from "react";
@@ -18,39 +18,47 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-
 const THEME_STORAGE_KEY = "bizmentor:v1:theme";
 
-/** 读取初始主题：localStorage 优先，其次系统偏好 */
-function getInitialTheme(): Theme {
+/** 读取当前主题：localStorage 优先，其次系统偏好 */
+function getThemeSnapshot(): Theme {
   if (typeof window === "undefined") return "light";
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
   if (stored === "light" || stored === "dark") return stored;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-/** 主题提供者：在 <html> 上切换 dark class，并持久化选择 */
+/** 订阅主题变化（跨标签页 storage 事件 + 同页自定义事件） */
+function subscribeTheme(onStoreChange: () => void): () => void {
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
+
+/** 写入主题并通知订阅者 */
+function setStoredTheme(theme: Theme): void {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // 存储不可用时忽略
+  }
+  window.dispatchEvent(new Event("storage"));
+}
+
+/**
+ * 主题提供者：在 <html> 上切换 dark class 并持久化。
+ * 服务端 / 首次 hydration 统一返回 light，避免不一致；挂载后自动切换到真实主题。
+ */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // 初始恒为 light，避免 hydration 不一致；真实主题由下方 effect 在挂载后应用
-  const [theme, setTheme] = useState<Theme>("light");
+  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, (): Theme => "light");
 
+  // 同步 <html> 的 dark class（副作用，首帧由 layout 内联脚本预先应用，此处保证后续一致）
   useEffect(() => {
-    setTheme(getInitialTheme());
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // 忽略存储不可用的情况
-    }
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
-  }, []);
+    setStoredTheme(theme === "dark" ? "light" : "dark");
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

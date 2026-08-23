@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Clock3 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TextArea } from "@/components/ui/FormField";
+import { useLocalData } from "@/lib/hooks/use-local-data";
 import { TRAINING_CATEGORY_LABELS } from "@/lib/constants";
 import { mockTrainingQuestions } from "@/lib/data/mock/training";
 import {
@@ -15,7 +16,7 @@ import {
   loadSubmissionsByQuestion,
 } from "@/lib/store/training-store";
 import { formatDate } from "@/lib/utils/format";
-import type { AnswerSubmission, TrainingQuestion } from "@/lib/types";
+import type { AnswerSubmission } from "@/lib/types";
 
 /**
  * 训练题目页。
@@ -24,17 +25,17 @@ import type { AnswerSubmission, TrainingQuestion } from "@/lib/types";
  */
 export default function TrainingQuestionPage() {
   const { id } = useParams<{ id: string }>();
-  const question: TrainingQuestion | undefined = mockTrainingQuestions.find(
-    (q) => q.id === String(id),
-  );
+  const questionId = String(id);
+  const question = mockTrainingQuestions.find((q) => q.id === questionId);
 
   const [answer, setAnswer] = useState("");
-  const [submissions, setSubmissions] = useState<AnswerSubmission[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (question) setSubmissions(loadSubmissionsByQuestion(question.id));
-  }, [question]);
+  // 提交记录：服务端渲染用空数组兜底；提交后通过 storage 事件自动刷新
+  const submissions = useLocalData<AnswerSubmission[]>(
+    useCallback(() => loadSubmissionsByQuestion(questionId), [questionId]),
+    [],
+  );
 
   if (!question) {
     return (
@@ -51,12 +52,11 @@ export default function TrainingQuestionPage() {
   }
 
   function handleSubmit() {
-    if (!answer.trim()) return;
+    if (!answer.trim() || submitting) return;
     setSubmitting(true);
     // 模拟提交延迟，保持交互反馈；真实场景为调用 AI Examiner Agent
     setTimeout(() => {
-      addSubmission(question!.id, answer);
-      setSubmissions(loadSubmissionsByQuestion(question!.id));
+      addSubmission(questionId, answer);
       setAnswer("");
       setSubmitting(false);
     }, 300);
