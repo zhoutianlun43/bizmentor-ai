@@ -175,3 +175,20 @@ const result = await runAI({
 - 安全：`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` 仅服务端，严禁 `NEXT_PUBLIC_` 前缀
 
 详细说明见 `lib/ai/README.md`。
+
+## 商业研究引擎（V0.3-A）
+
+新增 `lib/research/`：商机研究引擎第一阶段（Opportunity → Research → Evidence → Scoring → Validation Plan）。
+
+- Pipeline：Analyzer → Planner → Research Tasks → Synthesis → Scoring → Validation Plan → Final Summary（7 阶段）
+- Evidence First：`FACT / AI_INFERENCE / ASSUMPTION / NEEDS_VALIDATION`；FACT 必须有可验证来源（当前仅 USER_PROVIDED），否则自动降级
+- ResearchSource 抽象：`USER_PROVIDED / EXTERNAL_WEB / OFFICIAL_SOURCE / PLATFORM_DATA / UPLOADED_DOCUMENT`（后四者为未来扩展）
+- 评分：AI 只出提案，`overall_score` 由确定性函数计算，带版本（Score v1/v2/v3…）
+- 所有 AI 调用经 V0.2 Gateway（服务端 `/api/ai` 代理，Key 不出服务端）
+- 无真实 Web Search；缺少外部证据的结论明确标注「当前结论缺少外部证据，需要验证」
+- UI：商机详情页新增「开始 AI 研究」与结构化报告渲染（未改动首页/导航/训练页）
+
+```bash
+pnpm test                 # 全部单元测试（AI + 研究引擎，无需 Key）
+pnpm test:research-live   # 真实端到端研究（需 .env.local Key；OpenAI 无余额自动降级 DeepSeek）
+```

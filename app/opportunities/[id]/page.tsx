@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { ResearchPanel } from "@/components/research/ResearchPanel";
+import { readResearchRunSync } from "@/lib/research";
 import { Card } from "@/components/ui/Card";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import { ScoreBar } from "@/components/ui/ScoreBar";
@@ -23,6 +25,12 @@ export default function OpportunityDetailPage() {
   const opportunity = useLocalData(
     useCallback(() => findOpportunity(idStr), [idStr]),
     mockOpportunities.find((o) => o.id === idStr),
+  );
+
+  // 商机研究运行（V0.3-A）：localStorage 存储，完成后经 storage 事件自动刷新
+  const researchRun = useLocalData(
+    useCallback(() => readResearchRunSync(idStr), [idStr]),
+    undefined,
   );
 
   if (!opportunity) {
@@ -100,18 +108,8 @@ export default function OpportunityDetailPage() {
         )}
       </Card>
 
-      {/* 未来：AI 研究报告占位 */}
-      <Card className="mt-3 border-dashed">
-        <div className="flex items-center gap-2">
-          <FileText className="size-4 text-slate-400" />
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-            AI 研究报告（未来版本）
-          </h3>
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-          V0.1 暂不生成报告。下一阶段将由 Research Agent 自动产出：市场分析、用户洞察、竞品拆解、商业模式、单位经济模型与风险清单。
-        </p>
-      </Card>
+      {/* 商机研究（V0.3-A）：结构化研究报告 */}
+      <ResearchPanel opportunity={opportunity} run={researchRun} />
     </div>
   );
 }
