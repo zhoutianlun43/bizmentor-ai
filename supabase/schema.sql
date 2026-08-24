@@ -30,19 +30,21 @@ create index if not exists opportunities_created_at_idx on public.opportunities 
 -- 研究运行（research_runs）
 -- -------------------------------------------------------------
 create table if not exists public.research_runs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid(),
-  opportunity_id uuid not null references public.opportunities (id) on delete cascade,
-  status text not null default 'running',       -- running | completed | degraded | failed
-  stages jsonb not null default '[]'::jsonb,    -- StageRun[]
-  findings jsonb not null default '[]'::jsonb,  -- ResearchFinding[]
+  id uuid primary key default gen_random_uuid(), -- 内部主键
+  run_id text not null,                          -- 应用侧 runId（字符串）
+  user_id text not null default 'local-user',    -- 单用户阶段固定；Auth 接入后改为 auth.uid()
+  opportunity_id text not null,                  -- 应用侧 opportunityId（字符串，非 uuid）
+  status text not null default 'running',        -- running | completed | degraded | failed
+  stages jsonb not null default '[]'::jsonb,     -- StageRun[]
+  findings jsonb not null default '[]'::jsonb,   -- ResearchFinding[]
   score_history jsonb not null default '[]'::jsonb, -- ScoreVersion[]
   source_documents jsonb not null default '[]'::jsonb,
-  evidence_validation jsonb,                    -- CrossValidationResult
-  report jsonb,                                 -- ResearchReport
-  error jsonb,                                  -- { stage, type, message }
+  evidence_validation jsonb,                     -- CrossValidationResult
+  report jsonb,                                  -- ResearchReport
+  error jsonb,                                   -- { stage, type, message }
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (user_id, opportunity_id)               -- 每用户每商机一份研究（upsert 冲突键）
 );
 
 create index if not exists research_runs_user_id_idx on public.research_runs (user_id);

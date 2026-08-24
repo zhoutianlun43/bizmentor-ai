@@ -5,6 +5,8 @@ export { runResearchPipeline } from "./pipeline";
 export type { PipelineOptions } from "./pipeline";
 export { ResearchService } from "./service";
 export { LocalResearchRepository, createBrowserResearchStorage, createMemoryResearchStorage, readResearchRunSync } from "./repository";
+export { SupabaseResearchRepository, SupabaseRepositoryError } from "./supabase-repository";
+export type { SupabaseResearchRepositoryOptions } from "./supabase-repository";
 export type { ResearchRepository, ResearchStorage } from "./repository";
 export { createApiRunAi } from "./api-runai";
 export type { RunAiFn } from "./ai-call";
