@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "icons": "node scripts/generate-icons.mjs",
-    "test": "tsc -p tsconfig.test.json && node --test \".test-dist/lib/ai/tests/*.test.js\" \".test-dist/lib/research/tests/*.test.js\" \".test-dist/lib/decision/tests/*.test.js\" \".test-dist/lib/supabase/tests/*.test.js\" \".test-dist/lib/opportunity/tests/*.test.js\"",
+    "test": "tsc -p tsconfig.test.json && node --test \".test-dist/lib/ai/tests/*.test.js\" \".test-dist/lib/research/tests/*.test.js\" \".test-dist/lib/decision/tests/*.test.js\" \".test-dist/lib/supabase/tests/*.test.js\" \".test-dist/lib/opportunity/tests/*.test.js\" \".test-dist/lib/opportunity/hooks/*.test.js\" \".test-dist/lib/repository/tests/*.test.js\"",
     "test:smoke": "tsc -p tsconfig.test.json && node .test-dist/lib/ai/tests/smoke.live.js",
     "test:research-live": "tsc -p tsconfig.test.json && node .test-dist/lib/research/tests/research.live.js"
   },
@@ -25,8 +25,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-test-renderer": "19.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
+    "react-test-renderer": "19.2.8",
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
     "typescript": "^5"

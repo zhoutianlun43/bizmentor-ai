@@ -9,9 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { useLocalData } from "@/lib/hooks/use-local-data";
-import { mockOpportunities } from "@/lib/data/mock/opportunities";
-import { loadOpportunities } from "@/lib/store/opportunity-store";
+import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
 import type { Opportunity } from "@/lib/types";
@@ -36,7 +34,7 @@ function applyFilter(list: Opportunity[], filter: Filter): Opportunity[] {
 }
 
 export default function OpportunitiesPage() {
-  const list = useLocalData(loadOpportunities, mockOpportunities);
+  const { opportunities: list, loading, error } = useOpportunities();
   const [filter, setFilter] = useState<Filter>("all");
 
   const filtered = useMemo(() => applyFilter(list, filter), [list, filter]);
@@ -75,7 +73,11 @@ export default function OpportunitiesPage() {
       </div>
 
       {/* 列表 */}
-      {filtered.length === 0 ? (
+      {loading && list.length === 0 ? (
+        <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">加载中…</p>
+      ) : error ? (
+        <p className="mt-6 text-center text-xs text-rose-500" role="alert">{error}</p>
+      ) : filtered.length === 0 ? (
         <div className="mt-6">
           <EmptyState
             icon={Sparkles}

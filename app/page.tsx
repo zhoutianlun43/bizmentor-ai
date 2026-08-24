@@ -5,12 +5,11 @@ import { AbilityOverviewCard } from "@/components/home/AbilityOverviewCard";
 import { CurrentProjectCard } from "@/components/home/CurrentProjectCard";
 import { DailyOpportunityCard } from "@/components/home/DailyOpportunityCard";
 import { DailyTrainingCard } from "@/components/home/DailyTrainingCard";
-import { useLocalData } from "@/lib/hooks/use-local-data";
 import { mockMentorProfile } from "@/lib/data/mock/mentor";
 import { mockOpportunities } from "@/lib/data/mock/opportunities";
 import { mockProjects } from "@/lib/data/mock/projects";
 import { mockTrainingQuestions } from "@/lib/data/mock/training";
-import { loadOpportunities } from "@/lib/store/opportunity-store";
+import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { getGreeting } from "@/lib/utils/format";
 import type { Opportunity, Project, TrainingQuestion } from "@/lib/types";
 
@@ -46,7 +45,7 @@ function pickTopOpportunity(list: Opportunity[]): Opportunity {
 
 export default function HomePage() {
   // 服务端/首次渲染用 mock 兜底；hydration 后自动切换为本地真实数据
-  const opportunities = useLocalData(loadOpportunities, mockOpportunities);
+  const { opportunities } = useOpportunities();
   const fallbacks = pickFallbacks();
   const dailyOpportunity =
     opportunities.length > 0 ? pickTopOpportunity(opportunities) : fallbacks.dailyOpportunity;

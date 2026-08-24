@@ -14,8 +14,7 @@ import { ScoreBar } from "@/components/ui/ScoreBar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useLocalData } from "@/lib/hooks/use-local-data";
 import { OPPORTUNITY_SOURCE_LABELS } from "@/lib/constants";
-import { mockOpportunities } from "@/lib/data/mock/opportunities";
-import { findOpportunity } from "@/lib/store/opportunity-store";
+import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { formatDate } from "@/lib/utils/format";
 
 /** 商机详情 / 完整报告占位（V0.1 展示本地数据，AI 报告由未来 Agent 生成） */
@@ -23,16 +22,23 @@ export default function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
   const idStr = String(id);
 
-  const opportunity = useLocalData(
-    useCallback(() => findOpportunity(idStr), [idStr]),
-    mockOpportunities.find((o) => o.id === idStr),
-  );
+  const { opportunities, loading } = useOpportunities();
+  const opportunity = opportunities.find((o) => o.id === idStr);
 
   // 商机研究运行（V0.3-A）：localStorage 存储，完成后经 storage 事件自动刷新
   const researchRun = useLocalData(
     useCallback(() => readResearchRunSync(idStr), [idStr]),
     undefined,
   );
+
+  if (loading) {
+    return (
+      <div className="px-5 pb-4">
+        <AppHeader title="商机详情" />
+        <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">加载中…</p>
+      </div>
+    );
+  }
 
   if (!opportunity) {
     return (

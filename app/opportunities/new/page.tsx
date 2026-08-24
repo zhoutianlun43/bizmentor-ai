@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SelectField, TextArea, TextField } from "@/components/ui/FormField";
-import { addOpportunity } from "@/lib/store/opportunity-store";
+import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import type { OpportunitySource } from "@/lib/types";
 
 /** 新增商机：V0.1 保存到本地 mock 数据（localStorage），未来接入 Supabase */
@@ -18,13 +18,19 @@ export default function NewOpportunityPage() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const { create } = useOpportunities();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim() || !description.trim()) {
       setError("请填写商机名称与一句话描述");
       return;
     }
-    addOpportunity({ name, description, source, notes });
+    const created = await create({ name, description, source, notes });
+    if (!created) {
+      setError("保存失败，请重试");
+      return;
+    }
     router.push("/opportunities");
   }
 

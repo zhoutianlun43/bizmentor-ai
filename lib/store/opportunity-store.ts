@@ -1,4 +1,4 @@
-import { mockOpportunities } from "@/lib/data/mock/opportunities";
+import { mockOpportunities } from "../data/mock/opportunities";
 import { readJSON, writeJSON, uid } from "./storage";
 import type { Opportunity, OpportunityInput } from "@/lib/types";
 
