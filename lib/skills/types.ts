@@ -3,6 +3,7 @@
  * Skill 不是新的业务逻辑：Skill 是 Agent 调用现有 Engine/Memory 的业务能力封装。
  */
 import type { AgentContext } from "../agent/types";
+import type { BusinessOSContext } from "../context/types";
 import type { MemoryEngine } from "../memory/service";
 import type { KnowledgeEngine } from "../knowledge/knowledge-engine";
 import type { DecisionMemoryRecord, MemoryPattern } from "../memory/types";
@@ -35,6 +36,9 @@ export interface SkillOutput {
 }
 
 /** 可插拔商业技能 */
+/** Skill 执行上下文：AgentContext + 统一经营上下文（只读；Skill 不得修改 Profile/Knowledge） */
+export type SkillRunContext = AgentContext & { businessContext: BusinessOSContext };
+
 export interface BizSkill {
   id: string;
   name: string;
@@ -42,7 +46,7 @@ export interface BizSkill {
   domain: string;
   /** 依赖的工具 id（信息性，供 Agent 路由） */
   requiredTools: string[];
-  run(context: AgentContext, input: unknown): Promise<SkillOutput>;
+  run(context: SkillRunContext, input: unknown): Promise<SkillOutput>;
 }
 
 /** 选品分析输入 */

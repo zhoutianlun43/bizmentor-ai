@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.5.0 Phase 10A-1/2**（Personal Business OS 数据基础：Personal Profile + Business Profile）
+- **V0.5.0 Phase 10A-3**（Business Context Layer：统一经营上下文入口）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -52,7 +52,8 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/pwa | **PWA Manifest 共享源 + sw.js（离线/重同步）** | **9B-5** |
 | lib/identity/auth | AuthIdentityProvider（Auth Ready，fallback local-user） | 9B-5 |
 | lib/profile | **Personal Profile（用户是谁：名称/时区/语言/偏好）** | **10A-1（本阶段）** |
-| lib/business | **Business Profile（经营世界：名称/描述/businessTypes）** | **10A-2（本阶段）** |
+| lib/business | Business Profile（经营世界：名称/描述/businessTypes） | 10A-2 |
+| lib/context | **Business Context Layer（BusinessOSContext + Builder）** | **10A-3（本阶段）** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -104,7 +105,8 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - ~~9B-3~~ ✅ Skill System：可插拔技能（选品/竞品）+ skill_tool（已完成）
 - ~~9B-4~~ ✅ Personal Knowledge：用户长期认知（AI 候选 → 用户确认 → 进入 Context）（已完成）
 - ~~9B-5~~ ✅ Multi Device Foundation：Auth Ready + Settings + PWA + Sync（已完成）
-- ~~10A-1/2~~ ✅ Personal/Business Profile 数据基础层（已完成；10A-3+ 待用户补充任务说明）
+- ~~10A-1/2~~ ✅ Personal/Business Profile 数据基础层（已完成）
+- ~~10A-3~~ ✅ Business Context Layer：统一经营上下文（Agent Runtime + Skill 接入）（已完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -186,3 +188,13 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **测试**：270/270（新增 4：Profile CRUD + Supabase mock、Business CRUD + Supabase mock）。
 - **注意**：原任务消息在 10A-2 businessTypes 示例后截断，10A-3+ 子任务待用户补充。
 - **下一阶段（待确认）**：10A-3+（用户补充）；预期方向：Profile 上云、Agent Context 集成、Domain Plugin 骨架。
+
+---
+
+## 16. V0.5.0 Phase 10A-3 完成记录（Business Context Layer）
+
+- **lib/context/**：BusinessOSContext（userId/personalProfile/businessProfile/confirmedKnowledge/memoryPatterns/activeProjects/preferences/updatedAt）+ BusinessContextBuilder（聚合 Profile/Knowledge(仅 confirmed)/Memory/Repository 当前业务状态）+ ContextRepository（Local 实现；Supabase business_context_snapshots 预留，不建真实表）。
+- **Agent Runtime 接入**：AgentContext 增加 businessContext；恢复流程升级为 Identity → BusinessContextBuilder → AgentContext（换设备/重开 App 可恢复完整经营状态）。
+- **Skill 接入**：SkillRunContext = AgentContext & { businessContext }（只读；Skill 不得修改 Profile/Knowledge）。
+- **测试**：277/277（新增 7：Profile 聚合 / confirmed 过滤 / Memory 注入 / Agent Runtime 恢复 / Skill 读取 / Local / Supabase Mock）。
+- **下一阶段（建议）**：10A-4+ 待用户补充；候选方向：context 上云快照、Domain Plugin 骨架、Profile 接入 UI。

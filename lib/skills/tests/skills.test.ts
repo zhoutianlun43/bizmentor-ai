@@ -28,6 +28,7 @@ function makeContext(): AgentContext {
     memoryPatterns: [],
     recentEvents: [],
     knowledgeRecords: [],
+    businessContext: { userId: "test-user", personalProfile: null, businessProfile: null, confirmedKnowledge: [], memoryPatterns: [], activeProjects: [], preferences: {}, updatedAt: NOW },
     createdAt: NOW,
   };
 }

@@ -9,6 +9,7 @@ import type { UserDecision, LearningEvent } from "../decision/types";
 import type { PlanStatus, TaskExecutionSummary } from "../decision/execution";
 import type { MemoryPattern } from "../memory/types";
 import type { KnowledgeRecord } from "../knowledge/types";
+import type { BusinessOSContext } from "../context/types";
 import type { AgentEventType } from "./events";
 
 /** 触发来源 */
@@ -52,6 +53,8 @@ export interface AgentContext {
   recentEvents: LearningEvent[];
   /** V0.4.2 Phase 9B-4：已确认的个人长期知识（用户是谁/如何判断） */
   knowledgeRecords: KnowledgeRecord[];
+  /** V0.5.0 Phase 10A-3：统一经营上下文（用户是谁/经营什么/经验/历史/状态） */
+  businessContext: BusinessOSContext;
   createdAt: string;
 }
 

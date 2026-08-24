@@ -10,6 +10,8 @@ import type { KnowledgeEngine } from "../knowledge/knowledge-engine";
 import type { OpportunityRepository } from "../opportunity/repository";
 import type { DecisionRepository } from "../decision/repository";
 import type { MemoryPattern } from "../memory/types";
+import { BusinessContextBuilder } from "../context/context-builder";
+import type { BusinessOSContext } from "../context/types";
 import type { AgentContext, ExecutionSummarySnapshot } from "./types";
 
 export interface ContextRecoveryDeps {
@@ -25,6 +27,8 @@ export interface ContextRecoveryDeps {
   activeOpportunityId?: string;
   /** 主动决策 id */
   activeDecisionId?: string;
+  /** 统一经营上下文构建器（V0.5.0 Phase 10A-3；缺省构建最小上下文） */
+  contextBuilder?: BusinessContextBuilder;
 }
 
 /** 从 Repository/Memory/Execution 恢复 Agent 上下文 */
@@ -68,6 +72,23 @@ export async function recoverContext(deps: ContextRecoveryDeps): Promise<AgentCo
   // V0.4.2 Phase 9B-4：只加载已确认 Knowledge（未确认不影响核心决策）
   const knowledgeRecords = deps.knowledge ? await deps.knowledge.confirmed() : [];
 
+  // V0.5.0 Phase 10A-3：统一经营上下文（Identity → BusinessContextBuilder → AgentContext）
+  let businessContext: BusinessOSContext;
+  if (deps.contextBuilder) {
+    businessContext = await deps.contextBuilder.build();
+  } else {
+    businessContext = {
+      userId: identity.userId,
+      personalProfile: null,
+      businessProfile: null,
+      confirmedKnowledge: [],
+      memoryPatterns,
+      activeProjects: [],
+      preferences: {},
+      updatedAt: createdAt,
+    };
+  }
+
   return {
     userId: identity.userId,
     identity,
@@ -77,6 +98,7 @@ export async function recoverContext(deps: ContextRecoveryDeps): Promise<AgentCo
     memoryPatterns,
     recentEvents,
     knowledgeRecords,
+    businessContext,
     createdAt,
   };
 }
