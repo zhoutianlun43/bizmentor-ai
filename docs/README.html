@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>README</title>
+<style>
+  body{font-family:"Microsoft YaHei",-apple-system,sans-serif;max-width:860px;margin:0 auto;padding:32px 20px;color:#1f2937;line-height:1.7;background:#fff}
+  h1{border-bottom:2px solid #4f46e5;padding-bottom:10px;color:#111827}
+  h2{margin-top:36px;border-left:4px solid #4f46e5;padding-left:10px;color:#111827}
+  h3{margin-top:24px;color:#1f2937}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid #d1d5db;padding:6px 10px;text-align:left}
+  th{background:#eef2ff}
+  code{background:#f3f4f6;padding:2px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;overflow:auto;font-size:13px}
+  blockquote{border-left:4px solid #9ca3af;margin:12px 0;padding:4px 14px;color:#4b5563;background:#f9fafb}
+  hr{border:none;border-top:1px solid #e5e7eb;margin:28px 0}
+</style></head>
+<body><h1>BizMentor 文档总目录（docs/）</h1>
+<blockquote>
+<p>所有文档均为双版本：<code>.md</code>（文件查看）+ <code>.html</code>（双击浏览器打开）。<br>配合 <code>outputs/README.md</code>（阶段报告索引）与 <code>BizMentor-Portable-完整知识包.zip</code>（便携完整包）使用。</p>
+</blockquote>
+<h2>📌 核心文档（4 份，最重要）</h2>
+<table>
+<thead>
+<tr>
+<th>文档</th>
+<th>内容</th>
+<th>什么时候读</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>BizMentor-Master.md / .html</strong></td>
+<td>完整项目圣经：架构/数据模型/AI/研究/决策/记忆/知识/Agent/Skill/产品/部署/规范/阶段史/未完成</td>
+<td><strong>任何 AI / 任何人接手，第一个读它</strong></td>
+</tr>
+<tr>
+<td><strong>bizmentor-manifest.json</strong></td>
+<td>机器可读清单：模块/关键文件/表/路由/环境变量/命令</td>
+<td>AI 程序化索引</td>
+</tr>
+<tr>
+<td><strong>BizMentor-System-State.md / .html</strong></td>
+<td>当前状态 + 开发规则 + 最近 Phase 记录（唯一事实来源）</td>
+<td>每次开发前后同步</td>
+</tr>
+<tr>
+<td><strong>BizMentor-Asset-Inventory.md / .html</strong></td>
+<td>所有资产位置：代码/部署/数据库/环境变量/存储地图/风险</td>
+<td>找东西时读</td>
+</tr>
+</tbody></table>
+<h2>🧭 阅读顺序（新 AI 接手）</h2>
+<pre><code>1. BizMentor-Master.md      → 完完整整了解项目
+2. BizMentor-System-State.md → 当前状态 + 规则
+3. bizmentor-manifest.json  → 机器清单（可选）
+4. BizMentor-Asset-Inventory.md → 资产在哪
+5. outputs/README.md        → 按需翻历史报告
+</code></pre>
+<h2>📦 便携完整包</h2>
+<p><code>outputs/BizMentor-Portable-完整知识包.zip</code> = 以上全部 + 代码 bundle（<code>git clone bizmentor.bundle</code> 恢复完整历史）。</p>
+<h2>📁 相关位置</h2>
+<ul>
+<li>阶段报告（41 份，V0.1→V0.7）：<code>outputs/README.md</code></li>
+<li>产品截图：<code>outputs/screenshots/</code></li>
+<li>代码：<code>bizmentor-ai/</code>（GitHub 私有仓 zhoutianlun43/bizmentor-ai）</li>
+</ul>
+</body></html>
