@@ -11,7 +11,7 @@ import type { MemoryPattern } from "../memory/types";
 import type { AgentEventType } from "./events";
 
 /** 触发来源 */
-export type AgentTrigger = "user" | "scheduled" | "event" | "manual";
+export type AgentTrigger = "user" | "scheduled" | "event" | "manual" | "skill";
 
 /** Agent 生命周期状态 */
 export type AgentLifecycleState =
@@ -90,6 +90,10 @@ export interface AgentRun {
   memoryWrites?: number;
   /** V0.4.2 Phase 9B-2：耗时（ms） */
   duration?: number;
+  /** V0.4.2 Phase 9B-3：本次运行调用的技能 id */
+  skillsUsed?: string[];
+  /** V0.4.2 Phase 9B-3：技能结果摘要 */
+  skillResults?: Array<{ skillId: string; summary: string; createdAt: string }>;
 }
 
 /** Agent Run 输入（用户/调度传入） */
@@ -106,4 +110,7 @@ export interface AgentRunInput {
   loopType?: AgentRun["loopType"];
   /** V0.4.2 Phase 9B-2：记忆写入次数（工具可上报） */
   memoryWrites?: number;
+  /** V0.4.2 Phase 9B-3：便捷调用技能（等价于 skill_tool） */
+  skill?: string;
+  skillInput?: unknown;
 }

@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.4.2 Phase 9B-2**（Business Operating Loop：晨报 / 日间监控 / 晚报 + Scheduler + Event）
+- **V0.4.2 Phase 9B-3**（Skill System：可插拔商业技能 + AgentRuntime skill_tool）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -44,7 +44,8 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/agent | Agent Runtime（生命周期/工具/上下文/审计） | 9B-1 |
 | lib/agent/loops | **Business Operating Loop（晨报/异常检测/晚报）** | **9B-2（本阶段）** |
 | lib/agent/scheduler | **Agent Scheduler（App 打开/手动/测试触发）** | **9B-2** |
-| lib/agent/events | **Agent Event 总线（旁路 emit/subscribe）** | **9B-2** |
+| lib/agent/events | Agent Event 总线（旁路 emit/subscribe） | 9B-2 |
+| lib/skills | **Skill System（BizSkill/Registry/选品/竞品）** | **9B-3（本阶段）** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -93,6 +94,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 ## 9. 下一阶段计划
 
 - ~~9B-2~~ ✅ Operating Loop：晨报/日间监控/晚报 + Scheduler + Event（已完成）
+- ~~9B-3~~ ✅ Skill System：可插拔技能（选品/竞品）+ skill_tool（已完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -124,3 +126,17 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **Agent 主动能力**：晨报（今日状态/异常/建议/记忆洞察）；日间监控（异常检测 + 严重度排序）；晚报（复盘 + 决策对照 AI vs 用户 vs 实际 + 经验 + 明日动作）
 - **当前限制**：Scheduler 仅 App 打开/手动/测试触发（无服务器 7×24）；晨报/晚报为确定性生成（AI 文案增强未做）；Loop 产出暂不落库（调用方保存）
 - **测试**：243/243 通过（新增 6：晨报/异常/晚报/Scheduler/Event/Runtime 调用 Loop）
+
+---
+
+## 12. Phase 9B-3 完成记录（Skill System）
+
+- **Skill 架构**：`lib/skills/` —— BizSkill 接口（id/name/description/domain/requiredTools/run）+ SkillRegistry（动态注册/唯一 id/重复报错/invokeSkill）+ SkillOutput（summary/structured/actions/evidence/createdAt）+ researchToSkillResult 适配器。
+- **已实现技能**：
+  - `product_selection`（选品分析助手）：Research + Domain(ecommerce) + Memory.similar（历史成功/失败案例注入）→ 市场机会/用户需求/竞争/风险/建议动作/历史案例
+  - `competitor_analysis`（竞品拆解助手）：Research + External + Memory 模式 → 定位/定价/内容/流量/优势/弱点/可复制策略
+- **AgentRuntime 集成**：`skill_tool` + `agent.run("skill", { skill, input })` 便捷调用；AgentRun 扩展 skillsUsed / skillResults。
+- **数据流**：AgentRuntime → SkillRegistry → Skill → Engine Tools（research/memory）→ SkillOutput → AgentRun 审计。
+- **原则**：Skill 不复制引擎逻辑，只编排；未注入 research 时诚实标记「需研究验证」，不伪造来源。
+- **测试**：249/249（新增 6：Registry/调用/product_selection/competitor_analysis/Memory 注入/AgentRuntime 调用技能）。
+- **下一阶段**：9B-4 Personal Knowledge（习惯/判断/经验/案例）→ 9B-5 多端就绪（PWA）。

@@ -70,9 +70,13 @@ export class AgentRuntime {
       const ctx = await recoverContext(this.contextDeps);
       run.userId = ctx.userId;
 
-      // 2) planning：选择工具
+      // 2) planning：选择工具（input.skill 便捷 → 走 skill_tool）
       this.lifecycle.transition("planning");
-      const toolIds = input.tools && input.tools.length > 0 ? input.tools : this.registry.list().map((t) => t.id);
+      const effectiveTools = input.skill ? ["skill_tool"] : input.tools && input.tools.length > 0 ? input.tools : this.registry.list().map((t) => t.id);
+      const effectiveArgs = input.skill
+        ? { ...(input.args ?? {}), skill_tool: { skill: input.skill, input: input.skillInput ?? input.args?.skill_tool } }
+        : input.args;
+      const toolIds = effectiveTools;
       const selected = toolIds.map((id) => {
         const tool = this.registry.get(id);
         if (!tool) throw new Error(`未知工具：${id}`);
@@ -85,8 +89,8 @@ export class AgentRuntime {
       for (const tool of selected) {
         const toolStart = Date.now();
         try {
-          const result = await tool.execute(ctx, input.args?.[tool.id]);
-          run.toolsUsed.push({ toolId: tool.id, input: input.args?.[tool.id] ?? null, result, durationMs: Date.now() - toolStart });
+          const result = await tool.execute(ctx, effectiveArgs?.[tool.id]);
+          run.toolsUsed.push({ toolId: tool.id, input: effectiveArgs?.[tool.id] ?? null, result, durationMs: Date.now() - toolStart });
           outputs[tool.id] = result;
         } catch (error) {
           run.toolsUsed.push({
@@ -99,8 +103,16 @@ export class AgentRuntime {
         }
       }
 
-      // 4) observing：汇总工具结果
+      // 4) observing：汇总工具结果 + 技能记录
       this.lifecycle.transition("observing");
+      const skillCall = run.toolsUsed.find((t) => t.toolId === "skill_tool");
+      if (skillCall?.result) {
+        const { skill, output } = skillCall.result as { skill?: string; output?: { summary?: string; createdAt?: string } };
+        if (skill) {
+          run.skillsUsed = [skill];
+          run.skillResults = [{ skillId: skill, summary: output?.summary ?? "", createdAt: output?.createdAt ?? new Date().toISOString() }];
+        }
+      }
       const observation = { toolCount: selected.length, outputs };
 
       // 5) reflecting：生成最终结果
