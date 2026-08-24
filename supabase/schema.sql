@@ -189,7 +189,11 @@ create table if not exists public.ai_usage (
 create index if not exists ai_usage_created_at_idx on public.ai_usage (created_at desc);
 
 -- -------------------------------------------------------------
--- Row Level Security（多用户就绪）
+-- Row Level Security（单用户，无 Auth）
+-- -------------------------------------------------------------
+-- 当前个人使用：不接 Auth，固定 user_id = 'local-user'，
+-- 所有业务表允许（anon / service role）对 user_id='local-user' 的行进行读写。
+-- 未来接入 Auth 后：把策略改为 using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id)。
 -- -------------------------------------------------------------
 alter table public.opportunities enable row level security;
 alter table public.research_runs enable row level security;
@@ -200,21 +204,19 @@ alter table public.validation_results enable row level security;
 alter table public.learning_events enable row level security;
 alter table public.ai_usage enable row level security;
 
--- 业务表：用户只能访问自己的数据（service role 自动绕过 RLS）
-create policy "own opportunities" on public.opportunities
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own research_runs" on public.research_runs
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own decisions" on public.decisions
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own decision_reviews" on public.decision_reviews
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own validation_plans" on public.validation_plans
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own validation_results" on public.validation_results
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own learning_events" on public.learning_events
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "single user opportunities" on public.opportunities
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+create policy "single user research_runs" on public.research_runs
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+create policy "single user decisions" on public.decisions
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+create policy "single user decision_reviews" on public.decision_reviews
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+create policy "single user validation_plans" on public.validation_plans
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+create policy "single user validation_results" on public.validation_results
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+create policy "single user learning_events" on public.learning_events
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
 
--- ai_usage：不开放 anon 策略（仅 service role 写入/读取）
--- create policy "no anon ai_usage" ... （默认拒绝即可）
+-- ai_usage：不开放 anon 策略（仅 service role 写入/读取，service role 自动绕过 RLS）
