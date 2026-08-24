@@ -10,6 +10,8 @@ import { KnowledgeEngine } from "@/lib/knowledge";
 import { LocalKnowledgeRepository } from "@/lib/knowledge/repository";
 import { MemoryEngine } from "@/lib/memory";
 import { LocalMemoryRepository } from "@/lib/memory/repository";
+import { LocalConversationRepository, createBrowserConversationStorage } from "@/lib/conversation";
+import { uid } from "@/lib/store/storage";
 import type { BusinessOSContext } from "@/lib/context/types";
 
 interface Msg {
@@ -17,14 +19,23 @@ interface Msg {
   content: string;
 }
 
-/** AI 对话页（V0.6.0 MVP）：Chat → /api/chat → LLM（自动加载 BusinessContext） */
+interface Candidate {
+  type: string;
+  content: string;
+}
+
+/** AI 对话页（V0.6.1）：历史持久化 + BusinessContext + AI 认知候选确认 */
 export default function ChatPage() {
+  const [convoRepo] = useState(() => new LocalConversationRepository(createBrowserConversationStorage()));
   const [context, setContext] = useState<BusinessOSContext | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [savedCandidate, setSavedCandidate] = useState(false);
 
+  // 恢复上下文 + 最近会话
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -38,14 +49,34 @@ export default function ChatPage() {
         });
         const ctx = await builder.build();
         if (!cancelled) setContext(ctx);
+        const conversations = await convoRepo.list("local-user");
+        const latest = conversations[0];
+        if (latest && latest.messages.length > 0 && !cancelled) {
+          setMessages(latest.messages.map((m) => ({ role: m.role, content: m.content })));
+        }
       } catch {
-        // 上下文构建失败不影响对话
+        // 忽略：上下文/历史失败不影响对话
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [convoRepo]);
+
+  const persist = useCallback(
+    async (next: Msg[]) => {
+      const now = new Date().toISOString();
+      const list = await convoRepo.list("local-user");
+      let convo = list[0];
+      if (!convo) {
+        convo = { id: uid(), userId: "local-user", messages: [], createdAt: now, updatedAt: now };
+      }
+      convo.messages = next.map((m) => ({ role: m.role, content: m.content, createdAt: now }));
+      convo.updatedAt = now;
+      await convoRepo.save(convo);
+    },
+    [convoRepo],
+  );
 
   const send = useCallback(async () => {
     const text = input.trim();
@@ -55,21 +86,56 @@ export default function ChatPage() {
     setInput("");
     setBusy(true);
     setError(null);
+    setCandidate(null);
+    setSavedCandidate(false);
     try {
+      // 历史摘要：只发送最近 10 条 + 首条摘要占位（避免过长）
+      const history: Msg[] = next.slice(-10);
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next, context }),
+        body: JSON.stringify({ messages: history, context }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? data.error ?? "请求失败");
-      setMessages((m) => [...m, { role: "assistant", content: data.content }]);
+      const withReply: Msg[] = [...next, { role: "assistant", content: data.content }];
+      setMessages(withReply);
+      await persist(withReply);
+      // 尝试提炼学习候选
+      try {
+        const kr = await fetch("/api/knowledge-candidate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: withReply }),
+        });
+        const kd = await kr.json();
+        if (kd.found && kd.content) setCandidate({ type: kd.type, content: kd.content });
+      } catch {
+        // 候选失败不影响对话
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "请求失败");
     } finally {
       setBusy(false);
     }
-  }, [input, busy, messages, context]);
+  }, [input, busy, messages, context, persist]);
+
+  async function confirmCandidate() {
+    if (!candidate) return;
+    const engine = new KnowledgeEngine(new LocalKnowledgeRepository());
+    await engine.save({
+      id: uid(),
+      userId: "local-user",
+      type: (candidate.type as "habit" | "judgment_style" | "industry_experience" | "success_case" | "failure_case") ?? "habit",
+      content: candidate.content,
+      tags: [],
+      source: "ai_suggestion",
+      confidence: 0.6,
+      confirmed: true,
+      createdAt: new Date().toISOString(),
+    });
+    setSavedCandidate(true);
+  }
 
   return (
     <div className="px-5 pb-4">
@@ -103,6 +169,15 @@ export default function ChatPage() {
         </div>
         {error && <p className="text-xs text-red-500">{error}</p>}
       </Card>
+
+      {candidate && !savedCandidate && (
+        <Card className="mt-3 border-amber-300">
+          <p className="text-xs text-slate-500">AI 发现一条可能值得记住的信息：</p>
+          <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">「{candidate.content}」</p>
+          <Button onClick={confirmCandidate} variant="secondary" size="sm" className="mt-2">确认加入 AI 认知</Button>
+        </Card>
+      )}
+      {savedCandidate && <p className="mt-2 text-xs text-emerald-600">已加入你的长期认知（可在「我的AI认知」查看）。</p>}
     </div>
   );
 }

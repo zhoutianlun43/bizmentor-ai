@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.6.0 MVP**（Product Layer：AI 对话 / Dashboard / 技能中心 / 我的AI认知 / LLM）
+- **V0.6.1 Product Usability**（Onboarding / 对话历史 / AI Daily Assistant / Chat 认知确认）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -56,7 +56,9 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/context | Business Context Layer（BusinessOSContext + Builder） | 10A-3 |
 | lib/llm | **LLM Provider 抽象（OpenAI-compatible + DeepSeek）** | **V0.6.0** |
 | app/chat · app/skills · app/knowledge | **MVP 产品页（对话/技能/知识）** | **V0.6.0** |
-| app/api/chat · skill · review | **MVP API（对话/技能/复盘）** | **V0.6.0** |
+| app/api/chat · skill · review · knowledge-candidate | MVP API（对话/技能/复盘/认知提炼） | V0.6.0/1 |
+| lib/conversation | **Conversation（聊天历史，Local 优先 + Supabase 预留）** | **V0.6.1** |
+| app/onboarding | **Onboarding（首次进入：个人+经营画像）** | **V0.6.1** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -110,7 +112,8 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - ~~9B-5~~ ✅ Multi Device Foundation：Auth Ready + Settings + PWA + Sync（已完成）
 - ~~10A-1/2~~ ✅ Personal/Business Profile 数据基础层（已完成）
 - ~~10A-3~~ ✅ Business Context Layer：统一经营上下文（Agent Runtime + Skill 接入）（已完成）
-- ~~V0.6.0 MVP~~ ✅ Product Layer：AI 对话 / Dashboard 今日状态 / 技能中心 / 我的AI认知 / Learning Center / LLM（第一批完成）
+- ~~V0.6.0 MVP~~ ✅ Product Layer：AI 对话 / Dashboard / 技能中心 / 我的AI认知 / LLM（已完成）
+- ~~V0.6.1~~ ✅ Product Usability：Onboarding / 对话历史 / AI Daily Assistant / Chat 认知确认（已完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -214,3 +217,14 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **Repository Provider**：新增 getProfileRepository / getBusinessRepository。
 - **测试**：283/283（新增 6：LLM Provider/HTTP 错误/getLlm/context 提示）。
 - **下一批**：/api/skill 深度研究接入（runResearch 真实 ResearchService）；聊天历史持久化；PWA 安装与生产部署验证。
+
+---
+
+## 18. V0.6.1 Product Usability 完成记录
+
+- **Onboarding**：/onboarding 首次进入表单（个人：称呼/地区/语言/身份；业务：类型/行业/产品/目标）→ 保存 Personal/Business Profile → 首页守卫跳转 → BusinessContext 自动生成。
+- **Conversation**：lib/conversation/（Conversation { id, userId, messages[], createdAt, updatedAt }，Local 优先 + Supabase 预留）；/chat 持久化历史 + 只发最近 10 条。
+- **AI Daily Assistant**：首页新增今日关注/风险/下一步 + 「为什么这样建议」展开来源（异常检测/历史模式/长期认知）。
+- **Chat 认知确认**：/api/knowledge-candidate（LLM 提炼用户信息）→ 对话中显示 [确认加入AI认知] → 用户确认后进入 Knowledge（AI 不自动学习）。
+- **测试**：285/285（新增 2：Conversation Local + Supabase mock）。
+- **验收**：pnpm test/lint/tsc/build 全部通过（20 路由）。
