@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { TextArea } from "@/components/ui/FormField";
 import { ResearchProgress } from "./ResearchProgress";
 import { ResearchReportView } from "./ResearchReportView";
-import { ResearchService, LocalResearchRepository, createApiRunAi, createExternalResearchApi } from "@/lib/research";
+import { ResearchService, createApiRunAi, createExternalResearchApi } from "@/lib/research";
+import { getResearchRepository } from "@/lib/repository/provider";
 import type { ResearchRun, StageRun } from "@/lib/research";
 import type { Opportunity } from "@/lib/types";
 
@@ -30,7 +31,7 @@ export function ResearchPanel({ opportunity, run }: ResearchPanelProps) {
     setError("");
     setStages([]);
     const service = new ResearchService({
-      repository: new LocalResearchRepository(),
+      repository: getResearchRepository(),
       runAi: createApiRunAi(),
       externalResearch: createExternalResearchApi(),
     });
