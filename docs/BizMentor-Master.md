@@ -211,7 +211,7 @@ node scripts/migrate-localstorage.ts --file X.json --dry-run  # 迁移 dry-run
 
 ## 17. 已知问题 / 未完成
 
-1. **无 git remote**（git 历史只在本机）——最优先修复
+1. ~~无 git remote~~ ✅ 已解决（GitHub 私有仓已推送）
 2. 新表未应用生产（profiles/business_profiles/memory_records/user_settings/conversations）
 3. 用户知识/对话/记忆在 localStorage（未上云，清缓存即丢）
 4. 无 SUPABASE_SERVICE_ROLE_KEY

@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.7.0 Product Release**（App Shell / 全流程闭环 / 已发布到 bizmentor.top）
+- **V0.7.0 Product Release + Git 远程备份**（App Shell / 全流程闭环 / 已推送 GitHub）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 

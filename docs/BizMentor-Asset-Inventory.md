@@ -13,9 +13,9 @@
 | 项目绝对路径 | `C:\Users\周天伦\Documents\Codex\2026-08-23\files-pasted-by-the-user-bizmentor\bizmentor-ai` |
 | 工作区父目录 | `C:\Users\周天伦\Documents\Codex\2026-08-23\files-pasted-by-the-user-bizmentor\`（outputs 报告、work 临时文件） |
 | Git 状态 | 工作树干净 |
-| Git remote | **无**（未配置任何远程仓库） |
+| Git remote | ✅ `https://github.com/zhoutianlun43/bizmentor-ai.git`（已配置并推送） |
 | 当前 branch | `master` |
-| 是否已推送远程 | **否**（git 历史只存在于本机） |
+| 是否已推送远程 | ✅ **是**（master 已推送到 GitHub，完全同步） |
 | package.json version | `0.1.0`（版本实际记录在 docs/BizMentor-System-State.md） |
 
 ### 最近 10 次 commit
@@ -163,14 +163,14 @@ ec1fa1b feat(knowledge): Personal Knowledge System (V0.4.2 9B-4)
 | 清浏览器缓存 | localStorage 全部（profiles 回退、knowledge、conversations、memory、settings、agentRuns、onboarded） | Supabase 云端数据 |
 
 ### 关键风险 TOP
-1. **🔴 无 git remote**：全部 git 历史只在本机。换电脑/磁盘损坏 = 源码+历史全丢（服务器只有无 .git 的代码副本）。
+1. **✅ 已解决：git remote 已配置并推送**（GitHub 私有仓 zhoutianlun43/bizmentor-ai）；换电脑可用 `git clone` 恢复全部源码+历史。
 2. **🔴 用户知识/对话/画像在 localStorage**：清缓存/换设备即丢（Profile 有本地回退，但 knowledge/conversations/memory 无云端表）。
 3. **🟠 新表未应用生产**：profiles/business_profiles/memory_records/user_settings/conversations 需在 Supabase 执行 schema.sql。
 4. **🟠 无 service role key**：ai_usage 等仅 service role 能力不可用。
 5. **🟡 package.json version 仍是 0.1.0**：版本号以 docs 为准，易混淆。
 
 ### 建议（非本次任务，供后续）
-- 立即配置 git remote（GitHub/Gitee 私有仓）并推送。
+- ~~立即配置 git remote~~ ✅ 已完成（GitHub zhoutianlun43/bizmentor-ai，已推送）。
 - 在 Supabase 应用新表；把 knowledge/conversations/settings 上云。
 - 定期备份 .env.local + localStorage（或用导出按钮）。
 
