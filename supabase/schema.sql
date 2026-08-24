@@ -220,3 +220,27 @@ create policy "single user learning_events" on public.learning_events
   for all using (user_id = 'local-user') with check (user_id = 'local-user');
 
 -- ai_usage：不开放 anon 策略（仅 service role 写入/读取，service role 自动绕过 RLS）
+
+-- -------------------------------------------------------------
+-- 商业记忆（memory_records，V0.4.1 Phase 8B-2：Cloud Memory Layer）
+-- 每条决策一条记忆；record jsonb 存 DecisionMemoryRecord 全文；user_id 单用户 RLS
+-- -------------------------------------------------------------
+create table if not exists public.memory_records (
+  id text primary key,
+  decision_id text not null unique,
+  user_id text not null default 'local-user',
+  opportunity_id text not null,
+  domain text,
+  outcome text,
+  record jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists memory_records_user_id_idx on public.memory_records (user_id);
+create index if not exists memory_records_domain_idx on public.memory_records (domain);
+create index if not exists memory_records_outcome_idx on public.memory_records (outcome);
+
+alter table public.memory_records enable row level security;
+create policy "single user memory_records" on public.memory_records
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');

@@ -7,6 +7,7 @@
  * 说明：生产接入 Supabase 读取需要 RLS/Auth 就绪（后续任务）；当前未配置时行为与现状一致。
  */
 import { env } from "../config/env";
+import { getCurrentUserId } from "../identity/resolver";
 import { getSupabaseBrowserClient } from "../supabase/client";
 import { LocalOpportunityRepository } from "../opportunity/local-repository";
 import { SupabaseOpportunityRepository } from "../opportunity/supabase-repository";
@@ -17,17 +18,21 @@ import type { ResearchRepository } from "../research/repository";
 import { SupabaseDecisionRepository } from "../decision/supabase-repository";
 import { LocalDecisionRepositoryWrapper } from "../decision/local-repository";
 import type { DecisionRepository } from "../decision/repository";
+import { SupabaseMemoryRepository } from "../memory/supabase-repository";
+import { LocalMemoryRepository } from "../memory/repository";
+import type { MemoryRepository } from "../memory/repository";
 
 let cachedOpportunity: OpportunityRepository | undefined;
 let cachedResearch: ResearchRepository | undefined;
 let cachedDecision: DecisionRepository | undefined;
+let cachedMemory: MemoryRepository | undefined;
 
 /** 获取商机仓库（进程内单例；便于测试注入） */
 export function getOpportunityRepository(): OpportunityRepository {
   if (cachedOpportunity) return cachedOpportunity;
   if (env.supabaseUrl && env.supabaseAnonKey) {
     cachedOpportunity = new SupabaseOpportunityRepository(getSupabaseBrowserClient(), {
-      userId: "local-user",
+      userId: getCurrentUserId(),
     });
   } else {
     cachedOpportunity = new LocalOpportunityRepository();
@@ -40,7 +45,7 @@ export function getResearchRepository(): ResearchRepository {
   if (cachedResearch) return cachedResearch;
   if (env.supabaseUrl && env.supabaseAnonKey) {
     cachedResearch = new SupabaseResearchRepository(getSupabaseBrowserClient(), {
-      userId: "local-user",
+      userId: getCurrentUserId(),
     });
   } else {
     cachedResearch = new LocalResearchRepositoryWrapper();
@@ -53,7 +58,7 @@ export function getDecisionRepository(): DecisionRepository {
   if (cachedDecision) return cachedDecision;
   if (env.supabaseUrl && env.supabaseAnonKey) {
     cachedDecision = new SupabaseDecisionRepository(getSupabaseBrowserClient(), {
-      userId: "local-user",
+      userId: getCurrentUserId(),
     });
   } else {
     cachedDecision = new LocalDecisionRepositoryWrapper();
@@ -66,4 +71,18 @@ export function __resetRepositories(): void {
   cachedOpportunity = undefined;
   cachedResearch = undefined;
   cachedDecision = undefined;
+  cachedMemory = undefined;
+}
+
+/** 获取记忆仓库（配置 Supabase → SupabaseMemoryRepository，否则 Local fallback） */
+export function getMemoryRepository(): MemoryRepository {
+  if (cachedMemory) return cachedMemory;
+  if (env.supabaseUrl && env.supabaseAnonKey) {
+    cachedMemory = new SupabaseMemoryRepository(getSupabaseBrowserClient(), {
+      userId: getCurrentUserId(),
+    });
+  } else {
+    cachedMemory = new LocalMemoryRepository();
+  }
+  return cachedMemory;
 }

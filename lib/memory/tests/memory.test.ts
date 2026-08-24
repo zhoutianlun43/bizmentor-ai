@@ -158,12 +158,12 @@ test("MemoryEngine：recordDecision 全链路（决策→评审→结果→评�
 
   // 重复 record → 覆盖（仍 1 条）
   await memory.recordDecision(decision.id);
-  assert.equal(memory.list().length, 1);
+  assert.equal((await memory.list()).length, 1);
 
   // 模式检索命中
-  const patterns = memory.retrieve({ decision: "validate" });
+  const patterns = await memory.retrieve({ decision: "validate" });
   assert.ok(patterns.length >= 1);
-  const similar = memory.similar({ name: "本地宠物洗护到家服务" });
+  const similar = await memory.similar({ name: "本地宠物洗护到家服务" });
   assert.ok(similar.length >= 1);
 });
 
@@ -175,10 +175,10 @@ test("MemoryEngine：archiveEvents + aggregates", async () => {
     { id: "e2", userId: "u", opportunityId: "o", skill: "validation", signal: "negative", severity: 0.4, evidence: "e", createdAt: NOW },
   ], new Map([["o", "ecommerce"]]));
   assert.equal(count, 2);
-  const archived = memory.listArchived("validation");
+  const archived = await memory.listArchived("validation");
   assert.equal(archived.length, 2);
   assert.equal(archived[0].domain, "ecommerce");
-  const agg = memory.aggregates();
+  const agg = await memory.aggregates();
   assert.equal(agg[0].positive, 1);
   assert.equal(agg[0].negative, 1);
 });

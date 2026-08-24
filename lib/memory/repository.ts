@@ -1,9 +1,9 @@
 /**
- * MemoryRepository（V0.4.1 Phase 8A）。
+ * MemoryRepository（V0.4.1 Phase 8B-2）。
  * 存储 Decision Memory 记录 + 归档学习事件。
  * - LocalMemoryRepository：localStorage（浏览器）/ 内存（测试）
- * - 未来 Supabase：实现本接口（需新增表，暂缓，避免 schema 改动）
- * 存储键：bizmentor:v1:memory（jsonb 等价，纯前端）
+ * - SupabaseMemoryRepository：memory_records 表 + learning_events（云端，另文件）
+ * 接口统一为异步（对齐 Decision/Opportunity/Research 仓库）。
  */
 import { readJSON, writeJSON } from "../store/storage";
 import { mergeArchivedEvents } from "./archive";
@@ -23,12 +23,12 @@ export interface MemoryStorage {
 }
 
 export interface MemoryRepository {
-  load(): MemoryStore;
-  saveRecords(records: DecisionMemoryRecord[]): void;
-  listRecords(): DecisionMemoryRecord[];
-  archive(events: ArchivedLearningEvent[]): void;
-  listArchived(): ArchivedLearningEvent[];
-  clear(): void;
+  load(): Promise<MemoryStore>;
+  saveRecords(records: DecisionMemoryRecord[]): Promise<void>;
+  listRecords(): Promise<DecisionMemoryRecord[]>;
+  archive(events: ArchivedLearningEvent[]): Promise<void>;
+  listArchived(): Promise<ArchivedLearningEvent[]>;
+  clear(): Promise<void>;
 }
 
 export function createBrowserMemoryStorage(): MemoryStorage {
@@ -48,6 +48,7 @@ export function createMemoryMemoryStorage(): MemoryStorage {
   };
 }
 
+/** 本地实现（同步存储，异步接口） */
 export class LocalMemoryRepository implements MemoryRepository {
   private readonly storage: MemoryStorage;
 
@@ -55,31 +56,31 @@ export class LocalMemoryRepository implements MemoryRepository {
     this.storage = storage ?? createBrowserMemoryStorage();
   }
 
-  load(): MemoryStore {
+  async load(): Promise<MemoryStore> {
     return this.storage.load();
   }
 
-  saveRecords(records: DecisionMemoryRecord[]): void {
-    const store = this.load();
+  async saveRecords(records: DecisionMemoryRecord[]): Promise<void> {
+    const store = this.storage.load();
     store.records = upsertDecisionMemory(store.records, records);
     this.storage.save(store);
   }
 
-  listRecords(): DecisionMemoryRecord[] {
-    return this.load().records;
+  async listRecords(): Promise<DecisionMemoryRecord[]> {
+    return this.storage.load().records;
   }
 
-  archive(events: ArchivedLearningEvent[]): void {
-    const store = this.load();
+  async archive(events: ArchivedLearningEvent[]): Promise<void> {
+    const store = this.storage.load();
     store.archivedEvents = mergeArchivedEvents(store.archivedEvents, events);
     this.storage.save(store);
   }
 
-  listArchived(): ArchivedLearningEvent[] {
-    return this.load().archivedEvents;
+  async listArchived(): Promise<ArchivedLearningEvent[]> {
+    return this.storage.load().archivedEvents;
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     this.storage.save({ records: [], archivedEvents: [] });
   }
 }

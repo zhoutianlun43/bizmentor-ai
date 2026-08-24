@@ -54,45 +54,45 @@ export class MemoryEngine {
       domain,
       opportunityName,
     });
-    this.memory.saveRecords([record]);
+    await this.memory.saveRecords([record]);
     return record;
   }
 
   /** Learning Event 归档：归一化 + 去重入记忆库 */
   async archiveEvents(events: LearningEvent[], domainByOpportunity?: Map<string, string>): Promise<number> {
     const archived = archiveLearningEvents(events, domainByOpportunity);
-    this.memory.archive(archived);
+    await this.memory.archive(archived);
     return archived.length;
   }
 
   /** Pattern Retrieval：按领域/决策/技能聚合模式 */
-  retrieve(query: MemoryQuery): MemoryPattern[] {
-    return retrievePatterns(this.memory.listRecords(), query);
+  async retrieve(query: MemoryQuery): Promise<MemoryPattern[]> {
+    return retrievePatterns(await this.memory.listRecords(), query);
   }
 
   /** 相似决策检索 */
-  similar(opportunity: { domain?: string; name: string; description?: string }, limit?: number): DecisionMemoryRecord[] {
-    return findSimilarDecisions(this.memory.listRecords(), opportunity, limit);
+  async similar(opportunity: { domain?: string; name: string; description?: string }, limit?: number): Promise<DecisionMemoryRecord[]> {
+    return findSimilarDecisions(await this.memory.listRecords(), opportunity, limit);
   }
 
   /** 全部决策记忆 */
-  list(): DecisionMemoryRecord[] {
+  async list(): Promise<DecisionMemoryRecord[]> {
     return this.memory.listRecords();
   }
 
   /** 归档事件列表（可按 skill 过滤） */
-  listArchived(skill?: AbilitySkill): ArchivedLearningEvent[] {
-    const events = this.memory.listArchived();
+  async listArchived(skill?: AbilitySkill): Promise<ArchivedLearningEvent[]> {
+    const events = await this.memory.listArchived();
     return skill ? events.filter((e) => e.skill === skill) : events;
   }
 
   /** 归档事件聚合（按 skill） */
-  aggregates(skill?: AbilitySkill) {
-    return aggregateLearningEvents(this.memory.listArchived(), skill);
+  async aggregates(skill?: AbilitySkill): Promise<ReturnType<typeof aggregateLearningEvents>> {
+    return aggregateLearningEvents(await this.memory.listArchived(), skill);
   }
 
   /** 清空记忆（测试/重置用） */
-  clear(): void {
-    this.memory.clear();
+  async clear(): Promise<void> {
+    await this.memory.clear();
   }
 }

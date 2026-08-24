@@ -24,6 +24,10 @@ export const env = {
   /** 服务端专用（禁止 NEXT_PUBLIC_ 前缀；Phase 2 数据层使用） */
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
 
+  // ---------- Identity（V0.4.1 Phase 8B-2） ----------
+  /** 可选：部署时固定当前用户 id（缺省 local-user）；未来 Auth 阶段由会话解析 */
+  identityUserId: process.env.IDENTITY_USER_ID ?? "",
+
   // ---------- OpenAI（仅服务端） ----------
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   openaiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",

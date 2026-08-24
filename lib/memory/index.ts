@@ -6,6 +6,8 @@ export type { BuildDecisionMemoryInput } from "./builder";
 export { archiveLearningEvents, aggregateLearningEvents, mergeArchivedEvents, normalizeLearningEvent } from "./archive";
 export { findSimilarDecisions, nameOverlap, retrievePatterns } from "./retrieval";
 export { LocalMemoryRepository, createBrowserMemoryStorage, createMemoryMemoryStorage } from "./repository";
+export { SupabaseMemoryRepository } from "./supabase-repository";
+export type { SupabaseMemoryRepositoryOptions } from "./supabase-repository";
 export type { MemoryRepository, MemoryStorage, MemoryStore } from "./repository";
 export type {
   ArchivedLearningEvent,
