@@ -1,0 +1,240 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { SupabaseOpportunityRepository } from "../supabase-repository";
+import { SupabaseRepositoryError } from "../../supabase/errors";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// ===================== mock Supabase client =====================
+type Row = Record<string, unknown>;
+interface MockError {
+  message: string;
+}
+
+class MockBuilder {
+  private filters: Array<[string, unknown]> = [];
+  private orderCol?: string;
+  private orderAsc = true;
+  private op?: "insert" | "update" | "delete";
+  private payload?: Row;
+
+  constructor(private db: Map<string, Row[]>, private table: string, private mock: MockSupabase) {}
+
+  select(): this {
+    return this;
+  }
+  eq(col: string, value: unknown): this {
+    this.filters.push([col, value]);
+    return this;
+  }
+  order(col: string, opts?: { ascending?: boolean }): this {
+    this.orderCol = col;
+    this.orderAsc = opts?.ascending !== false;
+    return this;
+  }
+  insert(row: Row): this {
+    this.op = "insert";
+    this.payload = row;
+    return this;
+  }
+  update(payload: Row): this {
+    this.op = "update";
+    this.payload = payload;
+    return this;
+  }
+  delete(): this {
+    this.op = "delete";
+    return this;
+  }
+
+  private match(row: Row): boolean {
+    return this.filters.every(([col, v]) => row[col] === v);
+  }
+  private rows(): Row[] {
+    let rows = this.db.get(this.table) ?? [];
+    rows = rows.filter((r) => this.match(r));
+    if (this.orderCol) {
+      rows = [...rows].sort((a, b) => {
+        const av = String(a[this.orderCol!] ?? "");
+        const bv = String(b[this.orderCol!] ?? "");
+        if (av === bv) return 0;
+        return this.orderAsc ? (av < bv ? -1 : 1) : av < bv ? 1 : -1;
+      });
+    }
+    return rows;
+  }
+
+  async maybeSingle(): Promise<{ data: Row | null; error: MockError | null }> {
+    const err = this.mock.takeFail();
+    if (err) return { data: null, error: err };
+    const rows = this.rows();
+    return { data: rows.length > 0 ? rows[0] : null, error: null };
+  }
+
+  async single(): Promise<{ data: Row | null; error: MockError | null }> {
+    const err = this.mock.takeFail();
+    if (err) return { data: null, error: err };
+    if (this.op === "update" && this.payload) {
+      const rows = this.db.get(this.table) ?? [];
+      const targets = rows.filter((r) => this.match(r));
+      targets.forEach((r) => Object.assign(r, this.payload));
+      this.db.set(this.table, rows);
+      return { data: targets.length > 0 ? { ...targets[0] } : null, error: null };
+    }
+    const rows = this.rows();
+    return { data: rows.length > 0 ? rows[0] : null, error: null };
+  }
+
+  then<T>(
+    onfulfilled?: (value: { data: unknown; error: MockError | null; count?: number }) => T | PromiseLike<T>,
+  ): Promise<T> {
+    const err = this.mock.takeFail();
+    const tableRows = this.db.get(this.table) ?? [];
+    if (this.op === "insert" && this.payload) {
+      tableRows.push({ ...this.payload });
+      this.db.set(this.table, tableRows);
+      return Promise.resolve({ data: this.payload, error: err }).then(onfulfilled);
+    }
+    if (this.op === "delete") {
+      const before = tableRows.length;
+      const after = tableRows.filter((r) => !this.match(r));
+      this.db.set(this.table, after);
+      return Promise.resolve({ data: null, error: err, count: before - after.length }).then(onfulfilled);
+    }
+    return Promise.resolve({ data: err ? [] : this.rows(), error: err }).then(onfulfilled);
+  }
+}
+
+class MockSupabase {
+  readonly db = new Map<string, Row[]>();
+  failNext = false;
+  from(table: string): MockBuilder {
+    return new MockBuilder(this.db, table, this);
+  }
+  takeFail(): MockError | null {
+    if (this.failNext) {
+      this.failNext = false;
+      return { message: "mock database error" };
+    }
+    return null;
+  }
+}
+
+function createRepo(mock: MockSupabase): SupabaseOpportunityRepository {
+  return new SupabaseOpportunityRepository(mock as unknown as SupabaseClient, { userId: "u1", table: "opportunities" });
+}
+
+function sampleRow(overrides: Partial<Row> = {}): Row {
+  return {
+    id: "opp-1",
+    user_id: "u1",
+    name: "AI × 电商运营自动化",
+    description: "面向中小卖家的 AI 运营助手",
+    source: "user",
+    status: "researching",
+    score: null,
+    notes: null,
+    created_at: "2026-08-24T00:00:00.000Z",
+    updated_at: "2026-08-24T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+// ===================== tests =====================
+
+test("create 成功：生成 id/状态，写入行（score/notes 为 jsonb null）", async () => {
+  const mock = new MockSupabase();
+  const repo = createRepo(mock);
+  const opp = await repo.createOpportunity({
+    name: "  本地宠物洗护  ",
+    description: " 上门洗护预约 ",
+    source: "user",
+    notes: " 备注 ",
+  });
+  assert.ok(opp.id);
+  assert.equal(opp.name, "本地宠物洗护");
+  assert.equal(opp.status, "researching");
+  assert.ok(opp.createdAt);
+
+  const rows = mock.db.get("opportunities") ?? [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].id, opp.id);
+  assert.equal(rows[0].user_id, "u1");
+  assert.equal(rows[0].name, "本地宠物洗护");
+  assert.equal(rows[0].score, null);
+  assert.equal(rows[0].notes, "备注");
+});
+
+test("get 不存在 → undefined", async () => {
+  const mock = new MockSupabase();
+  const repo = createRepo(mock);
+  assert.equal(await repo.getOpportunity("nope"), undefined);
+});
+
+test("list 排序：created_at 倒序", async () => {
+  const mock = new MockSupabase();
+  mock.db.set("opportunities", [
+    sampleRow({ id: "a", created_at: "2026-08-24T00:00:00.000Z" }),
+    sampleRow({ id: "c", created_at: "2026-08-24T02:00:00.000Z" }),
+    sampleRow({ id: "b", created_at: "2026-08-24T01:00:00.000Z" }),
+    sampleRow({ id: "other-user", user_id: "u2" }),
+  ]);
+  const repo = createRepo(mock);
+  const list = await repo.listOpportunities();
+  assert.deepEqual(list.map((o) => o.id), ["c", "b", "a"]);
+});
+
+test("update 覆盖：字段更新、id 不变、返回更新后对象", async () => {
+  const mock = new MockSupabase();
+  mock.db.set("opportunities", [sampleRow()]);
+  const repo = createRepo(mock);
+  const updated = await repo.updateOpportunity("opp-1", {
+    name: "新名字",
+    status: "validating",
+    score: { demand: 8, competition: 6, willingnessToPay: 7, moat: 5, risk: 4, overall: 7.2 },
+  });
+  assert.ok(updated);
+  assert.equal(updated?.id, "opp-1");
+  assert.equal(updated?.name, "新名字");
+  assert.equal(updated?.status, "validating");
+  assert.equal(updated?.score?.overall, 7.2);
+
+  const rows = mock.db.get("opportunities") ?? [];
+  assert.equal(rows[0].name, "新名字");
+  assert.equal(rows[0].status, "validating");
+  assert.ok(rows[0].updated_at, "更新应写入 updated_at");
+});
+
+test("update 不存在 → undefined", async () => {
+  const mock = new MockSupabase();
+  const repo = createRepo(mock);
+  assert.equal(await repo.updateOpportunity("nope", { name: "x" }), undefined);
+});
+
+test("delete 成功：删除后 get 返回 undefined", async () => {
+  const mock = new MockSupabase();
+  mock.db.set("opportunities", [sampleRow()]);
+  const repo = createRepo(mock);
+  assert.equal(await repo.deleteOpportunity("opp-1"), true);
+  assert.equal(await repo.getOpportunity("opp-1"), undefined);
+  assert.equal((mock.db.get("opportunities") ?? []).length, 0);
+});
+
+test("数据映射错误：脏数据 → SupabaseRepositoryError(mapRow)", async () => {
+  const mock = new MockSupabase();
+  mock.db.set("opportunities", [sampleRow({ name: undefined })]);
+  const repo = createRepo(mock);
+  await assert.rejects(
+    () => repo.getOpportunity("opp-1"),
+    (e: unknown) => e instanceof SupabaseRepositoryError && e.operation === "mapRow",
+  );
+});
+
+test("错误包装：上游错误不直接暴露", async () => {
+  const mock = new MockSupabase();
+  const repo = createRepo(mock);
+  mock.failNext = true;
+  await assert.rejects(
+    () => repo.createOpportunity({ name: "x", description: "y", source: "user" }),
+    (e: unknown) => e instanceof SupabaseRepositoryError && e.operation === "createOpportunity",
+  );
+});

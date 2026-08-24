@@ -10,17 +10,9 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "../supabase/server";
+import { SupabaseRepositoryError } from "../supabase/errors";
+export { SupabaseRepositoryError };
 import type { ResearchRun } from "./types";
-
-/** Supabase 仓库错误（包装上游错误，便于调用方捕获） */
-export class SupabaseRepositoryError extends Error {
-  readonly operation: string;
-  constructor(operation: string, message: string) {
-    super("SupabaseResearchRepository." + operation + " 失败: " + message);
-    this.name = "SupabaseRepositoryError";
-    this.operation = operation;
-  }
-}
 
 export interface SupabaseResearchRepositoryOptions {
   /** 数据归属用户（单用户阶段默认 local-user；Auth 接入后传真实 userId） */

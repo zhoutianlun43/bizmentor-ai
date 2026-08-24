@@ -11,13 +11,13 @@ create extension if not exists "pgcrypto";
 -- 商机（opportunities）
 -- -------------------------------------------------------------
 create table if not exists public.opportunities (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid(),
+  id text primary key,                          -- 应用侧字符串 id（mock 如 opp-ai-ecommerce / uid()）
+  user_id text not null default 'local-user',   -- 单用户阶段固定；Auth 接入后改为 auth.uid()::text
   name text not null,
   description text not null,
   source text not null default 'user',          -- ai | user
   status text not null default 'researching',   -- researching | validating | validated | abandoned
-  score jsonb,                                  -- OpportunityScore
+  score jsonb,                                  -- OpportunityScore（jsonb）
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
