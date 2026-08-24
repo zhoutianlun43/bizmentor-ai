@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.5.0 Phase 10A-3**（Business Context Layer：统一经营上下文入口）
+- **V0.6.0 MVP**（Product Layer：AI 对话 / Dashboard / 技能中心 / 我的AI认知 / LLM）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -53,7 +53,10 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/identity/auth | AuthIdentityProvider（Auth Ready，fallback local-user） | 9B-5 |
 | lib/profile | **Personal Profile（用户是谁：名称/时区/语言/偏好）** | **10A-1（本阶段）** |
 | lib/business | Business Profile（经营世界：名称/描述/businessTypes） | 10A-2 |
-| lib/context | **Business Context Layer（BusinessOSContext + Builder）** | **10A-3（本阶段）** |
+| lib/context | Business Context Layer（BusinessOSContext + Builder） | 10A-3 |
+| lib/llm | **LLM Provider 抽象（OpenAI-compatible + DeepSeek）** | **V0.6.0** |
+| app/chat · app/skills · app/knowledge | **MVP 产品页（对话/技能/知识）** | **V0.6.0** |
+| app/api/chat · skill · review | **MVP API（对话/技能/复盘）** | **V0.6.0** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -107,6 +110,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - ~~9B-5~~ ✅ Multi Device Foundation：Auth Ready + Settings + PWA + Sync（已完成）
 - ~~10A-1/2~~ ✅ Personal/Business Profile 数据基础层（已完成）
 - ~~10A-3~~ ✅ Business Context Layer：统一经营上下文（Agent Runtime + Skill 接入）（已完成）
+- ~~V0.6.0 MVP~~ ✅ Product Layer：AI 对话 / Dashboard 今日状态 / 技能中心 / 我的AI认知 / Learning Center / LLM（第一批完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -198,3 +202,15 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **Skill 接入**：SkillRunContext = AgentContext & { businessContext }（只读；Skill 不得修改 Profile/Knowledge）。
 - **测试**：277/277（新增 7：Profile 聚合 / confirmed 过滤 / Memory 注入 / Agent Runtime 恢复 / Skill 读取 / Local / Supabase Mock）。
 - **下一阶段（建议）**：10A-4+ 待用户补充；候选方向：context 上云快照、Domain Plugin 骨架、Profile 接入 UI。
+
+---
+
+## 17. V0.6.0 MVP Product Layer 完成记录（第一批）
+
+- **lib/llm/**：LlmProvider 抽象（OpenAI-compatible + DeepSeek，generate(messages)）+ buildBusinessSystemPrompt（把 BusinessOSContext 注入个性化 system，非固定模板）。
+- **API**：/api/chat（BusinessContext → LLM → 回复）、/api/skill（SkillRegistry 调用，当前 memory+确定性）、/api/review（晚间复盘 → 知识候选）。
+- **页面**：/chat（问 AI 对话）、/skills（技能中心）、/knowledge（我的AI认知：确认/删除/新增 + Learning Center 复盘）。
+- **首页 Dashboard**：TodayBriefing（今日经营状态：商机/研究/验证/超期 + AI 建议 + 问AI/技能/知识入口）。
+- **Repository Provider**：新增 getProfileRepository / getBusinessRepository。
+- **测试**：283/283（新增 6：LLM Provider/HTTP 错误/getLlm/context 提示）。
+- **下一批**：/api/skill 深度研究接入（runResearch 真实 ResearchService）；聊天历史持久化；PWA 安装与生产部署验证。

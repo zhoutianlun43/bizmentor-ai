@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { TodayBriefing } from "@/components/home/TodayBriefing";
 import { AbilityOverviewCard } from "@/components/home/AbilityOverviewCard";
 import { CurrentProjectCard } from "@/components/home/CurrentProjectCard";
 import { DailyOpportunityCard } from "@/components/home/DailyOpportunityCard";
@@ -64,6 +65,14 @@ export default function HomePage() {
   return (
     <div className="space-y-6 px-5 pb-4">
       <AppHeader title="BizMentor AI" subtitle={greeting} />
+
+      {/* V0.6.0 MVP：今日经营状态 + 产品入口 */}
+      <TodayBriefing />
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <a href="/chat" className="rounded-xl bg-indigo-600 px-3 py-2.5 text-center text-xs font-medium text-white">问 AI</a>
+        <a href="/skills" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">技能中心</a>
+        <a href="/knowledge" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">我的AI认知</a>
+      </div>
 
       <section aria-label="今日商业机会">
         <DailyOpportunityCard opportunity={dailyOpportunity} />
