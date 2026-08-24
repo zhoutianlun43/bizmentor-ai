@@ -259,3 +259,33 @@ create table if not exists public.user_settings (
 alter table public.user_settings enable row level security;
 create policy "single user user_settings" on public.user_settings
   for all using (user_id = 'local-user') with check (user_id = 'local-user');
+
+-- -------------------------------------------------------------
+-- 个人画像（profiles，V0.5.0 Phase 10A-1：Personal Profile Layer）
+-- -------------------------------------------------------------
+create table if not exists public.profiles (
+  id text primary key,
+  user_id text not null unique,
+  profile jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+create policy "single user profiles" on public.profiles
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');
+
+-- -------------------------------------------------------------
+-- 经营画像（business_profiles，V0.5.0 Phase 10A-2：Business Profile Layer）
+-- -------------------------------------------------------------
+create table if not exists public.business_profiles (
+  id text primary key,
+  user_id text not null unique,
+  profile jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.business_profiles enable row level security;
+create policy "single user business_profiles" on public.business_profiles
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');

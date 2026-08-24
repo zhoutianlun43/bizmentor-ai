@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.4.2 Phase 9B-5**（Multi Device Foundation：Auth Ready + Settings + PWA + Sync）
+- **V0.5.0 Phase 10A-1/2**（Personal Business OS 数据基础：Personal Profile + Business Profile）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -50,7 +50,9 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/settings | **Settings Repository（本地缓存 + Supabase 云端同步）** | **9B-5（本阶段）** |
 | lib/sync | **SyncManager（LWW 同步）+ AgentStateRepository 预留** | **9B-5** |
 | lib/pwa | **PWA Manifest 共享源 + sw.js（离线/重同步）** | **9B-5** |
-| lib/identity/auth | **AuthIdentityProvider（Auth Ready，fallback local-user）** | **9B-5** |
+| lib/identity/auth | AuthIdentityProvider（Auth Ready，fallback local-user） | 9B-5 |
+| lib/profile | **Personal Profile（用户是谁：名称/时区/语言/偏好）** | **10A-1（本阶段）** |
+| lib/business | **Business Profile（经营世界：名称/描述/businessTypes）** | **10A-2（本阶段）** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -102,6 +104,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - ~~9B-3~~ ✅ Skill System：可插拔技能（选品/竞品）+ skill_tool（已完成）
 - ~~9B-4~~ ✅ Personal Knowledge：用户长期认知（AI 候选 → 用户确认 → 进入 Context）（已完成）
 - ~~9B-5~~ ✅ Multi Device Foundation：Auth Ready + Settings + PWA + Sync（已完成）
+- ~~10A-1/2~~ ✅ Personal/Business Profile 数据基础层（已完成；10A-3+ 待用户补充任务说明）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -172,3 +175,14 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **数据同步方案**：Supabase 未来唯一真相源；localStorage = 缓存/离线降级；LWW 冲突策略；不迁移所有业务数据（框架先行）。
 - **测试**：266/266（新增 11：Auth fallback/认证优先/状态监听、Settings CRUD/本地 fallback/缓存策略、Sync LWW/push/pull/sync、PWA manifest/sw.js）。
 - **下一阶段（规划）**：接 Supabase Auth + RLS 升级（多用户）；生产应用 user_settings 表；AgentState/Settings 上云；PWA 完善。
+
+---
+
+## 15. V0.5.0 Phase 10A-1/2 完成记录（Personal Business OS 数据基础）
+
+- **10A-1 Personal Profile**（lib/profile/）：PersonalProfile（id/userId/name/timezone/language/preferences/createdAt/updatedAt）；ProfileRepository（save/get/update）；LocalProfileRepository（localStorage）+ SupabaseProfileRepository（预留，profiles 表 DDL 已入 schema.sql）。
+- **10A-2 Business Profile**（lib/business/）：BusinessProfile（id/userId/name/description/businessTypes/preferences/createdAt/updatedAt）；BusinessType 通用枚举（commerce/service/product/content/saas/marketplace/local_service，**不绑定行业**）；BusinessProfileRepository（save/get/update）；Local + Supabase（预留，business_profiles 表 DDL 已入 schema.sql）。
+- **原则**：行业能力未来通过 Domain Plugin 扩展；本层只存通用用户/经营画像。
+- **测试**：270/270（新增 4：Profile CRUD + Supabase mock、Business CRUD + Supabase mock）。
+- **注意**：原任务消息在 10A-2 businessTypes 示例后截断，10A-3+ 子任务待用户补充。
+- **下一阶段（待确认）**：10A-3+（用户补充）；预期方向：Profile 上云、Agent Context 集成、Domain Plugin 骨架。
