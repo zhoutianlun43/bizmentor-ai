@@ -8,5 +8,5 @@
     "moduleResolution": "node10",
     "types": ["node"]
   },
-  "include": ["lib/ai/**/*.ts", "lib/research/**/*.ts", "lib/decision/**/*.ts", "lib/supabase/**/*.ts", "lib/opportunity/**/*.ts", "lib/repository/**/*.ts", "supabase/integration-tests/**/*.ts", "lib/migration/**/*.ts", "lib/external/**/*.ts", "lib/domain/**/*.ts", "lib/memory/**/*.ts", "lib/identity/**/*.ts", "scripts/**/*.ts"]
+  "include": ["lib/ai/**/*.ts", "lib/research/**/*.ts", "lib/decision/**/*.ts", "lib/supabase/**/*.ts", "lib/opportunity/**/*.ts", "lib/repository/**/*.ts", "supabase/integration-tests/**/*.ts", "lib/migration/**/*.ts", "lib/external/**/*.ts", "lib/domain/**/*.ts", "lib/memory/**/*.ts", "lib/identity/**/*.ts", "lib/agent/**/*.ts", "scripts/**/*.ts"]
 }
