@@ -50,6 +50,8 @@ export function ResearchPanel({ opportunity, run }: ResearchPanelProps) {
         },
         (stage) => setStages((prev) => [...prev, stage]),
       );
+      // 触发页面 hook 刷新（Supabase 写入无 storage 事件，需要显式通知）
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
     } catch (err) {
       setError((err as Error).message?.slice(0, 200) ?? "研究失败");
     } finally {

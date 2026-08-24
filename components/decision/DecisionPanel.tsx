@@ -120,6 +120,7 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
     setError("");
     try {
       await service.reviewDecision(decision.id, { name: opportunity.name, description: opportunity.description });
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
     } catch (err) {
       setError((err as Error).message?.slice(0, 200) ?? "AI 评审失败");
     } finally {
@@ -158,6 +159,7 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
     setBusy(`status-${taskId}`);
     try {
       await service.updateTaskStatus(taskId, status as "pending" | "running" | "completed" | "failed" | "cancelled");
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
     } finally {
       setBusy("");
     }
@@ -182,6 +184,7 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
     };
     try {
       await service.submitValidationResult(input);
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
     } catch (err) {
       setError((err as Error).message?.slice(0, 200) ?? "提交验证结果失败");
     } finally {
@@ -195,6 +198,7 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
     setError("");
     try {
       await service.applyValidationToScore(decision.id);
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
     } catch (err) {
       setError((err as Error).message?.slice(0, 200) ?? "评分更新失败");
     } finally {
