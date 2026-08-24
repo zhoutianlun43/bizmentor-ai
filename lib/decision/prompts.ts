@@ -4,6 +4,8 @@
  * 原则：不得编造事实；不得生成验证结果。
  */
 import type { UserDecision, UserJudgment } from "./types";
+import { getDomainProfile } from "../domain/registry";
+import type { BusinessDomain } from "../domain/types";
 
 export interface PromptParts {
   system: string;
@@ -23,6 +25,8 @@ export function examinerPrompt(params: {
   aiScoreSnapshot?: { overall_score: number; confidence: number } | null;
   decision: UserDecision["decision"];
   judgment: UserJudgment;
+  /** 领域信息（V0.4.1 Phase 6.1B：注入领域决策检查清单） */
+  domain?: { id: string; label?: string };
 }): PromptParts {
   const judgmentLines = [
     `为什么做/不做：${params.judgment.why}`,
@@ -33,9 +37,16 @@ export function examinerPrompt(params: {
     `预计结果：${params.judgment.expectedOutcome}`,
   ];
   if (params.judgment.differentJudgment) judgmentLines.push(`与 AI 不同的判断：${params.judgment.differentJudgment}`);
+  const domainChecklist = params.domain
+    ? getDomainProfile(params.domain.id as BusinessDomain).decisionChecklist
+    : undefined;
 
   return {
-    system: `你是 BizMentor 的「AI Examiner」（商业判断评审）。${REVIEW_RULES}\n${JSON_INSTRUCTION}`,
+    system: `你是 BizMentor 的「AI Examiner」（商业判断评审）。${REVIEW_RULES}\n${
+      domainChecklist && domainChecklist.length > 0
+        ? `领域检查清单（${params.domain?.label ?? ""}）：\n${domainChecklist.map((c) => `- ${c}`).join("\n")}\n`
+        : ""
+    }${JSON_INSTRUCTION}`,
     user: `请评审下面的用户商业判断。\n\n商机：${params.opportunity.name}\n描述：${params.opportunity.description}\n\nAI 研究报告当时的判断（供对比）：${
       params.aiScoreSnapshot
         ? `综合评分 ${params.aiScoreSnapshot.overall_score}/10，置信度 ${params.aiScoreSnapshot.confidence}`

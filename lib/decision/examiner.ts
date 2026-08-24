@@ -13,6 +13,8 @@ export interface ExaminerDeps {
   runAi: RunAiFn;
   opportunity: { name: string; description: string };
   decision: UserDecision;
+  /** 领域信息（V0.4.1 Phase 6.1B：可选，注入领域决策检查清单） */
+  domain?: { id: string; label?: string };
 }
 
 export async function reviewUserDecision(deps: ExaminerDeps): Promise<UserDecisionReview> {
@@ -21,6 +23,7 @@ export async function reviewUserDecision(deps: ExaminerDeps): Promise<UserDecisi
     aiScoreSnapshot: deps.decision.aiScoreSnapshot ?? null,
     decision: deps.decision.decision,
     judgment: deps.decision.judgment,
+    domain: deps.domain,
   });
 
   let lastErrors: string[] = [];

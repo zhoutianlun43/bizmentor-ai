@@ -245,6 +245,8 @@ export interface ReportMeta {
   notice: string;
   generatedAt: string;
   providers: Partial<Record<ResearchStageName, { provider: AiProviderName; provider_degraded: boolean }>>;
+  /** 领域信息（V0.4.1 Phase 6.1B：检测结果，用于上下文注入与可追溯） */
+  domain?: { id: string; label: string; confidence: number };
 }
 
 /** 最终研究报告（结构化，非一段文本） */

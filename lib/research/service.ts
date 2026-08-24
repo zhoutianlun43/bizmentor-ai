@@ -4,6 +4,7 @@
  * - 未来：repository 换成 SupabaseResearchRepository，UI 无需改动
  */
 import type { RunAiFn } from "./ai-call";
+import { detectDomain } from "../domain/detect";
 import type { ExternalResearchFn } from "./external/types";
 import { runResearchPipeline } from "./pipeline";
 import { LocalResearchRepository } from "./repository";
@@ -31,7 +32,17 @@ export class ResearchService {
 
   /** 执行一次完整研究并保存结果 */
   async startResearch(input: ResearchInput, onStage?: (stage: StageRun, index: number) => void): Promise<ResearchRun> {
-    const run = await runResearchPipeline(input, { runAi: this.runAi, externalResearch: this.externalResearch, onStage });
+    // V0.4.1 Phase 6.1B：领域检测（规则优先，低置信才走 AI simple）→ 注入 Pipeline 上下文
+    const domain = await detectDomain(
+      { name: input.opportunity.name, description: input.opportunity.description },
+      { runAi: this.runAi },
+    );
+    const run = await runResearchPipeline(input, {
+      runAi: this.runAi,
+      externalResearch: this.externalResearch,
+      onStage,
+      domain,
+    });
     await this.repository.saveRun(run);
     return run;
   }

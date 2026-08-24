@@ -41,6 +41,10 @@ export const NEGATIVE_DIMENSIONS: ReadonlySet<ScoreDimension> = new Set([
   "risk",
 ]);
 
+/** 合并领域权重覆盖（缺省返回通用权重副本） */
+export function mergeScoreWeights(overrides?: Partial<Record<ScoreDimension, number>>): Record<ScoreDimension, number> {
+  return overrides ? { ...SCORE_WEIGHTS, ...overrides } : { ...SCORE_WEIGHTS };
+}
 export const DIMENSION_LABELS: Record<ScoreDimension, string> = {
   demand: "需求",
   market: "市场",
@@ -64,27 +68,27 @@ export function round1(value: number): number {
 }
 
 /** 确定性 overall_score（0-10，保留 1 位小数） */
-export function computeOverallScore(proposal: ScoreProposal): number {
+export function computeOverallScore(proposal: ScoreProposal, weights: Record<ScoreDimension, number> = SCORE_WEIGHTS): number {
   const byDim = new Map(proposal.dimensions.map((d) => [d.dimension, clampScore(d.score)]));
   let weighted = 0;
   let weightSum = 0;
   for (const dim of SCORE_DIMENSIONS) {
     const score = byDim.get(dim) ?? 0;
     const effective = NEGATIVE_DIMENSIONS.has(dim) ? 10 - score : score;
-    weighted += effective * SCORE_WEIGHTS[dim];
-    weightSum += SCORE_WEIGHTS[dim];
+    weighted += effective * weights[dim];
+    weightSum += weights[dim];
   }
   return round1(weighted / weightSum);
 }
 
 /** 确定性 confidence 聚合（0-1，保留 2 位小数） */
-export function computeConfidence(proposal: ScoreProposal): number {
+export function computeConfidence(proposal: ScoreProposal, weights: Record<ScoreDimension, number> = SCORE_WEIGHTS): number {
   const byDim = new Map(proposal.dimensions.map((d) => [d.dimension, clamp01(d.confidence)]));
   let weighted = 0;
   let weightSum = 0;
   for (const dim of SCORE_DIMENSIONS) {
-    weighted += (byDim.get(dim) ?? 0) * SCORE_WEIGHTS[dim];
-    weightSum += SCORE_WEIGHTS[dim];
+    weighted += (byDim.get(dim) ?? 0) * weights[dim];
+    weightSum += weights[dim];
   }
   return Math.round((weighted / weightSum) * 100) / 100;
 }
@@ -95,7 +99,7 @@ export function computeConfidence(proposal: ScoreProposal): number {
  * - overall / confidence 确定性计算
  * - assumptions / unknowns / validation_required 提取
  */
-export function buildScoreResult(proposal: ScoreProposal, evidence: EvidenceItem[]): ScoreResult {
+export function buildScoreResult(proposal: ScoreProposal, evidence: EvidenceItem[], weights: Record<ScoreDimension, number> = SCORE_WEIGHTS): ScoreResult {
   const breakdown: DimensionScore[] = proposal.dimensions.map((d) => ({
     ...d,
     score: clampScore(d.score),
@@ -107,9 +111,9 @@ export function buildScoreResult(proposal: ScoreProposal, evidence: EvidenceItem
   const validationRequired = [...unknowns];
   return {
     version: 1,
-    overall_score: computeOverallScore({ dimensions: breakdown }),
+    overall_score: computeOverallScore({ dimensions: breakdown }, weights),
     score_breakdown: breakdown,
-    confidence: computeConfidence({ dimensions: breakdown }),
+    confidence: computeConfidence({ dimensions: breakdown }, weights),
     evidence: allEvidence,
     assumptions,
     unknowns,

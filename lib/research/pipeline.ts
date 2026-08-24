@@ -20,6 +20,8 @@ import type { AiProviderName } from "../ai/types";
 import type { RunAiFn } from "./ai-call";
 import { StageCallError } from "./ai-call";
 import type { ResearchContext } from "./context";
+import { getDomainProfile } from "../domain/registry";
+import type { DomainDetection } from "../domain/types";
 import { bindAndEnforce } from "./evidence";
 import { NO_EXTERNAL_EVIDENCE_NOTICE, toSourceDocuments } from "./sources";
 import { withEnforcedEvidence } from "./scoring";
@@ -64,6 +66,8 @@ export interface PipelineOptions {
   externalResearch: ExternalResearchFn;
   /** 每完成一个阶段回调（UI 进度展示） */
   onStage?: (stage: StageRun, index: number) => void;
+  /** 领域信息（V0.4.1 Phase 6.1B：可选，缺省走通用流程） */
+  domain?: DomainDetection;
 }
 
 /** 归一化后的分析器输出（initialAssumptions 已应用 Evidence 规则） */
@@ -156,7 +160,7 @@ function bindCellSources(
 export async function runResearchPipeline(input: ResearchInput, options: PipelineOptions): Promise<ResearchRun> {
   const { runAi, externalResearch, onStage } = options;
   const sourceDocuments = toSourceDocuments(input.materials ?? []);
-  const ctx: ResearchContext = { runAi, externalResearch, input, sourceDocuments };
+  const ctx: ResearchContext = { runAi, externalResearch, input, sourceDocuments, domain: options.domain };
 
   const runId = uid();
   const createdAt = new Date().toISOString();
@@ -299,6 +303,13 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
       providers: Object.fromEntries(
         stages.map((s) => [s.stage, { provider: s.provider, provider_degraded: s.provider_degraded }]),
       ) as ReportMeta["providers"],
+      domain: options.domain
+        ? {
+            id: options.domain.domain,
+            label: getDomainProfile(options.domain.domain).label,
+            confidence: options.domain.confidence,
+          }
+        : undefined,
     };
   } catch (error) {
     status = "failed";

@@ -93,7 +93,12 @@ export class DecisionService {
   ): Promise<{ review: UserDecisionReview; events: LearningEvent[] }> {
     const decision = await this.decisions.getDecision(decisionId);
     if (!decision) throw new Error("决策不存在");
-    const review = await reviewUserDecision({ runAi: this.runAi, opportunity, decision });
+    // V0.4.1 Phase 6.1B：从研究结果读取领域，注入 Examiner（保持一致，避免重复检测）
+    const run = await this.research.getRun(decision.opportunityId);
+    const domain = run?.report?.meta?.domain
+      ? { id: run.report.meta.domain.id, label: run.report.meta.domain.label }
+      : undefined;
+    const review = await reviewUserDecision({ runAi: this.runAi, opportunity, decision, domain });
     await this.decisions.saveReview(review);
     const events = generateLearningEvents({ userId: this.userId, opportunityId: decision.opportunityId, decision, review });
     await this.decisions.saveEvents(events);
