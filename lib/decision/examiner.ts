@@ -7,6 +7,7 @@ import type { AiProviderName } from "../ai/types";
 import type { RunAiFn } from "../research/ai-call";
 import { examinerPrompt } from "./prompts";
 import { decisionReviewSchema, extractJson, validateWithSchema } from "./schema";
+import { normalizeDecisionReviewOutput } from "./normalize";
 import type { UserDecision, UserDecisionReview } from "./types";
 
 export interface ExaminerDeps {
@@ -49,7 +50,9 @@ export async function reviewUserDecision(deps: ExaminerDeps): Promise<UserDecisi
       lastErrors = [`JSON 解析失败: ${(error as Error).message}`];
       continue;
     }
-    const validated = validateWithSchema(decisionReviewSchema, raw);
+    // V0.4.1 Phase 7A：先确定性规范化（枚举模糊匹配/数值 clamp），再 schema 校验
+    const normalized = normalizeDecisionReviewOutput(raw);
+    const validated = validateWithSchema(decisionReviewSchema, normalized);
     if (validated.ok) {
       return {
         id: `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

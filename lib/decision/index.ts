@@ -1,5 +1,9 @@
 /** 商业决策与验证闭环（V0.3-C）对外出口 */
 export { DecisionService } from "./service";
+export { generateInvestmentThesis } from "./thesis";
+export { computeUnitEconomics, generateUnitEconomics } from "./unit-economics";
+export { materializeValidationTasks, mapDimensionByDomain, defaultDeadline } from "./validation";
+export { normalizeDecisionReviewOutput, normalizeWeaknessCategory, normalizeAbilitySkill, normalizeSignal } from "./normalize";
 export type { DecisionServiceDeps } from "./service";
 export { reviewUserDecision } from "./examiner";
 export { computeScoreV2 } from "./scoring";

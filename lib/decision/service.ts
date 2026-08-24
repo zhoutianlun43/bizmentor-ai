@@ -6,9 +6,12 @@
  * - 客户端：localStorage repository + createApiRunAi；未来 Supabase 只换 repository
  */
 import type { RunAiFn } from "../research/ai-call";
+import type { InvestmentThesis, UnitEconomicsModel } from "../research/types";
 import { LocalResearchRepository } from "../research/repository";
 import type { ResearchRepository } from "../research/repository";
 import { reviewUserDecision } from "./examiner";
+import { generateInvestmentThesis as buildInvestmentThesis } from "./thesis";
+import { generateUnitEconomics as buildUnitEconomics } from "./unit-economics";
 import { generateLearningEvents } from "./learning";
 import { LocalDecisionRepository } from "./repository";
 import type { DecisionRepository } from "./repository";
@@ -178,6 +181,39 @@ export class DecisionService {
     return { result, events };
   }
 
+  // ---------- 4.5 Investment Thesis + Unit Economics（V0.4.1 Phase 7A） ----------
+
+  /** 生成投资论点并保存到研究报告（report.jsonb，无需改 schema） */
+  async generateInvestmentThesis(opportunityId: string): Promise<InvestmentThesis> {
+    const run = await this.research.getRun(opportunityId);
+    if (!run || !run.report) throw new Error("研究运行不存在或未完成");
+    const thesis = await buildInvestmentThesis({
+      runAi: this.runAi,
+      report: run.report,
+      runId: run.runId,
+      opportunity: { id: opportunityId, name: run.report.opportunityName },
+    });
+    run.report.thesis = thesis;
+    run.updatedAt = new Date().toISOString();
+    await this.research.saveRun(run);
+    return thesis;
+  }
+
+  /** 生成单位经济模型并保存到研究报告（Business Model Analyzer） */
+  async generateUnitEconomics(opportunityId: string): Promise<UnitEconomicsModel> {
+    const run = await this.research.getRun(opportunityId);
+    if (!run || !run.report) throw new Error("研究运行不存在或未完成");
+    const model = await buildUnitEconomics({
+      runAi: this.runAi,
+      report: run.report,
+      runId: run.runId,
+      opportunity: { id: opportunityId, name: run.report.opportunityName },
+    });
+    run.report.unitEconomics = model;
+    run.updatedAt = new Date().toISOString();
+    await this.research.saveRun(run);
+    return model;
+  }
   // ---------- 5. Score v2 ----------
 
   /** 使用真实验证结果计算 Score v2 并追加到研究运行的 scoreHistory */

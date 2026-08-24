@@ -233,6 +233,14 @@ export interface ValidationPlanItem {
   method: string;
   successCriteria: string;
   effort: "low" | "medium" | "high";
+  /** V0.4.1 Phase 7A：可执行验证方案字段（AI 可补充，缺省由确定性填充） */
+  hypothesis?: string;
+  sampleSize?: string;
+  failureCriteria?: string;
+  deadline?: string;
+  costEstimate?: string;
+  owner?: string;
+  relatedDimension?: ScoreDimension;
 }
 
 /** 报告元信息：降级状态 / 外部证据情况 */
@@ -247,6 +255,58 @@ export interface ReportMeta {
   providers: Partial<Record<ResearchStageName, { provider: AiProviderName; provider_degraded: boolean }>>;
   /** 领域信息（V0.4.1 Phase 6.1B：检测结果，用于上下文注入与可追溯） */
   domain?: { id: string; label: string; confidence: number };
+}
+
+/** 投资论点（Investment Thesis，V0.4.1 Phase 7A）：为什么值得投入/不投入的逻辑框架 */
+export interface InvestmentThesis {
+  id: string;
+  opportunityId: string;
+  runId: string;
+  /** 领域（来自 report.meta.domain） */
+  domain?: string;
+  /** 核心假设（一句话） */
+  coreHypothesis: string;
+  /** 逻辑链（为什么成立） */
+  logicChain: string[];
+  /** 关键假设（尽量绑定证据/来源） */
+  keyAssumptions: Array<{ claim: string; evidenceClass: "FACT" | "AI_INFERENCE" | "ASSUMPTION" | "NEEDS_VALIDATION"; sourceId?: string }>;
+  /** 什么会证伪（反方逻辑） */
+  invalidators: string[];
+  /** 上行空间 */
+  expectedUpside: string;
+  /** 决策门（什么条件下 proceed） */
+  decisionGate: string;
+  /** 0-1 */
+  confidence: number;
+  createdAt: string;
+}
+
+/** 单位经济模型（Business Model Analyzer，V0.4.1 Phase 7A）：AI 提案输入 + 确定性计算 */
+export interface UnitEconomicsModel {
+  domain: string;
+  currency: string;
+  /** 原始输入（按领域不同：电商 aov/cogsRate/...；SaaS acvPerMonth/churnRate/...） */
+  inputs: Record<string, number>;
+  /** 确定性推导 */
+  derived: {
+    grossMarginRate: number;
+    /** 单笔订单/单月贡献毛利（扣运费/平台费/变动成本后） */
+    contributionPerUnit: number;
+    contributionRate: number;
+    /** 获客成本（用户输入） */
+    cac: number;
+    /** 回本周期（订单数或月数） */
+    paybackUnits: number;
+    /** 生命周期价值 */
+    ltv: number;
+    /** LTV / CAC */
+    ltvCac: number;
+  };
+  /** 关键假设（含证据类） */
+  assumptions: string[];
+  /** 0-1 */
+  confidence: number;
+  createdAt: string;
 }
 
 /** 最终研究报告（结构化，非一段文本） */
@@ -270,6 +330,10 @@ export interface ResearchReport {
   competitors: CompetitorFinding[];
   /** 竞品矩阵 */
   competitorMatrix?: CompetitorMatrix;
+  /** 投资论点（Business Decision Engine 生成，V0.4.1 Phase 7A） */
+  thesis?: InvestmentThesis;
+  /** 单位经济模型（Business Model Analyzer 生成，V0.4.1 Phase 7A） */
+  unitEconomics?: UnitEconomicsModel;
   meta: ReportMeta;
 }
 

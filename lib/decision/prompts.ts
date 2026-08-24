@@ -54,3 +54,34 @@ export function examinerPrompt(params: {
     }\n用户决策：${params.decision}\n用户判断：\n${judgmentLines.join("\n")}\n\nJSON 格式：\n{"score":7.0,"strengths":["优点1"],"weaknesses":[{"category":"logic_gap|over_optimism|...","description":"问题描述","severity":0.5}],"reasoning_gaps":["逻辑缺口"],"missing_evidence":["缺少的证据"],"recommended_actions":["建议"],"ability_signals":[{"skill":"strategic_judgment|validation|...","signal":"positive|negative|neutral","severity":0.4,"evidence":"依据"}]}`,
   };
 }
+
+// ===================== V0.4.1 Phase 7A：Business Decision Engine =====================
+
+/** Investment Thesis 提示词：把研究报告提炼为投资论点 */
+export function investmentThesisPrompt(report: {
+  opportunityName: string;
+  executiveSummary: string;
+  overallScore: number;
+  confidence: number;
+  nextActions: string[];
+  domainLabel?: string;
+}): PromptParts {
+  return {
+    system: `你是 BizMentor 的「投资论点架构师」。基于研究报告提炼投资论点（Investment Thesis）：核心假设、逻辑链、关键假设、证伪条件、上行空间、决策门。\n${JSON_INSTRUCTION}`,
+    user: `请基于以下研究报告输出投资论点。\n\n商机：${report.opportunityName}${report.domainLabel ? `\n领域：${report.domainLabel}` : ""}\n综合评分：${report.overallScore}/10（置信度 ${report.confidence}）\n\n执行摘要：${report.executiveSummary}\n\n建议的下一步：\n${report.nextActions.map((a) => `- ${a}`).join("\n")}\n\nJSON 格式：\n{"coreHypothesis":"一句话核心假设","logicChain":["逻辑1","逻辑2"],"keyAssumptions":[{"claim":"关键假设","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","sourceId":"可选来源id"}],"invalidators":["什么会证伪"],"expectedUpside":"上行空间","decisionGate":"什么条件下 proceed","confidence":0.6}`,
+  };
+}
+
+/** 单位经济模型提示词：按领域让 AI 提案输入，系统确定性计算推导指标 */
+export function unitEconomicsPrompt(report: { opportunityName: string; executiveSummary: string; domain: string }): PromptParts {
+  const domainHint =
+    report.domain === "ecommerce"
+      ? "电商：输入 aov（客单价）、cogsRate（商品成本率 0-1）、shippingPerOrder（单均履约成本）、platformFeeRate（平台费率 0-1）、cac（获客成本）、avgOrdersPerCustomer（每客户购买次数）"
+      : report.domain === "saas"
+        ? "SaaS：输入 acvPerMonth（单客户月均收入）、grossMarginRate（毛利率 0-1）、churnRate（月流失率 0-1）、cac（获客成本）"
+        : "通用：输入 revenuePerUnit（单次成交收入）、costPerUnit（单次成交变动成本）、cac（获客成本）、avgTransactionsPerCustomer（每客户成交次数）";
+  return {
+    system: `你是 BizMentor 的「商业模式分析器」。${REVIEW_RULES}\n${JSON_INSTRUCTION}\n你只提供输入提案，推导指标（毛利率/贡献/回本/LTV/LTV-CAC）由系统确定性计算。`,
+    user: `请基于研究结论，为以下商机提案单位经济输入。\n\n商机：${report.opportunityName}\n领域：${report.domain}\n\n${domainHint}\n\n研究摘要：${report.executiveSummary}\n\nJSON 格式：\n{"inputs":{"<字段名>":数值},"assumptions":["关键假设1"],"confidence":0.6}`,
+  };
+}
