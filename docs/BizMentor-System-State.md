@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.6.1 Product Usability**（Onboarding / 对话历史 / AI Daily Assistant / Chat 认知确认）
+- **V0.7.0 Product Release**（App Shell / 全流程闭环 / 已发布到 bizmentor.top）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -228,3 +228,14 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **Chat 认知确认**：/api/knowledge-candidate（LLM 提炼用户信息）→ 对话中显示 [确认加入AI认知] → 用户确认后进入 Knowledge（AI 不自动学习）。
 - **测试**：285/285（新增 2：Conversation Local + Supabase mock）。
 - **验收**：pnpm test/lint/tsc/build 全部通过（20 路由）。
+
+---
+
+## 19. V0.7.0 Product Release 完成记录
+
+- **App Shell**：底部导航（首页/AI/商机/技能/我的）+ 顶部用户状态条（用户·经营名 + 完善资料）+ 全局 OnboardingGuard。
+- **全流程闭环**：首次访问 → /onboarding 填画像 → 保存（Profile/Business 带本地回退，生产 Supabase 未建表也可用）→ 首页 Dashboard（AI Daily Assistant 建议 + 今日经营状态 + 问AI/技能/认知入口）→ 问AI（带上下文+历史）→ 技能中心 → 我的AI认知 → 复盘。
+- **已发布**：代码部署到生产（bizmentor.top），/、/chat、/skills、/knowledge、/onboarding、/profile 全部 200；/api/chat 可调用（真实 LLM）。
+- **线上验证**：onboarding→首页→chat 全链路通过；Dashboard 显示真实生产数据（商机/研究中/异常建议）。
+- **截图**：outputs/screenshots/v070/（01-07）。
+- **验收**：pnpm test 285/285、lint 0 警告、tsc/build 通过。
