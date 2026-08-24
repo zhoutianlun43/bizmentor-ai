@@ -107,6 +107,7 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
           differentJudgment: differentFromAi ? judgment.differentJudgment : undefined,
         },
       });
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
     } catch (err) {
       setError((err as Error).message?.slice(0, 200) ?? "创建决策失败");
     } finally {
@@ -147,6 +148,7 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
         opportunityId: opportunity.id,
         tasks: draftTasks,
       });
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
       setDraftTasks([]);
     } catch (err) {
       setError((err as Error).message?.slice(0, 200) ?? "创建验证计划失败");
