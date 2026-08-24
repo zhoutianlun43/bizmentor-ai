@@ -11,8 +11,12 @@ import { getSupabaseBrowserClient } from "../supabase/client";
 import { LocalOpportunityRepository } from "../opportunity/local-repository";
 import { SupabaseOpportunityRepository } from "../opportunity/supabase-repository";
 import type { OpportunityRepository } from "../opportunity/repository";
+import { SupabaseResearchRepository } from "../research/supabase-repository";
+import { LocalResearchRepositoryWrapper } from "../research/local-repository";
+import type { ResearchRepository } from "../research/repository";
 
 let cachedOpportunity: OpportunityRepository | undefined;
+let cachedResearch: ResearchRepository | undefined;
 
 /** 获取商机仓库（进程内单例；便于测试注入） */
 export function getOpportunityRepository(): OpportunityRepository {
@@ -27,7 +31,21 @@ export function getOpportunityRepository(): OpportunityRepository {
   return cachedOpportunity;
 }
 
+/** 获取研究仓库（进程内单例；配置 Supabase → Supabase，否则 Local fallback） */
+export function getResearchRepository(): ResearchRepository {
+  if (cachedResearch) return cachedResearch;
+  if (env.supabaseUrl && env.supabaseAnonKey) {
+    cachedResearch = new SupabaseResearchRepository(getSupabaseBrowserClient(), {
+      userId: "local-user",
+    });
+  } else {
+    cachedResearch = new LocalResearchRepositoryWrapper();
+  }
+  return cachedResearch;
+}
+
 /** 测试用：重置缓存（注入替代实现） */
 export function __resetRepositories(): void {
   cachedOpportunity = undefined;
+  cachedResearch = undefined;
 }

@@ -1,18 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
 import { DecisionPanel } from "@/components/decision/DecisionPanel";
-import { readResearchRunSync } from "@/lib/research";
+import { useResearchRuns } from "@/lib/research/hooks/use-research-runs";
 import { Card } from "@/components/ui/Card";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { useLocalData } from "@/lib/hooks/use-local-data";
 import { OPPORTUNITY_SOURCE_LABELS } from "@/lib/constants";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { formatDate } from "@/lib/utils/format";
@@ -25,11 +23,9 @@ export default function OpportunityDetailPage() {
   const { opportunities, loading } = useOpportunities();
   const opportunity = opportunities.find((o) => o.id === idStr);
 
-  // 商机研究运行（V0.3-A）：localStorage 存储，完成后经 storage 事件自动刷新
-  const researchRun = useLocalData(
-    useCallback(() => readResearchRunSync(idStr), [idStr]),
-    undefined,
-  );
+  // 商机研究运行（V0.4.1）：异步 hook 读取
+  const { runs } = useResearchRuns();
+  const researchRun = runs.find((r) => r.opportunityId === idStr);
 
   if (loading) {
     return (

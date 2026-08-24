@@ -14,3 +14,10 @@ test("provider：配置了 Supabase → SupabaseOpportunityRepository", async ()
   const repo = getOpportunityRepository();
   assert.ok(repo instanceof SupabaseOpportunityRepository);
 });
+
+test("provider：配置了 Supabase → SupabaseResearchRepository", async () => {
+  const { getResearchRepository } = await import("../provider");
+  const { SupabaseResearchRepository } = await import("../../research/supabase-repository");
+  const repo = getResearchRepository();
+  assert.ok(repo instanceof SupabaseResearchRepository);
+});
