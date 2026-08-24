@@ -177,7 +177,10 @@ export default function ChatPage() {
           <Button onClick={confirmCandidate} variant="secondary" size="sm" className="mt-2">确认加入 AI 认知</Button>
         </Card>
       )}
-      {savedCandidate && <p className="mt-2 text-xs text-emerald-600">已加入你的长期认知（可在「我的AI认知」查看）。</p>}
+      {savedCandidate && <p className="mt-2 text-xs text-emerald-600">已加入你的长期认知。</p>}
+      <p className="mt-3 text-center text-[11px] text-slate-400">
+        <a href="/knowledge" className="text-indigo-500">查看我的AI认知</a> · <a href="/skills" className="text-indigo-500">技能中心</a>
+      </p>
     </div>
   );
 }

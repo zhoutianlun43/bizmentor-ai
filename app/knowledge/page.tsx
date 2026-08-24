@@ -112,6 +112,7 @@ export default function KnowledgePage() {
         </Card>
       )}
 
+      <p className="mt-3 text-center text-[11px] text-slate-400"><a href="/profile" className="text-indigo-500">返回我的</a> · <a href="/chat" className="text-indigo-500">去问 AI</a></p>
       <div className="mt-3 space-y-3">
         {groups.map((g) => (
           <Card key={g.type}>

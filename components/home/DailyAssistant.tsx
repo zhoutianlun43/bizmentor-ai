@@ -97,6 +97,7 @@ export function DailyAssistant() {
         ))}
         {suggestions.length === 0 && <p className="text-xs text-slate-400">暂无建议，先和 AI 聊聊或新增商机。</p>}
       </div>
+      <a href="/chat" className="mt-2 block rounded-xl bg-indigo-50 px-3 py-2 text-center text-xs font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">去问 AI 深入聊聊</a>
     </Card>
   );
 }

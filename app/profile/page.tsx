@@ -1,3 +1,6 @@
+"use client";
+import { useEffect, useState } from "react";
+import { getBusinessRepository, getProfileRepository } from "@/lib/repository/provider";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ExportDataButton } from "@/components/migration/ExportDataButton";
 import { Card } from "@/components/ui/Card";
@@ -13,6 +16,26 @@ import { mockMentorProfile } from "@/lib/data/mock/mentor";
 export default function ProfilePage() {
   const profile = mockMentorProfile;
   const xpRatio = Math.min(100, Math.round((profile.xp / profile.xpToNext) * 100));
+  const [business, setBusiness] = useState<string>("未设置经营");
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [b, p] = await Promise.all([getBusinessRepository().get("local-user"), getProfileRepository().get("local-user")]);
+        if (!cancelled) {
+          if (b?.name) setBusiness(`${b.name}（${b.businessTypes.join("、")}）`);
+          if (p?.name) setUserName(p.name);
+        }
+      } catch {
+        // 忽略
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="px-5 pb-4">
@@ -33,6 +56,16 @@ export default function ProfilePage() {
         <p className="mt-2 text-[11px] text-indigo-200">
           通过训练、判断与项目验证积累经验值，升级你的商业等级。
         </p>
+      </Card>
+
+      {/* V0.7.0：业务画像 + 认知入口（打通） */}
+      <Card className="mt-3">
+        <h3 className="text-sm font-semibold">我的业务</h3>
+        <p className="mt-1 text-xs text-slate-500">{userName ? `${userName} · ` : ""}{business}</p>
+        <div className="mt-2 flex gap-2">
+          <a href="/onboarding" className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">完善资料</a>
+          <a href="/knowledge" className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">我的AI认知</a>
+        </div>
       </Card>
 
       {/* 能力评分 */}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, GraduationCap, Home, Lightbulb, User } from "lucide-react";
+import { Home, Lightbulb, MessageCircle, Sparkles, User } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -12,12 +12,12 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-/** 底部导航：首页 / 商机 / 项目 / 训练 / 我的 */
+/** 底部导航（V0.7.0 App Shell）：首页 / AI / 商机 / 技能 / 我的 */
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "首页", icon: Home },
+  { href: "/chat", label: "AI", icon: MessageCircle },
   { href: "/opportunities", label: "商机", icon: Lightbulb },
-  { href: "/projects", label: "项目", icon: Briefcase },
-  { href: "/training", label: "训练", icon: GraduationCap },
+  { href: "/skills", label: "技能", icon: Sparkles },
   { href: "/profile", label: "我的", icon: User },
 ];
 

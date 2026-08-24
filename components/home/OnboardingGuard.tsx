@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const ONBOARDED_KEY = "bizmentor:v1:onboarded";
 
@@ -18,8 +18,10 @@ export function markOnboarded(): void {
 /** 首页守卫：未完成 Onboarding 时跳转 /onboarding */
 export function OnboardingGuard() {
   const router = useRouter();
+  const pathname = usePathname();
   useEffect(() => {
+    if (pathname === "/onboarding") return;
     if (!isOnboarded()) router.replace("/onboarding");
-  }, [router]);
+  }, [router, pathname]);
   return null;
 }

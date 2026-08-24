@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { UserStatusBar } from "@/components/layout/UserStatusBar";
+import { OnboardingGuard } from "@/components/home/OnboardingGuard";
 import { RegisterSW } from "@/components/RegisterSW";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
@@ -48,6 +50,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ThemeProvider>
           {/* 手机优先：内容居中并限制最大宽度，模拟 iPhone 屏幕 */}
           <div className="mx-auto min-h-dvh w-full max-w-md">
+            <OnboardingGuard />
+            <UserStatusBar />
             <main className="pb-28">{children}</main>
             <BottomNav />
           </div>
