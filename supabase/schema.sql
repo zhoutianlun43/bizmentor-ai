@@ -54,10 +54,10 @@ create index if not exists research_runs_opportunity_id_idx on public.research_r
 -- 决策（decisions）
 -- -------------------------------------------------------------
 create table if not exists public.decisions (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid(),
-  opportunity_id uuid not null references public.opportunities (id) on delete cascade,
-  run_id uuid references public.research_runs (id) on delete set null,
+  id text primary key,                          -- 应用侧字符串 id（uid()）
+  user_id text not null default 'local-user',   -- 单用户阶段固定；Auth 接入后改为 auth.uid()::text
+  opportunity_id text not null,                 -- 应用侧 opportunityId（字符串）
+  run_id text,                                  -- 应用侧 runId（字符串）
   decision text not null,                       -- proceed | validate | continue_research | pause | abandon
   different_from_ai boolean not null default false,
   judgment jsonb not null,                      -- UserJudgment
@@ -73,9 +73,9 @@ create index if not exists decisions_opportunity_id_idx on public.decisions (opp
 -- AI 评审（decision_reviews）
 -- -------------------------------------------------------------
 create table if not exists public.decision_reviews (
-  id uuid primary key default gen_random_uuid(),
-  decision_id uuid not null references public.decisions (id) on delete cascade,
-  user_id uuid not null default auth.uid(),
+  id text primary key,                          -- 应用侧字符串 id
+  decision_id text not null,
+  user_id text not null default 'local-user',
   score numeric not null,                       -- 评审分 0-10
   strengths jsonb not null default '[]'::jsonb,
   weaknesses jsonb not null default '[]'::jsonb,
@@ -94,10 +94,10 @@ create index if not exists decision_reviews_decision_id_idx on public.decision_r
 -- 验证计划（validation_plans）
 -- -------------------------------------------------------------
 create table if not exists public.validation_plans (
-  id uuid primary key default gen_random_uuid(),
-  decision_id uuid not null references public.decisions (id) on delete cascade,
-  user_id uuid not null default auth.uid(),
-  opportunity_id uuid not null references public.opportunities (id) on delete cascade,
+  id text primary key,                          -- 应用侧字符串 id
+  decision_id text not null,
+  user_id text not null default 'local-user',
+  opportunity_id text not null,
   tasks jsonb not null default '[]'::jsonb,     -- ValidationTask[]
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -109,12 +109,12 @@ create index if not exists validation_plans_decision_id_idx on public.validation
 -- 验证结果（validation_results，仅用户输入，AI 不参与）
 -- -------------------------------------------------------------
 create table if not exists public.validation_results (
-  id uuid primary key default gen_random_uuid(),
-  task_id uuid not null,
-  plan_id uuid not null references public.validation_plans (id) on delete cascade,
-  decision_id uuid not null references public.decisions (id) on delete cascade,
-  user_id uuid not null default auth.uid(),
-  opportunity_id uuid not null references public.opportunities (id) on delete cascade,
+  id text primary key,                          -- 应用侧字符串 id
+  task_id text not null,
+  plan_id text not null,
+  decision_id text not null,
+  user_id text not null default 'local-user',
+  opportunity_id text not null,
   actual_sample text,
   actual_result text not null,
   user_feedback text,
@@ -133,10 +133,10 @@ create index if not exists validation_results_plan_id_idx on public.validation_r
 -- 学习事件（learning_events，能力画像数据源）
 -- -------------------------------------------------------------
 create table if not exists public.learning_events (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid(),
-  opportunity_id uuid references public.opportunities (id) on delete set null,
-  decision_id uuid references public.decisions (id) on delete set null,
+  id text primary key,                          -- 应用侧字符串 id
+  user_id text not null default 'local-user',
+  opportunity_id text,
+  decision_id text,
   skill text not null,
   signal text not null,                         -- positive | negative | neutral
   severity numeric not null default 0,
@@ -146,6 +146,25 @@ create table if not exists public.learning_events (
 
 create index if not exists learning_events_user_id_idx on public.learning_events (user_id);
 create index if not exists learning_events_skill_idx on public.learning_events (skill);
+
+-- -------------------------------------------------------------
+-- 评分更新（score_updates，Score v2 变化可追溯）
+-- -------------------------------------------------------------
+create table if not exists public.score_updates (
+  id text primary key,                          -- 应用侧字符串 id
+  decision_id text,
+  user_id text not null default 'local-user',
+  from_version integer not null,
+  to_version integer not null,
+  before jsonb not null,                        -- ScoreVersion
+  after jsonb not null,                         -- ScoreVersion
+  reason text,
+  new_evidence jsonb not null default '[]'::jsonb,
+  validation_results jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists score_updates_decision_id_idx on public.score_updates (decision_id);
 
 -- -------------------------------------------------------------
 -- AI 用量（ai_usage，服务端写入，仅 service role 可访问）
