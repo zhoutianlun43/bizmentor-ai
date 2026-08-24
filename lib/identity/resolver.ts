@@ -5,17 +5,27 @@
 import { env } from "../config/env";
 import type { Identity, IdentitySource } from "./types";
 
-let overrideUserId: string | undefined;
+let overrideUserId: string | undefined; // 显式覆盖（测试/会话最高优先）
+let authUserId: string | undefined; // 认证用户（AuthIdentityProvider 注入，次优先）
 
-/** 测试 / 未来 Auth 注入：设置会话用户（传 undefined 清除覆盖） */
+/** 显式覆盖（测试 / 未来 Auth 会话注入）：传 undefined 清除 */
 export function setIdentityOverride(userId: string | undefined): void {
   overrideUserId = userId;
 }
 
-/** 解析当前用户 id（override 参数优先，其次会话覆盖、环境、默认） */
+/** 认证用户（AuthIdentityProvider 使用；登出传 undefined 清除） */
+export function setAuthUserId(userId: string | undefined): void {
+  authUserId = userId;
+}
+
+/**
+ * 解析当前用户 id（V0.4.2 Phase 9B-5-A 优先级）：
+ * explicit override > authenticated user > IDENTITY_USER_ID > local-user
+ */
 export function resolveCurrentUserId(override?: string): string {
   if (override) return override;
   if (overrideUserId) return overrideUserId;
+  if (authUserId) return authUserId;
   if (env.identityUserId) return env.identityUserId;
   return "local-user";
 }

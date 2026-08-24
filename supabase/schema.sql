@@ -244,3 +244,18 @@ create index if not exists memory_records_outcome_idx on public.memory_records (
 alter table public.memory_records enable row level security;
 create policy "single user memory_records" on public.memory_records
   for all using (user_id = 'local-user') with check (user_id = 'local-user');
+
+-- -------------------------------------------------------------
+-- 用户设置（user_settings，V0.4.2 Phase 9B-5-B：多设备设置同步）
+-- -------------------------------------------------------------
+create table if not exists public.user_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null unique,
+  settings jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_settings enable row level security;
+create policy "single user user_settings" on public.user_settings
+  for all using (user_id = 'local-user') with check (user_id = 'local-user');

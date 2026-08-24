@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.4.2 Phase 9B-4**（Personal Knowledge System：用户长期认知与商业人格）
+- **V0.4.2 Phase 9B-5**（Multi Device Foundation：Auth Ready + Settings + PWA + Sync）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -46,7 +46,11 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/agent/scheduler | **Agent Scheduler（App 打开/手动/测试触发）** | **9B-2** |
 | lib/agent/events | Agent Event 总线（旁路 emit/subscribe） | 9B-2 |
 | lib/skills | Skill System（BizSkill/Registry/选品/竞品） | 9B-3 |
-| lib/knowledge | **Personal Knowledge（习惯/判断方式/经验/案例 + 确认机制）** | **9B-4（本阶段）** |
+| lib/knowledge | Personal Knowledge（习惯/判断方式/经验/案例 + 确认机制） | 9B-4 |
+| lib/settings | **Settings Repository（本地缓存 + Supabase 云端同步）** | **9B-5（本阶段）** |
+| lib/sync | **SyncManager（LWW 同步）+ AgentStateRepository 预留** | **9B-5** |
+| lib/pwa | **PWA Manifest 共享源 + sw.js（离线/重同步）** | **9B-5** |
+| lib/identity/auth | **AuthIdentityProvider（Auth Ready，fallback local-user）** | **9B-5** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -97,6 +101,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - ~~9B-2~~ ✅ Operating Loop：晨报/日间监控/晚报 + Scheduler + Event（已完成）
 - ~~9B-3~~ ✅ Skill System：可插拔技能（选品/竞品）+ skill_tool（已完成）
 - ~~9B-4~~ ✅ Personal Knowledge：用户长期认知（AI 候选 → 用户确认 → 进入 Context）（已完成）
+- ~~9B-5~~ ✅ Multi Device Foundation：Auth Ready + Settings + PWA + Sync（已完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -154,3 +159,16 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **Agent 集成**：AgentContext.knowledgeRecords（恢复时只加载 confirmed）；knowledge_tool（retrieve/capture）；AgentRun.knowledgeReads/knowledgeWrites。
 - **测试**：255/255（新增 6：CRUD/Capture/确认/未确认不进 Context/确认后加载/Skill 读取/AgentRuntime 调用）。
 - **下一阶段**：9B-5 多端就绪（PWA + SettingsRepository + 数据同步落地）。
+
+---
+
+## 14. Phase 9B-5 完成记录（Multi Device Foundation）
+
+- **Identity 多设备升级**：AuthIdentityProvider（getCurrentUser/isAuthenticated/resolveUserId/subscribeAuth/init）；优先级 explicit override > authenticated user > IDENTITY_USER_ID > local-user（resolver 新增独立 authUserId 槽位，业务层 getCurrentUserId() 不变）。
+- **Settings Repository**：lib/settings/ —— LocalSettingsRepository（localStorage）+ SupabaseSettingsRepository（user_settings 表）+ CachedSettingsRepository（Supabase 成功→更新本地缓存；失败→读本地缓存离线降级）。
+- **PWA 基础**：lib/pwa/manifest.ts 共享 manifest 源（app/manifest.ts 引用，/manifest.webmanifest 生成）；sw.js 增强（v2：新增 sync 事件网络恢复重同步 + refresh-cache 消息）。
+- **Sync 基础层**：lib/sync/ —— SyncManager（push/pull/sync，updated_at Last-Write-Wins）；AgentStateRepository 预留（agent_state/agent_runs/knowledge_records 未来进 Supabase，Local 先实现）。
+- **schema 新增**：user_settings 表（user_id unique + settings jsonb + RLS）。
+- **数据同步方案**：Supabase 未来唯一真相源；localStorage = 缓存/离线降级；LWW 冲突策略；不迁移所有业务数据（框架先行）。
+- **测试**：266/266（新增 11：Auth fallback/认证优先/状态监听、Settings CRUD/本地 fallback/缓存策略、Sync LWW/push/pull/sync、PWA manifest/sw.js）。
+- **下一阶段（规划）**：接 Supabase Auth + RLS 升级（多用户）；生产应用 user_settings 表；AgentState/Settings 上云；PWA 完善。
