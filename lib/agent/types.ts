@@ -8,6 +8,7 @@ import type { Opportunity } from "../types";
 import type { UserDecision, LearningEvent } from "../decision/types";
 import type { PlanStatus, TaskExecutionSummary } from "../decision/execution";
 import type { MemoryPattern } from "../memory/types";
+import type { AgentEventType } from "./events";
 
 /** 触发来源 */
 export type AgentTrigger = "user" | "scheduled" | "event" | "manual";
@@ -79,6 +80,16 @@ export interface AgentRun {
   completedAt?: string;
   result?: unknown;
   error?: string;
+  /** V0.4.2 Phase 9B-2：触发类型细分（app_open / manual / scheduled / event / user） */
+  triggerType?: string;
+  /** V0.4.2 Phase 9B-2：运行期间观察到的事件 */
+  events?: AgentEventType[];
+  /** V0.4.2 Phase 9B-2：所属经营循环（morning_briefing / day_monitoring / evening_review） */
+  loopType?: "morning_briefing" | "day_monitoring" | "evening_review";
+  /** V0.4.2 Phase 9B-2：本次运行写入记忆的次数 */
+  memoryWrites?: number;
+  /** V0.4.2 Phase 9B-2：耗时（ms） */
+  duration?: number;
 }
 
 /** Agent Run 输入（用户/调度传入） */
@@ -87,4 +98,12 @@ export interface AgentRunInput {
   tools?: string[];
   /** 每个工具的入参（key = tool id） */
   args?: Record<string, unknown>;
+  /** V0.4.2 Phase 9B-2：触发类型细分 */
+  triggerType?: string;
+  /** V0.4.2 Phase 9B-2：本次运行观察/产生的事件 */
+  events?: AgentEventType[];
+  /** V0.4.2 Phase 9B-2：所属经营循环 */
+  loopType?: AgentRun["loopType"];
+  /** V0.4.2 Phase 9B-2：记忆写入次数（工具可上报） */
+  memoryWrites?: number;
 }

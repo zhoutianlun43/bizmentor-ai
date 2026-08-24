@@ -11,10 +11,17 @@ export { createResearchTool } from "./tools/research";
 export { createDecisionTool } from "./tools/decision";
 export { createExecutionTool } from "./tools/execution";
 export { createMemoryTool } from "./tools/memory";
+export { createMorningBriefingTool, createEveningReviewTool, createMonitoringTool } from "./tools/loops";
 export type { ResearchToolDeps } from "./tools/research";
 export type { DecisionToolDeps } from "./tools/decision";
 export type { ExecutionToolDeps } from "./tools/execution";
 export type { MemoryToolDeps } from "./tools/memory";
+export { emit, subscribe, __resetEventBus } from "./events";
+export type { AgentEvent, AgentEventType } from "./events";
+export { AgentScheduler } from "./scheduler";
+export type { ScheduledTask } from "./scheduler";
+export { AnomalyDetector, collectState, generateEveningReview, generateMorningBriefing, toDateKey } from "./loops";
+export type { AnomalyAlert, AnomalyType, BriefingStatus, CollectedState, DailyBriefing, DailyReview, DecisionComparison, LoopDeps, ReviewDeps } from "./loops";
 export type {
   AgentContext,
   AgentLifecycleState,

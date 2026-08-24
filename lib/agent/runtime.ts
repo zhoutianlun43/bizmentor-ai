@@ -59,6 +59,10 @@ export class AgentRuntime {
       status: "idle",
       toolsUsed: [],
       startedAt,
+      triggerType: input.triggerType,
+      events: input.events,
+      loopType: input.loopType,
+      memoryWrites: input.memoryWrites,
     };
 
     try {
@@ -117,6 +121,7 @@ export class AgentRuntime {
         this.lifecycle.transition("idle");
       }
       run.completedAt = new Date().toISOString();
+      run.duration = Date.parse(run.completedAt) - Date.parse(run.startedAt);
       await this.runs.save(run);
     }
     return run;

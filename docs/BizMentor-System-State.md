@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.4.2 Phase 9B-1**（Agent Runtime Foundation + Project Continuity Manifest）
+- **V0.4.2 Phase 9B-2**（Business Operating Loop：晨报 / 日间监控 / 晚报 + Scheduler + Event）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -41,7 +41,10 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/memory | Business Memory（决策记忆/事件归档/模式检索） | 8A |
 | lib/identity | Identity（local-user / Auth 预留） | 8B-2 |
 | lib/repository | Repository Provider（Supabase/Local 切换） | 3A-3C |
-| lib/agent | **Agent Runtime（生命周期/工具/上下文/审计）** | **9B-1（本阶段）** |
+| lib/agent | Agent Runtime（生命周期/工具/上下文/审计） | 9B-1 |
+| lib/agent/loops | **Business Operating Loop（晨报/异常检测/晚报）** | **9B-2（本阶段）** |
+| lib/agent/scheduler | **Agent Scheduler（App 打开/手动/测试触发）** | **9B-2** |
+| lib/agent/events | **Agent Event 总线（旁路 emit/subscribe）** | **9B-2** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -53,6 +56,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **决策**：decisions / decision_reviews / validation_plans（tasks jsonb 含 stateHistory/priority）/ validation_results / score_updates / learning_events
 - **记忆**：memory_records（决策记忆，V0.4.2 9B-1 时生产表**待应用**——需在 Supabase SQL 编辑器执行 schema.sql 的 memory_records DDL）
 - **Agent 运行审计**：AgentRun（Local localStorage `bizmentor:v1:agentRuns`；未来 Supabase agent_runs 表）
+- **经营循环产出**：DailyBriefing / DailyReview / AnomalyAlert（确定性生成，可保存/恢复；暂不落库，由调用方保存）
 - **本地**：localStorage `bizmentor:v1:*`（开发/缓存）；**Supabase 是生产真相源**
 
 ## 5. 数据同步方案
@@ -88,7 +92,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 
 ## 9. 下一阶段计划
 
-- **9B-2** Operating Loop：晨报/日间监控/晚报（lib/agent/loops + Scheduler）
+- ~~9B-2~~ ✅ Operating Loop：晨报/日间监控/晚报 + Scheduler + Event（已完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -105,3 +109,18 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 
 ---
 *维护：每个 Phase 完成时更新本文件。*
+
+---
+
+## 11. Phase 9B-2 完成记录（Business Operating Loop）
+
+- **新增模块**：
+  - `lib/agent/loops/`：collect（状态收集）/ anomaly（AnomalyDetector：超期/未执行/失败/评分下降/证伪）/ briefing（晨报）/ review（晚报，自动沉淀决策记忆）/ types
+  - `lib/agent/scheduler.ts`：registerTask / runTask / runDueTasks（App 打开/手动/测试触发；未来 cron/server worker 预留）
+  - `lib/agent/events.ts`：旁路事件总线 emit/subscribe（RESEARCH_COMPLETED / DECISION_CREATED / VALIDATION_COMPLETED / TASK_OVERDUE / MEMORY_CREATED）
+  - `lib/agent/tools/loops.ts`：morning_briefing_tool / evening_review_tool / monitoring_tool（AgentRuntime 可调用）
+- **AgentRun 扩展**：triggerType / events / loopType / memoryWrites / duration（向后兼容）
+- **数据流**：触发（App 打开/手动/测试）→ AgentRuntime → Loop 工具 → collectState（Repository/Memory/Execution）→ 产出（晨报/异常/晚报）→ recordDecision 沉淀记忆 → AgentRun 审计
+- **Agent 主动能力**：晨报（今日状态/异常/建议/记忆洞察）；日间监控（异常检测 + 严重度排序）；晚报（复盘 + 决策对照 AI vs 用户 vs 实际 + 经验 + 明日动作）
+- **当前限制**：Scheduler 仅 App 打开/手动/测试触发（无服务器 7×24）；晨报/晚报为确定性生成（AI 文案增强未做）；Loop 产出暂不落库（调用方保存）
+- **测试**：243/243 通过（新增 6：晨报/异常/晚报/Scheduler/Event/Runtime 调用 Loop）
