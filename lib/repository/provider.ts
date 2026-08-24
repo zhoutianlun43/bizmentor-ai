@@ -24,9 +24,11 @@ import type { MemoryRepository } from "../memory/repository";
 import { SupabaseProfileRepository } from "../profile/supabase-repository";
 import { LocalProfileRepository } from "../profile/local-repository";
 import type { ProfileRepository } from "../profile/repository";
+import type { PersonalProfile, PersonalProfileInput } from "../profile/types";
 import { SupabaseBusinessProfileRepository } from "../business/supabase-repository";
 import { LocalBusinessProfileRepository } from "../business/local-repository";
 import type { BusinessProfileRepository } from "../business/repository";
+import type { BusinessProfile, BusinessProfileInput } from "../business/types";
 
 let cachedOpportunity: OpportunityRepository | undefined;
 let cachedResearch: ResearchRepository | undefined;
@@ -79,7 +81,10 @@ export function getDecisionRepository(): DecisionRepository {
 export function getProfileRepository(): ProfileRepository {
   if (cachedProfile) return cachedProfile;
   if (env.supabaseUrl && env.supabaseAnonKey) {
-    cachedProfile = new SupabaseProfileRepository(getSupabaseBrowserClient(), { userId: getCurrentUserId() });
+    cachedProfile = new FallbackProfileRepository(
+      new SupabaseProfileRepository(getSupabaseBrowserClient(), { userId: getCurrentUserId() }),
+      new LocalProfileRepository(),
+    );
   } else {
     cachedProfile = new LocalProfileRepository();
   }
@@ -90,11 +95,41 @@ export function getProfileRepository(): ProfileRepository {
 export function getBusinessRepository(): BusinessProfileRepository {
   if (cachedBusiness) return cachedBusiness;
   if (env.supabaseUrl && env.supabaseAnonKey) {
-    cachedBusiness = new SupabaseBusinessProfileRepository(getSupabaseBrowserClient(), { userId: getCurrentUserId() });
+    cachedBusiness = new FallbackBusinessProfileRepository(
+      new SupabaseBusinessProfileRepository(getSupabaseBrowserClient(), { userId: getCurrentUserId() }),
+      new LocalBusinessProfileRepository(),
+    );
   } else {
     cachedBusiness = new LocalBusinessProfileRepository();
   }
   return cachedBusiness;
+}
+
+/** 带本地回退的画像仓库：Supabase 失败（如尚未建表）→ 落到 localStorage */
+class FallbackProfileRepository implements ProfileRepository {
+  constructor(private readonly primary: ProfileRepository, private readonly fallback: ProfileRepository) {}
+  async save(profile: PersonalProfile): Promise<void> {
+    try { await this.primary.save(profile); } catch { await this.fallback.save(profile); }
+  }
+  async get(userId: string): Promise<PersonalProfile | undefined> {
+    try { return await this.primary.get(userId); } catch { return this.fallback.get(userId); }
+  }
+  async update(userId: string, patch: PersonalProfileInput): Promise<PersonalProfile | undefined> {
+    try { return await this.primary.update(userId, patch); } catch { return this.fallback.update(userId, patch); }
+  }
+}
+
+class FallbackBusinessProfileRepository implements BusinessProfileRepository {
+  constructor(private readonly primary: BusinessProfileRepository, private readonly fallback: BusinessProfileRepository) {}
+  async save(profile: BusinessProfile): Promise<void> {
+    try { await this.primary.save(profile); } catch { await this.fallback.save(profile); }
+  }
+  async get(userId: string): Promise<BusinessProfile | undefined> {
+    try { return await this.primary.get(userId); } catch { return this.fallback.get(userId); }
+  }
+  async update(userId: string, patch: BusinessProfileInput): Promise<BusinessProfile | undefined> {
+    try { return await this.primary.update(userId, patch); } catch { return this.fallback.update(userId, patch); }
+  }
 }
 
 export function __resetRepositories(): void {
