@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BizMentor-Asset-Inventory</title>
+<style>
+  body{font-family:"Microsoft YaHei",-apple-system,sans-serif;max-width:860px;margin:0 auto;padding:32px 20px;color:#1f2937;line-height:1.7;background:#fff}
+  h1{border-bottom:2px solid #4f46e5;padding-bottom:10px;color:#111827}
+  h2{margin-top:36px;border-left:4px solid #4f46e5;padding-left:10px;color:#111827}
+  h3{margin-top:24px;color:#1f2937}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid #d1d5db;padding:6px 10px;text-align:left}
+  th{background:#eef2ff}
+  code{background:#f3f4f6;padding:2px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;overflow:auto;font-size:13px}
+  blockquote{border-left:4px solid #9ca3af;margin:12px 0;padding:4px 14px;color:#4b5563;background:#f9fafb}
+  hr{border:none;border-top:1px solid #e5e7eb;margin:28px 0}
+</style></head>
+<body><h1>BizMentor-Asset-Inventory（项目资产清单）</h1>
+<blockquote>
+<p>审计日期：2026-08-24<br>目的：任何 AI / 开发者接手本项目，只读本文件即可知道所有资产在哪里。<br>安全：本文件<strong>只列变量名称，不包含任何 Key 值</strong>。</p>
+</blockquote>
+<hr>
+<h2>1. 代码位置</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>项目绝对路径</td>
+<td><code>C:\Users\周天伦\Documents\Codex\2026-08-23\files-pasted-by-the-user-bizmentor\bizmentor-ai</code></td>
+</tr>
+<tr>
+<td>工作区父目录</td>
+<td><code>C:\Users\周天伦\Documents\Codex\2026-08-23\files-pasted-by-the-user-bizmentor\</code>（outputs 报告、work 临时文件）</td>
+</tr>
+<tr>
+<td>Git 状态</td>
+<td>工作树干净</td>
+</tr>
+<tr>
+<td>Git remote</td>
+<td><strong>无</strong>（未配置任何远程仓库）</td>
+</tr>
+<tr>
+<td>当前 branch</td>
+<td><code>master</code></td>
+</tr>
+<tr>
+<td>是否已推送远程</td>
+<td><strong>否</strong>（git 历史只存在于本机）</td>
+</tr>
+<tr>
+<td>package.json version</td>
+<td><code>0.1.0</code>（版本实际记录在 docs/BizMentor-System-State.md）</td>
+</tr>
+</tbody></table>
+<h3>最近 10 次 commit</h3>
+<pre><code>d6073b7 docs(release): V0.7.0 发布记录
+8c2fe59 fix(release): Profile/Business 仓库加本地回退
+cb14238 feat(release): V0.7.0 App Shell + Product Flow
+41a1bcf feat(ux): Product Usability Upgrade (V0.6.1)
+9b834e2 feat(mvp): MVP Product Layer (V0.6.0)
+511d992 feat(context): Business Context Layer (V0.5.0 10A-3)
+9bcb0f7 feat(profile): Personal &amp; Business Profile Layers (V0.5.0 10A-1/2)
+7e1a529 feat(multi-device): Multi Device Foundation (V0.4.2 9B-5)
+ec1fa1b feat(knowledge): Personal Knowledge System (V0.4.2 9B-4)
+1f5fd4b feat(skills): Skill System (V0.4.2 9B-3)
+</code></pre>
+<hr>
+<h2>2. 部署信息</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>公网地址</td>
+<td><a href="https://bizmentor.top">https://bizmentor.top</a></td>
+</tr>
+<tr>
+<td>部署平台</td>
+<td><strong>腾讯云轻量应用服务器（Lighthouse）</strong>，香港地域，Ubuntu 24.04，2C2G，公网 IPv4 <code>43.129.179.207</code></td>
+</tr>
+<tr>
+<td>是否 Vercel / Cloudflare Pages</td>
+<td><strong>否</strong>（自托管 VPS）</td>
+</tr>
+<tr>
+<td>反向代理</td>
+<td>Caddy（HTTPS，监听 80/443 → 127.0.0.1:3000）</td>
+</tr>
+<tr>
+<td>进程管理</td>
+<td>systemd 服务 <code>bizmentor</code>（Next.js <code>next start --hostname 127.0.0.1 --port 3000</code>）</td>
+</tr>
+<tr>
+<td>服务器代码目录</td>
+<td><code>/opt/bizmentor</code>（部署时 tar 上传，<strong>不含 .git</strong>）</td>
+</tr>
+<tr>
+<td>服务器环境变量</td>
+<td><code>/opt/bizmentor/.env.production</code>（不入 Git）</td>
+</tr>
+<tr>
+<td>SSH</td>
+<td><code>ubuntu@43.129.179.207</code>，本机密钥 <code>~/.ssh/id_ed25519_bizmentor</code></td>
+</tr>
+<tr>
+<td>域名</td>
+<td><code>bizmentor.top</code>（腾讯云 / DNSPod 注册，DNS 在 DNSPod：hubery.dnspod.net / aubrey.dnspod.net）</td>
+</tr>
+<tr>
+<td>部署配置（本地）</td>
+<td><code>deploy/deploy-app.sh</code>、<code>deploy/Caddyfile</code>、<code>deploy/bizmentor.service</code>、<code>deploy/setup-server.sh</code>、<code>deploy/.env.production.example</code></td>
+</tr>
+<tr>
+<td>部署配置（服务器）</td>
+<td><code>/opt/bizmentor/deploy/</code>（同本地）</td>
+</tr>
+<tr>
+<td>绑定账号</td>
+<td>腾讯云账号（域名/服务器）；SSH 密钥 <code>bizmentor-deploy</code>；无 Vercel/Cloudflare 账号绑定</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>3. 数据库信息</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>是否连接 Supabase</td>
+<td>✅ 是（生产 + 本地）</td>
+</tr>
+<tr>
+<td>Supabase 项目</td>
+<td><code>etxarbqpokyvobwibfbs</code>（区域 Singapore）</td>
+</tr>
+<tr>
+<td>Supabase URL</td>
+<td><code>https://etxarbqpokyvobwibfbs.supabase.co</code>（仅示例域名，Key 见环境变量）</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>未接 Auth；单用户 <code>user_id=&#39;local-user&#39;</code>，RLS 单用户策略</td>
+</tr>
+</tbody></table>
+<h3>3.1 生产库已存在的表（2026-08-24 探测）</h3>
+<table>
+<thead>
+<tr>
+<th>表</th>
+<th>行数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>opportunities</td>
+<td>1</td>
+<td>真实商机（万圣节产品海外社交媒体）</td>
+</tr>
+<tr>
+<td>research_runs</td>
+<td>1</td>
+<td>研究报告</td>
+</tr>
+<tr>
+<td>decisions</td>
+<td>2</td>
+<td>用户决策</td>
+</tr>
+<tr>
+<td>decision_reviews</td>
+<td>0</td>
+<td>AI 评审</td>
+</tr>
+<tr>
+<td>validation_plans</td>
+<td>0</td>
+<td>验证计划</td>
+</tr>
+<tr>
+<td>validation_results</td>
+<td>0</td>
+<td>验证结果</td>
+</tr>
+<tr>
+<td>learning_events</td>
+<td>2</td>
+<td>学习事件</td>
+</tr>
+<tr>
+<td>score_updates</td>
+<td>0</td>
+<td>评分更新</td>
+</tr>
+<tr>
+<td>ai_usage</td>
+<td>0</td>
+<td>AI 用量（仅 service role）</td>
+</tr>
+</tbody></table>
+<h3>3.2 schema.sql 已设计但<strong>未应用到生产</strong>的表（HTTP 404）</h3>
+<p><code>memory_records</code>、<code>profiles</code>、<code>business_profiles</code>、<code>user_settings</code>、<code>conversations</code>、<code>business_context_snapshots</code></p>
+<blockquote>
+<p>这些表 DDL 都在 <code>supabase/schema.sql</code>；当前 profile/business 通过<strong>本地回退</strong>工作。需要在 Supabase SQL 编辑器执行 schema.sql 补齐。</p>
+</blockquote>
+<h3>3.3 数据分布</h3>
+<ul>
+<li><strong>云端（Supabase）</strong>：opportunities、research_runs、decisions、learning_events（+ 其余空表）</li>
+<li><strong>仅 localStorage</strong>：profiles/businessProfiles（回退）、knowledge、memory、conversations、agentRuns、settings、agentState、opportunities(dev)、researchRuns(dev)、decisionData(dev)、theme、onboarded</li>
+</ul>
+<hr>
+<h2>4. 环境变量（仅名称；Key 值绝不外泄）</h2>
+<h3>4.1 本地 <code>.env.local</code>（开发机，gitignored）</h3>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NEXT_PUBLIC_SUPABASE_URL</td>
+<td>Supabase 项目地址</td>
+</tr>
+<tr>
+<td>NEXT_PUBLIC_SUPABASE_ANON_KEY</td>
+<td>Supabase 匿名 key（浏览器）</td>
+</tr>
+<tr>
+<td>OPENAI_API_KEY</td>
+<td>OpenAI 服务端 Key</td>
+</tr>
+<tr>
+<td>OPENAI_BASE_URL</td>
+<td>OpenAI API 地址</td>
+</tr>
+<tr>
+<td>OPENAI_RESEARCH_MODEL / OPENAI_REASONING_MODEL</td>
+<td>研究/推理模型名</td>
+</tr>
+<tr>
+<td>OPENAI_RESEARCH_INPUT_PRICE_PER_1M / OUTPUT</td>
+<td>计价（美元/1M tokens）</td>
+</tr>
+<tr>
+<td>OPENAI_REASONING_INPUT_PRICE_PER_1M / OUTPUT</td>
+<td>计价</td>
+</tr>
+<tr>
+<td>DEEPSEEK_API_KEY</td>
+<td>DeepSeek 服务端 Key</td>
+</tr>
+<tr>
+<td>DEEPSEEK_BASE_URL</td>
+<td>DeepSeek API 地址</td>
+</tr>
+<tr>
+<td>DEEPSEEK_MODEL</td>
+<td>DeepSeek 模型名</td>
+</tr>
+<tr>
+<td>DEEPSEEK_INPUT_PRICE_PER_1M / OUTPUT</td>
+<td>计价</td>
+</tr>
+<tr>
+<td>NEXT_PUBLIC_APP_URL</td>
+<td>应用公开地址</td>
+</tr>
+<tr>
+<td>AI_USAGE_FILE</td>
+<td>ai_usage 落盘路径（默认 .data/ai_usage.jsonl）</td>
+</tr>
+</tbody></table>
+<h3>4.2 服务器 <code>.env.production</code>（/opt/bizmentor，不入 Git）</h3>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NEXT_PUBLIC_APP_URL / SUPABASE_URL / SUPABASE_ANON_KEY</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>OPENAI_API_KEY / BASE_URL / RESEARCH_MODEL / REASONING_MODEL + 计价 6 项</td>
+<td>OpenAI</td>
+</tr>
+<tr>
+<td>DEEPSEEK_API_KEY / BASE_URL / MODEL + 计价 2 项</td>
+<td>DeepSeek</td>
+</tr>
+<tr>
+<td>AI_USAGE_FILE</td>
+<td>ai_usage 落盘</td>
+</tr>
+<tr>
+<td>TAVILY_API_KEY</td>
+<td>Tavily 搜索 Key（真实外部研究）</td>
+</tr>
+<tr>
+<td>EXTERNAL_INTELLIGENCE_PROVIDERS</td>
+<td>外部情报 Provider 顺序（tavily,duckduckgo）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>⚠️ <code>SUPABASE_SERVICE_ROLE_KEY</code>：本地/服务器<strong>均未配置</strong>（当前用 anon + RLS）。<br>规则：Key 只存环境变量；禁止打印/提交/写入报告。</p>
+</blockquote>
+<hr>
+<h2>5. 当前数据存储地图</h2>
+<h3>5.1 用户数据（localStorage 前缀 <code>bizmentor:v1:</code>，云端另注）</h3>
+<table>
+<thead>
+<tr>
+<th>数据</th>
+<th>localStorage 键</th>
+<th>云端</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Profile</td>
+<td><code>profiles</code></td>
+<td>预留（profiles 表未建）</td>
+<td>本地回退</td>
+</tr>
+<tr>
+<td>Business</td>
+<td><code>businessProfiles</code></td>
+<td>预留（business_profiles 表未建）</td>
+<td>本地回退</td>
+</tr>
+<tr>
+<td>Knowledge</td>
+<td><code>knowledge</code></td>
+<td>预留</td>
+<td>仅本地</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td><code>memory</code></td>
+<td>预留（memory_records 未建）</td>
+<td>仅本地（记录+归档事件）</td>
+</tr>
+<tr>
+<td>Conversation</td>
+<td><code>conversations</code></td>
+<td>预留</td>
+<td>仅本地</td>
+</tr>
+<tr>
+<td>Agent Run</td>
+<td><code>agentRuns</code></td>
+<td>预留</td>
+<td>仅本地</td>
+</tr>
+<tr>
+<td>Agent State</td>
+<td><code>agentState</code></td>
+<td>预留</td>
+<td>仅本地</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td><code>settings</code></td>
+<td>预留（user_settings 未建）</td>
+<td>本地</td>
+</tr>
+<tr>
+<td>商机/研究/决策（生产）</td>
+<td>开发时 local</td>
+<td><strong>Supabase</strong></td>
+<td>生产已上云</td>
+</tr>
+<tr>
+<td>主题 / onboarded</td>
+<td><code>theme</code> / <code>onboarded</code></td>
+<td>无</td>
+<td>仅本地</td>
+</tr>
+</tbody></table>
+<h3>5.2 开发数据</h3>
+<table>
+<thead>
+<tr>
+<th>数据</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Version / 版本历史</td>
+<td><code>docs/BizMentor-System-State.md</code>（第 1 节 + 各 Phase 完成记录）</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td><code>docs/BizMentor-System-State.md</code>（第 2 节）+ 各 Phase 架构报告（outputs/）</td>
+</tr>
+<tr>
+<td>Roadmap / 下一阶段</td>
+<td><code>docs/BizMentor-System-State.md</code>（第 9/16/17/18/19 节 + 未解决问题）</td>
+</tr>
+<tr>
+<td>Changelog</td>
+<td><strong>无独立 CHANGELOG</strong>；git log + <code>outputs/</code> 41 份 Phase 报告充当</td>
+</tr>
+<tr>
+<td>开发文档目录</td>
+<td><code>docs/</code>（System-State + 本文件）</td>
+</tr>
+<tr>
+<td>报告存档</td>
+<td><code>outputs/</code>（41 份 .md/.html 报告 + screenshots/）</td>
+</tr>
+<tr>
+<td>临时文件</td>
+<td><code>work/</code>（迁移样例/评估数据/转换脚本，不入库）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>6. 当前风险（数据丢失矩阵）</h2>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>会丢失</th>
+<th>不会丢失</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>删除 ChatGPT</td>
+<td>对话记录（本线程聊天）；不涉及项目文件</td>
+<td>代码/文档/云端数据</td>
+</tr>
+<tr>
+<td>删除 Codex</td>
+<td>Codex 线程历史；本地项目文件仍在磁盘</td>
+<td>代码/文档/云端数据</td>
+</tr>
+<tr>
+<td>换电脑</td>
+<td>本机项目源码（无 git remote！）、.env.local、localStorage 全部（profiles/knowledge/conversations/memory/settings/agentRuns）</td>
+<td>Supabase 云端数据</td>
+</tr>
+<tr>
+<td>换手机</td>
+<td>手机浏览器 localStorage（同上）</td>
+<td>Supabase 云端数据</td>
+</tr>
+<tr>
+<td>清浏览器缓存</td>
+<td>localStorage 全部（profiles 回退、knowledge、conversations、memory、settings、agentRuns、onboarded）</td>
+<td>Supabase 云端数据</td>
+</tr>
+</tbody></table>
+<h3>关键风险 TOP</h3>
+<ol>
+<li><strong>🔴 无 git remote</strong>：全部 git 历史只在本机。换电脑/磁盘损坏 = 源码+历史全丢（服务器只有无 .git 的代码副本）。</li>
+<li><strong>🔴 用户知识/对话/画像在 localStorage</strong>：清缓存/换设备即丢（Profile 有本地回退，但 knowledge/conversations/memory 无云端表）。</li>
+<li><strong>🟠 新表未应用生产</strong>：profiles/business_profiles/memory_records/user_settings/conversations 需在 Supabase 执行 schema.sql。</li>
+<li><strong>🟠 无 service role key</strong>：ai_usage 等仅 service role 能力不可用。</li>
+<li><strong>🟡 package.json version 仍是 0.1.0</strong>：版本号以 docs 为准，易混淆。</li>
+</ol>
+<h3>建议（非本次任务，供后续）</h3>
+<ul>
+<li>立即配置 git remote（GitHub/Gitee 私有仓）并推送。</li>
+<li>在 Supabase 应用新表；把 knowledge/conversations/settings 上云。</li>
+<li>定期备份 .env.local + localStorage（或用导出按钮）。</li>
+</ul>
+<hr>
+<h2>附：快速接手清单</h2>
+<ol>
+<li>读 <code>docs/BizMentor-System-State.md</code>（架构/版本/规则）。</li>
+<li>读本文件（资产位置）。</li>
+<li>代码在 <code>bizmentor-ai/</code>，测试 <code>pnpm test</code>，lint <code>pnpm lint</code>，构建 <code>pnpm build</code>。</li>
+<li>生产在腾讯云服务器，部署用 <code>deploy/deploy-app.sh</code>（或手动 tar+scp+pnpm build+systemctl）。</li>
+<li>Key 只在环境变量；永不打印/提交。</li>
+</ol>
+</body></html>

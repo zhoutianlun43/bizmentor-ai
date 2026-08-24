@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BizMentor-System-State</title>
+<style>
+  body{font-family:"Microsoft YaHei",-apple-system,sans-serif;max-width:860px;margin:0 auto;padding:32px 20px;color:#1f2937;line-height:1.7;background:#fff}
+  h1{border-bottom:2px solid #4f46e5;padding-bottom:10px;color:#111827}
+  h2{margin-top:36px;border-left:4px solid #4f46e5;padding-left:10px;color:#111827}
+  h3{margin-top:24px;color:#1f2937}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid #d1d5db;padding:6px 10px;text-align:left}
+  th{background:#eef2ff}
+  code{background:#f3f4f6;padding:2px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;overflow:auto;font-size:13px}
+  blockquote{border-left:4px solid #9ca3af;margin:12px 0;padding:4px 14px;color:#4b5563;background:#f9fafb}
+  hr{border:none;border-top:1px solid #e5e7eb;margin:28px 0}
+</style></head>
+<body><h1>BizMentor System State（项目连续性文档）</h1>
+<blockquote>
+<p><strong>本文件是 BizMentor-AI 项目的「唯一事实来源」</strong>。任何新的 Codex 窗口 / AI 助手 / 开发者接手前，必须先读本文件。<br>每个 Phase 完成后必须同步更新本文件（版本号、模块清单、数据资产、未解决问题）。</p>
+</blockquote>
+<hr>
+<h2>1. 当前版本</h2>
+<ul>
+<li><strong>V0.7.0 Product Release</strong>（App Shell / 全流程闭环 / 已发布到 bizmentor.top）</li>
+<li>最近 Git commit：<code>（提交时更新为最新）</code></li>
+<li>技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test</li>
+</ul>
+<h2>2. 当前系统架构</h2>
+<pre><code>用户触点（Web，未来 PWA/桌面/iOS）
+  ↓
+Agent Runtime（lib/agent：生命周期/工具编排/上下文/审计）  ← V0.4.2 9B-1
+  ↓ 调用
+Business Engine（lib/research · lib/decision · lib/domain · lib/external）
+  ↓ 记忆
+Business Memory（lib/memory + lib/knowledge[规划]）
+  ↓ 身份
+Identity（lib/identity，单用户 local-user，Auth 预留）
+  ↓ 存储
+Repository Provider（lib/repository：Supabase / Local 切换）
+</code></pre>
+<p>原则：<strong>Agent 只编排，不复制业务逻辑；引擎链是工具、Memory 是记忆、Identity 是身份。</strong></p>
+<h2>3. 已完成模块列表</h2>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>能力</th>
+<th>阶段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>lib/ai</td>
+<td>AI Gateway（OpenAI/DeepSeek 多 Provider + Router + usage）</td>
+<td>V0.2</td>
+</tr>
+<tr>
+<td>lib/research</td>
+<td>Research Pipeline（9 阶段）+ Evidence/Source/Score</td>
+<td>V0.3-A/B</td>
+</tr>
+<tr>
+<td>lib/decision</td>
+<td>Decision Engine（Thesis/单位经济/Examiner）+ Execution Engine（状态机/超期/摘要）</td>
+<td>V0.3-C / 7A / 7B-2</td>
+</tr>
+<tr>
+<td>lib/external</td>
+<td>External Intelligence（Tavily + DDG fallback）</td>
+<td>6.2-A/B</td>
+</tr>
+<tr>
+<td>lib/domain</td>
+<td>Business Domain（8 领域检测/注入）</td>
+<td>6.1A/B</td>
+</tr>
+<tr>
+<td>lib/memory</td>
+<td>Business Memory（决策记忆/事件归档/模式检索）</td>
+<td>8A</td>
+</tr>
+<tr>
+<td>lib/identity</td>
+<td>Identity（local-user / Auth 预留）</td>
+<td>8B-2</td>
+</tr>
+<tr>
+<td>lib/repository</td>
+<td>Repository Provider（Supabase/Local 切换）</td>
+<td>3A-3C</td>
+</tr>
+<tr>
+<td>lib/agent</td>
+<td>Agent Runtime（生命周期/工具/上下文/审计）</td>
+<td>9B-1</td>
+</tr>
+<tr>
+<td>lib/agent/loops</td>
+<td><strong>Business Operating Loop（晨报/异常检测/晚报）</strong></td>
+<td><strong>9B-2（本阶段）</strong></td>
+</tr>
+<tr>
+<td>lib/agent/scheduler</td>
+<td><strong>Agent Scheduler（App 打开/手动/测试触发）</strong></td>
+<td><strong>9B-2</strong></td>
+</tr>
+<tr>
+<td>lib/agent/events</td>
+<td>Agent Event 总线（旁路 emit/subscribe）</td>
+<td>9B-2</td>
+</tr>
+<tr>
+<td>lib/skills</td>
+<td>Skill System（BizSkill/Registry/选品/竞品）</td>
+<td>9B-3</td>
+</tr>
+<tr>
+<td>lib/knowledge</td>
+<td>Personal Knowledge（习惯/判断方式/经验/案例 + 确认机制）</td>
+<td>9B-4</td>
+</tr>
+<tr>
+<td>lib/settings</td>
+<td><strong>Settings Repository（本地缓存 + Supabase 云端同步）</strong></td>
+<td><strong>9B-5（本阶段）</strong></td>
+</tr>
+<tr>
+<td>lib/sync</td>
+<td><strong>SyncManager（LWW 同步）+ AgentStateRepository 预留</strong></td>
+<td><strong>9B-5</strong></td>
+</tr>
+<tr>
+<td>lib/pwa</td>
+<td><strong>PWA Manifest 共享源 + sw.js（离线/重同步）</strong></td>
+<td><strong>9B-5</strong></td>
+</tr>
+<tr>
+<td>lib/identity/auth</td>
+<td>AuthIdentityProvider（Auth Ready，fallback local-user）</td>
+<td>9B-5</td>
+</tr>
+<tr>
+<td>lib/profile</td>
+<td><strong>Personal Profile（用户是谁：名称/时区/语言/偏好）</strong></td>
+<td><strong>10A-1（本阶段）</strong></td>
+</tr>
+<tr>
+<td>lib/business</td>
+<td>Business Profile（经营世界：名称/描述/businessTypes）</td>
+<td>10A-2</td>
+</tr>
+<tr>
+<td>lib/context</td>
+<td>Business Context Layer（BusinessOSContext + Builder）</td>
+<td>10A-3</td>
+</tr>
+<tr>
+<td>lib/llm</td>
+<td><strong>LLM Provider 抽象（OpenAI-compatible + DeepSeek）</strong></td>
+<td><strong>V0.6.0</strong></td>
+</tr>
+<tr>
+<td>app/chat · app/skills · app/knowledge</td>
+<td><strong>MVP 产品页（对话/技能/知识）</strong></td>
+<td><strong>V0.6.0</strong></td>
+</tr>
+<tr>
+<td>app/api/chat · skill · review · knowledge-candidate</td>
+<td>MVP API（对话/技能/复盘/认知提炼）</td>
+<td>V0.6.0/1</td>
+</tr>
+<tr>
+<td>lib/conversation</td>
+<td><strong>Conversation（聊天历史，Local 优先 + Supabase 预留）</strong></td>
+<td><strong>V0.6.1</strong></td>
+</tr>
+<tr>
+<td>app/onboarding</td>
+<td><strong>Onboarding（首次进入：个人+经营画像）</strong></td>
+<td><strong>V0.6.1</strong></td>
+</tr>
+<tr>
+<td>lib/supabase</td>
+<td>浏览器/服务端客户端 + 统一错误</td>
+<td>1/4A</td>
+</tr>
+<tr>
+<td>lib/migration</td>
+<td>localStorage → Supabase 迁移工具</td>
+<td>5A</td>
+</tr>
+<tr>
+<td>app/</td>
+<td>首页/商机/项目/训练/我的 + /api/ai + /api/external-research</td>
+<td>V0.1-9B-1</td>
+</tr>
+</tbody></table>
+<h2>4. 数据资产说明</h2>
+<ul>
+<li><strong>商机</strong>：opportunities（Supabase 表，RLS 单用户 local-user）</li>
+<li><strong>研究</strong>：research_runs（run_id + report jsonb：findings/score/validationPlan/sources/thesis/unitEconomics）</li>
+<li><strong>决策</strong>：decisions / decision_reviews / validation_plans（tasks jsonb 含 stateHistory/priority）/ validation_results / score_updates / learning_events</li>
+<li><strong>记忆</strong>：memory_records（决策记忆，V0.4.2 9B-1 时生产表<strong>待应用</strong>——需在 Supabase SQL 编辑器执行 schema.sql 的 memory_records DDL）</li>
+<li><strong>Agent 运行审计</strong>：AgentRun（Local localStorage <code>bizmentor:v1:agentRuns</code>；未来 Supabase agent_runs 表）</li>
+<li><strong>经营循环产出</strong>：DailyBriefing / DailyReview / AnomalyAlert（确定性生成，可保存/恢复；暂不落库，由调用方保存）</li>
+<li><strong>本地</strong>：localStorage <code>bizmentor:v1:*</code>（开发/缓存）；<strong>Supabase 是生产真相源</strong></li>
+</ul>
+<h2>5. 数据同步方案</h2>
+<ul>
+<li>Repository Provider：配置 Supabase（URL + anon）→ 云端；否则 Local</li>
+<li>本地 = 缓存/开发；写入优先走 Supabase</li>
+<li>未来多设备：Supabase 唯一真相源 + 本地缓存只读副本；记忆（memory_records）跨设备共享</li>
+<li>迁移工具：scripts/migrate-localstorage.ts（opportunities/research/decisions/…，8 表）</li>
+</ul>
+<h2>6. Identity 方案</h2>
+<ul>
+<li>当前：单用户固定 <code>local-user</code>（Identity Layer 解析；<code>IDENTITY_USER_ID</code> 环境变量可选覆盖）</li>
+<li>RLS：所有业务表 <code>user_id=&#39;local-user&#39;</code> 单用户策略</li>
+<li>未来：Supabase Auth → <code>auth.uid()::text = user_id</code>；Identity.source 预留 &quot;auth&quot;</li>
+</ul>
+<h2>7. Memory 方案</h2>
+<ul>
+<li>决策记忆：<code>buildDecisionMemory</code>（AI prediction vs User prediction vs Actual result）→ memory_records</li>
+<li>事件归档：learning_events（表已存在）+ MemoryEngine 聚合（skill/signal/severity）</li>
+<li>模式检索：retrievePatterns（领域/决策分组 + 验证率 + 高频经验）+ findSimilarDecisions</li>
+<li>个人知识（Phase 9B-4 规划）：KnowledgeRecord（习惯/判断/经验/案例），confirmed 确认机制</li>
+</ul>
+<h2>8. 当前开发规则</h2>
+<ol>
+<li>不改数据库 schema（除非明确授权迁移）；扩展字段进 jsonb</li>
+<li>不修改既有 Pipeline 主流程；新能力走独立模块 + Repository 抽象</li>
+<li>不删/不改旧测试；新增测试保持 <code>pnpm test</code> 全绿</li>
+<li>验收三件套：<code>pnpm test</code> / <code>pnpm lint</code>（0 warning）/ <code>pnpm build</code>（+ <code>pnpm exec tsc --noEmit</code>）</li>
+<li>安全：API Key 只存环境变量；禁止打印/提交；禁止 NEXT_PUBLIC_ 暴露服务端 Key</li>
+<li>Agent 只编排，不复制业务逻辑；领域经验进 registry 配置，禁止硬编码分支</li>
+<li>报告双版本：<code>.md</code> + <code>.html</code>（用 work/md2html.mjs 生成）</li>
+<li>每个 Phase 完成：Git commit + 更新本文件 + 输出报告</li>
+</ol>
+<h2>9. 下一阶段计划</h2>
+<ul>
+<li><del>9B-2</del> ✅ Operating Loop：晨报/日间监控/晚报 + Scheduler + Event（已完成）</li>
+<li><del>9B-3</del> ✅ Skill System：可插拔技能（选品/竞品）+ skill_tool（已完成）</li>
+<li><del>9B-4</del> ✅ Personal Knowledge：用户长期认知（AI 候选 → 用户确认 → 进入 Context）（已完成）</li>
+<li><del>9B-5</del> ✅ Multi Device Foundation：Auth Ready + Settings + PWA + Sync（已完成）</li>
+<li><del>10A-1/2</del> ✅ Personal/Business Profile 数据基础层（已完成）</li>
+<li><del>10A-3</del> ✅ Business Context Layer：统一经营上下文（Agent Runtime + Skill 接入）（已完成）</li>
+<li><del>V0.6.0 MVP</del> ✅ Product Layer：AI 对话 / Dashboard / 技能中心 / 我的AI认知 / LLM（已完成）</li>
+<li><del>V0.6.1</del> ✅ Product Usability：Onboarding / 对话历史 / AI Daily Assistant / Chat 认知确认（已完成）</li>
+<li><strong>9B-3</strong> Skill System：可插拔技能（首批 product_selection + competitor_analysis）</li>
+<li><strong>9B-4</strong> Personal Knowledge：习惯/判断/经验/案例 + 确认机制</li>
+<li><strong>9B-5</strong> 多端就绪：PWA + SettingsRepository + 数据同步落地</li>
+<li>之后：Auth/多用户、桌面壳（Tauri 预留）、服务端 cron 主动推送</li>
+</ul>
+<h2>10. 未解决问题</h2>
+<ol>
+<li><strong>memory_records 生产表未应用</strong>：schema.sql 已含 DDL，需在 Supabase SQL 编辑器执行一次</li>
+<li><strong>OpenAI 不可用</strong>：research/reasoning 降级 DeepSeek（已知，独立于本阶段）</li>
+<li><strong>Agent 主动调度依赖运行环境</strong>：浏览器 Timer 需 App 打开；真正 7×24 需服务端 cron（另立）</li>
+<li><strong>多用户/Auth</strong>：未接；RLS 升级路径已设计</li>
+<li><strong>本地→云端记忆</strong>：本地 localStorage 记忆不自动上云（可选迁移）</li>
+<li><strong>桌面端</strong>：PWA 优先，Tauri 预留；未实施</li>
+</ol>
+<hr>
+<p><em>维护：每个 Phase 完成时更新本文件。</em></p>
+<hr>
+<h2>11. Phase 9B-2 完成记录（Business Operating Loop）</h2>
+<ul>
+<li><strong>新增模块</strong>：<ul>
+<li><code>lib/agent/loops/</code>：collect（状态收集）/ anomaly（AnomalyDetector：超期/未执行/失败/评分下降/证伪）/ briefing（晨报）/ review（晚报，自动沉淀决策记忆）/ types</li>
+<li><code>lib/agent/scheduler.ts</code>：registerTask / runTask / runDueTasks（App 打开/手动/测试触发；未来 cron/server worker 预留）</li>
+<li><code>lib/agent/events.ts</code>：旁路事件总线 emit/subscribe（RESEARCH_COMPLETED / DECISION_CREATED / VALIDATION_COMPLETED / TASK_OVERDUE / MEMORY_CREATED）</li>
+<li><code>lib/agent/tools/loops.ts</code>：morning_briefing_tool / evening_review_tool / monitoring_tool（AgentRuntime 可调用）</li>
+</ul>
+</li>
+<li><strong>AgentRun 扩展</strong>：triggerType / events / loopType / memoryWrites / duration（向后兼容）</li>
+<li><strong>数据流</strong>：触发（App 打开/手动/测试）→ AgentRuntime → Loop 工具 → collectState（Repository/Memory/Execution）→ 产出（晨报/异常/晚报）→ recordDecision 沉淀记忆 → AgentRun 审计</li>
+<li><strong>Agent 主动能力</strong>：晨报（今日状态/异常/建议/记忆洞察）；日间监控（异常检测 + 严重度排序）；晚报（复盘 + 决策对照 AI vs 用户 vs 实际 + 经验 + 明日动作）</li>
+<li><strong>当前限制</strong>：Scheduler 仅 App 打开/手动/测试触发（无服务器 7×24）；晨报/晚报为确定性生成（AI 文案增强未做）；Loop 产出暂不落库（调用方保存）</li>
+<li><strong>测试</strong>：243/243 通过（新增 6：晨报/异常/晚报/Scheduler/Event/Runtime 调用 Loop）</li>
+</ul>
+<hr>
+<h2>12. Phase 9B-3 完成记录（Skill System）</h2>
+<ul>
+<li><strong>Skill 架构</strong>：<code>lib/skills/</code> —— BizSkill 接口（id/name/description/domain/requiredTools/run）+ SkillRegistry（动态注册/唯一 id/重复报错/invokeSkill）+ SkillOutput（summary/structured/actions/evidence/createdAt）+ researchToSkillResult 适配器。</li>
+<li><strong>已实现技能</strong>：<ul>
+<li><code>product_selection</code>（选品分析助手）：Research + Domain(ecommerce) + Memory.similar（历史成功/失败案例注入）→ 市场机会/用户需求/竞争/风险/建议动作/历史案例</li>
+<li><code>competitor_analysis</code>（竞品拆解助手）：Research + External + Memory 模式 → 定位/定价/内容/流量/优势/弱点/可复制策略</li>
+</ul>
+</li>
+<li><strong>AgentRuntime 集成</strong>：<code>skill_tool</code> + <code>agent.run(&quot;skill&quot;, { skill, input })</code> 便捷调用；AgentRun 扩展 skillsUsed / skillResults。</li>
+<li><strong>数据流</strong>：AgentRuntime → SkillRegistry → Skill → Engine Tools（research/memory）→ SkillOutput → AgentRun 审计。</li>
+<li><strong>原则</strong>：Skill 不复制引擎逻辑，只编排；未注入 research 时诚实标记「需研究验证」，不伪造来源。</li>
+<li><strong>测试</strong>：249/249（新增 6：Registry/调用/product_selection/competitor_analysis/Memory 注入/AgentRuntime 调用技能）。</li>
+<li><strong>下一阶段</strong>：9B-4 Personal Knowledge（习惯/判断/经验/案例）→ 9B-5 多端就绪（PWA）。</li>
+</ul>
+<hr>
+<h2>13. Phase 9B-4 完成记录（Personal Knowledge System）</h2>
+<ul>
+<li><strong>Knowledge 架构</strong>：<code>lib/knowledge/</code> —— KnowledgeRecord（habit/judgment_style/industry_experience/success_case/failure_case；source：user_input/ai_suggestion/review/decision；confidence；confirmed）+ KnowledgeRepository（save/list/findByType/confirm/remove，Local 先实现，Supabase 预留）+ KnowledgeEngine（captureFromUserInput / captureFromDecision / captureFromReview / confirm）+ knowledgeInsights 辅助。</li>
+<li><strong>Memory 与 Knowledge 区别</strong>：Memory 记录「发生过什么」（决策/事件）；Knowledge 总结「这个用户是什么样的人」（习惯/判断方式/偏好/经验）。</li>
+<li><strong>确认机制</strong>：AI（规则）提取候选 → confirmed=false 入库 → 用户 confirm() → confirmed=true → 才进入 Agent Context；未确认只能作为临时建议，不影响核心决策。</li>
+<li><strong>数据流</strong>：决策记忆/每日复盘/用户输入 → KnowledgeEngine 提取候选 → 用户确认 → Context.knowledgeRecords → Agent 运行时与 Skill 读取（选品参考价格/风险偏好，竞品参考行业经验）。</li>
+<li><strong>Agent 集成</strong>：AgentContext.knowledgeRecords（恢复时只加载 confirmed）；knowledge_tool（retrieve/capture）；AgentRun.knowledgeReads/knowledgeWrites。</li>
+<li><strong>测试</strong>：255/255（新增 6：CRUD/Capture/确认/未确认不进 Context/确认后加载/Skill 读取/AgentRuntime 调用）。</li>
+<li><strong>下一阶段</strong>：9B-5 多端就绪（PWA + SettingsRepository + 数据同步落地）。</li>
+</ul>
+<hr>
+<h2>14. Phase 9B-5 完成记录（Multi Device Foundation）</h2>
+<ul>
+<li><strong>Identity 多设备升级</strong>：AuthIdentityProvider（getCurrentUser/isAuthenticated/resolveUserId/subscribeAuth/init）；优先级 explicit override &gt; authenticated user &gt; IDENTITY_USER_ID &gt; local-user（resolver 新增独立 authUserId 槽位，业务层 getCurrentUserId() 不变）。</li>
+<li><strong>Settings Repository</strong>：lib/settings/ —— LocalSettingsRepository（localStorage）+ SupabaseSettingsRepository（user_settings 表）+ CachedSettingsRepository（Supabase 成功→更新本地缓存；失败→读本地缓存离线降级）。</li>
+<li><strong>PWA 基础</strong>：lib/pwa/manifest.ts 共享 manifest 源（app/manifest.ts 引用，/manifest.webmanifest 生成）；sw.js 增强（v2：新增 sync 事件网络恢复重同步 + refresh-cache 消息）。</li>
+<li><strong>Sync 基础层</strong>：lib/sync/ —— SyncManager（push/pull/sync，updated_at Last-Write-Wins）；AgentStateRepository 预留（agent_state/agent_runs/knowledge_records 未来进 Supabase，Local 先实现）。</li>
+<li><strong>schema 新增</strong>：user_settings 表（user_id unique + settings jsonb + RLS）。</li>
+<li><strong>数据同步方案</strong>：Supabase 未来唯一真相源；localStorage = 缓存/离线降级；LWW 冲突策略；不迁移所有业务数据（框架先行）。</li>
+<li><strong>测试</strong>：266/266（新增 11：Auth fallback/认证优先/状态监听、Settings CRUD/本地 fallback/缓存策略、Sync LWW/push/pull/sync、PWA manifest/sw.js）。</li>
+<li><strong>下一阶段（规划）</strong>：接 Supabase Auth + RLS 升级（多用户）；生产应用 user_settings 表；AgentState/Settings 上云；PWA 完善。</li>
+</ul>
+<hr>
+<h2>15. V0.5.0 Phase 10A-1/2 完成记录（Personal Business OS 数据基础）</h2>
+<ul>
+<li><strong>10A-1 Personal Profile</strong>（lib/profile/）：PersonalProfile（id/userId/name/timezone/language/preferences/createdAt/updatedAt）；ProfileRepository（save/get/update）；LocalProfileRepository（localStorage）+ SupabaseProfileRepository（预留，profiles 表 DDL 已入 schema.sql）。</li>
+<li><strong>10A-2 Business Profile</strong>（lib/business/）：BusinessProfile（id/userId/name/description/businessTypes/preferences/createdAt/updatedAt）；BusinessType 通用枚举（commerce/service/product/content/saas/marketplace/local_service，<strong>不绑定行业</strong>）；BusinessProfileRepository（save/get/update）；Local + Supabase（预留，business_profiles 表 DDL 已入 schema.sql）。</li>
+<li><strong>原则</strong>：行业能力未来通过 Domain Plugin 扩展；本层只存通用用户/经营画像。</li>
+<li><strong>测试</strong>：270/270（新增 4：Profile CRUD + Supabase mock、Business CRUD + Supabase mock）。</li>
+<li><strong>注意</strong>：原任务消息在 10A-2 businessTypes 示例后截断，10A-3+ 子任务待用户补充。</li>
+<li><strong>下一阶段（待确认）</strong>：10A-3+（用户补充）；预期方向：Profile 上云、Agent Context 集成、Domain Plugin 骨架。</li>
+</ul>
+<hr>
+<h2>16. V0.5.0 Phase 10A-3 完成记录（Business Context Layer）</h2>
+<ul>
+<li><strong>lib/context/</strong>：BusinessOSContext（userId/personalProfile/businessProfile/confirmedKnowledge/memoryPatterns/activeProjects/preferences/updatedAt）+ BusinessContextBuilder（聚合 Profile/Knowledge(仅 confirmed)/Memory/Repository 当前业务状态）+ ContextRepository（Local 实现；Supabase business_context_snapshots 预留，不建真实表）。</li>
+<li><strong>Agent Runtime 接入</strong>：AgentContext 增加 businessContext；恢复流程升级为 Identity → BusinessContextBuilder → AgentContext（换设备/重开 App 可恢复完整经营状态）。</li>
+<li><strong>Skill 接入</strong>：SkillRunContext = AgentContext &amp; { businessContext }（只读；Skill 不得修改 Profile/Knowledge）。</li>
+<li><strong>测试</strong>：277/277（新增 7：Profile 聚合 / confirmed 过滤 / Memory 注入 / Agent Runtime 恢复 / Skill 读取 / Local / Supabase Mock）。</li>
+<li><strong>下一阶段（建议）</strong>：10A-4+ 待用户补充；候选方向：context 上云快照、Domain Plugin 骨架、Profile 接入 UI。</li>
+</ul>
+<hr>
+<h2>17. V0.6.0 MVP Product Layer 完成记录（第一批）</h2>
+<ul>
+<li><strong>lib/llm/</strong>：LlmProvider 抽象（OpenAI-compatible + DeepSeek，generate(messages)）+ buildBusinessSystemPrompt（把 BusinessOSContext 注入个性化 system，非固定模板）。</li>
+<li><strong>API</strong>：/api/chat（BusinessContext → LLM → 回复）、/api/skill（SkillRegistry 调用，当前 memory+确定性）、/api/review（晚间复盘 → 知识候选）。</li>
+<li><strong>页面</strong>：/chat（问 AI 对话）、/skills（技能中心）、/knowledge（我的AI认知：确认/删除/新增 + Learning Center 复盘）。</li>
+<li><strong>首页 Dashboard</strong>：TodayBriefing（今日经营状态：商机/研究/验证/超期 + AI 建议 + 问AI/技能/知识入口）。</li>
+<li><strong>Repository Provider</strong>：新增 getProfileRepository / getBusinessRepository。</li>
+<li><strong>测试</strong>：283/283（新增 6：LLM Provider/HTTP 错误/getLlm/context 提示）。</li>
+<li><strong>下一批</strong>：/api/skill 深度研究接入（runResearch 真实 ResearchService）；聊天历史持久化；PWA 安装与生产部署验证。</li>
+</ul>
+<hr>
+<h2>18. V0.6.1 Product Usability 完成记录</h2>
+<ul>
+<li><strong>Onboarding</strong>：/onboarding 首次进入表单（个人：称呼/地区/语言/身份；业务：类型/行业/产品/目标）→ 保存 Personal/Business Profile → 首页守卫跳转 → BusinessContext 自动生成。</li>
+<li><strong>Conversation</strong>：lib/conversation/（Conversation { id, userId, messages[], createdAt, updatedAt }，Local 优先 + Supabase 预留）；/chat 持久化历史 + 只发最近 10 条。</li>
+<li><strong>AI Daily Assistant</strong>：首页新增今日关注/风险/下一步 + 「为什么这样建议」展开来源（异常检测/历史模式/长期认知）。</li>
+<li><strong>Chat 认知确认</strong>：/api/knowledge-candidate（LLM 提炼用户信息）→ 对话中显示 [确认加入AI认知] → 用户确认后进入 Knowledge（AI 不自动学习）。</li>
+<li><strong>测试</strong>：285/285（新增 2：Conversation Local + Supabase mock）。</li>
+<li><strong>验收</strong>：pnpm test/lint/tsc/build 全部通过（20 路由）。</li>
+</ul>
+<hr>
+<h2>19. V0.7.0 Product Release 完成记录</h2>
+<ul>
+<li><strong>App Shell</strong>：底部导航（首页/AI/商机/技能/我的）+ 顶部用户状态条（用户·经营名 + 完善资料）+ 全局 OnboardingGuard。</li>
+<li><strong>全流程闭环</strong>：首次访问 → /onboarding 填画像 → 保存（Profile/Business 带本地回退，生产 Supabase 未建表也可用）→ 首页 Dashboard（AI Daily Assistant 建议 + 今日经营状态 + 问AI/技能/认知入口）→ 问AI（带上下文+历史）→ 技能中心 → 我的AI认知 → 复盘。</li>
+<li><strong>已发布</strong>：代码部署到生产（bizmentor.top），/、/chat、/skills、/knowledge、/onboarding、/profile 全部 200；/api/chat 可调用（真实 LLM）。</li>
+<li><strong>线上验证</strong>：onboarding→首页→chat 全链路通过；Dashboard 显示真实生产数据（商机/研究中/异常建议）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v070/（01-07）。</li>
+<li><strong>验收</strong>：pnpm test 285/285、lint 0 警告、tsc/build 通过。</li>
+</ul>
+</body></html>
