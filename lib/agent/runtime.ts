@@ -113,6 +113,13 @@ export class AgentRuntime {
           run.skillResults = [{ skillId: skill, summary: output?.summary ?? "", createdAt: output?.createdAt ?? new Date().toISOString() }];
         }
       }
+      // 记录个人知识读写
+      const kCall = run.toolsUsed.find((t) => t.toolId === "knowledge_tool");
+      if (kCall?.result) {
+        const { action, records, record } = kCall.result as { action?: string; records?: Array<{ type?: string; content?: string }>; record?: { type?: string; content?: string } };
+        if (action === "retrieve") run.knowledgeReads = records ?? [];
+        if (action === "capture" && record) run.knowledgeWrites = [record];
+      }
       const observation = { toolCount: selected.length, outputs };
 
       // 5) reflecting：生成最终结果

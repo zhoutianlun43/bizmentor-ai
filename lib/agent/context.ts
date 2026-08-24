@@ -6,6 +6,7 @@
 import { getCurrentIdentity } from "../identity/resolver";
 import { buildExecutionSummary } from "../decision/execution";
 import { MemoryEngine } from "../memory/service";
+import type { KnowledgeEngine } from "../knowledge/knowledge-engine";
 import type { OpportunityRepository } from "../opportunity/repository";
 import type { DecisionRepository } from "../decision/repository";
 import type { MemoryPattern } from "../memory/types";
@@ -18,6 +19,8 @@ export interface ContextRecoveryDeps {
   decisionRepository?: DecisionRepository;
   /** 记忆引擎（可选；缺省不检索模式/事件） */
   memory?: MemoryEngine;
+  /** 个人知识引擎（可选；缺省不加载已确认知识） */
+  knowledge?: KnowledgeEngine;
   /** 主动商机 id */
   activeOpportunityId?: string;
   /** 主动决策 id */
@@ -62,6 +65,9 @@ export async function recoverContext(deps: ContextRecoveryDeps): Promise<AgentCo
     recentEvents = (await deps.memory.listArchived()).slice(0, 10) as unknown as AgentContext["recentEvents"];
   }
 
+  // V0.4.2 Phase 9B-4：只加载已确认 Knowledge（未确认不影响核心决策）
+  const knowledgeRecords = deps.knowledge ? await deps.knowledge.confirmed() : [];
+
   return {
     userId: identity.userId,
     identity,
@@ -70,6 +76,7 @@ export async function recoverContext(deps: ContextRecoveryDeps): Promise<AgentCo
     executionSummary,
     memoryPatterns,
     recentEvents,
+    knowledgeRecords,
     createdAt,
   };
 }

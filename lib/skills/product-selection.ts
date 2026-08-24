@@ -4,6 +4,7 @@
  * 只编排，不复制引擎逻辑；未注入 research 时诚实标记「需研究验证」。
  */
 import { sectionOf } from "./research-adapter";
+import { knowledgeInsights } from "../knowledge/knowledge-engine";
 import type { BizSkill, ProductSelectionInput, ProductSelectionResult, SkillDeps, SkillOutput } from "./types";
 
 export function createProductSelectionSkill(deps: SkillDeps): BizSkill {
@@ -32,7 +33,10 @@ export function createProductSelectionSkill(deps: SkillDeps): BizSkill {
       // 2) Research（可选）
       const research = deps.runResearch ? await deps.runResearch({ name, description }) : undefined;
 
-      // 3) 提取（确定性；缺失诚实标记）
+      // 3) 用户长期知识（已确认）
+      const userKnowledge = await knowledgeInsights(deps.knowledge, ["habit", "judgment_style", "industry_experience"]);
+
+      // 4) 提取（确定性；缺失诚实标记）
       const fallback = "需研究验证（未注入 research 或证据不足）";
       const marketOpportunity = sectionOf(research, "market", fallback);
       const userNeed = sectionOf(research, "painPoint", fallback) || sectionOf(research, "targetUser", fallback);
@@ -41,6 +45,7 @@ export function createProductSelectionSkill(deps: SkillDeps): BizSkill {
       const risks = riskText === fallback ? [fallback] : riskText.split(/[；;。]/).filter((s) => s.trim()).slice(0, 5);
 
       const suggestedActions = [
+        ...(userKnowledge.length > 0 ? [`结合你的长期经验：${userKnowledge.join("；")}`] : []),
         `验证「${i.productIdea}」在 ${i.category ?? "女装"} 品类的需求强度（外部数据 + 小样本访谈）`,
         ...(historicalCases.length > 0 ? [`参考 ${historicalCases.length} 个历史相似决策的经验教训后决定测款`] : []),
         "若通过初筛，创建商机并启动 Research Pipeline",
@@ -57,6 +62,7 @@ export function createProductSelectionSkill(deps: SkillDeps): BizSkill {
         risks,
         suggestedActions,
         historicalCases,
+        userKnowledge,
       };
 
       const evidence: SkillOutput["evidence"] = [

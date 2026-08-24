@@ -8,6 +8,7 @@ import type { Opportunity } from "../types";
 import type { UserDecision, LearningEvent } from "../decision/types";
 import type { PlanStatus, TaskExecutionSummary } from "../decision/execution";
 import type { MemoryPattern } from "../memory/types";
+import type { KnowledgeRecord } from "../knowledge/types";
 import type { AgentEventType } from "./events";
 
 /** 触发来源 */
@@ -49,6 +50,8 @@ export interface AgentContext {
   executionSummary?: ExecutionSummarySnapshot;
   memoryPatterns: MemoryPattern[];
   recentEvents: LearningEvent[];
+  /** V0.4.2 Phase 9B-4：已确认的个人长期知识（用户是谁/如何判断） */
+  knowledgeRecords: KnowledgeRecord[];
   createdAt: string;
 }
 
@@ -94,6 +97,10 @@ export interface AgentRun {
   skillsUsed?: string[];
   /** V0.4.2 Phase 9B-3：技能结果摘要 */
   skillResults?: Array<{ skillId: string; summary: string; createdAt: string }>;
+  /** V0.4.2 Phase 9B-4：本次运行读取的个人知识 */
+  knowledgeReads?: Array<{ type?: string; content?: string }>;
+  /** V0.4.2 Phase 9B-4：本次运行写入的个人知识 */
+  knowledgeWrites?: Array<{ type?: string; content?: string }>;
 }
 
 /** Agent Run 输入（用户/调度传入） */

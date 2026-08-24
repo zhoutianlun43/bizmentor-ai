@@ -7,7 +7,7 @@
 
 ## 1. 当前版本
 
-- **V0.4.2 Phase 9B-3**（Skill System：可插拔商业技能 + AgentRuntime skill_tool）
+- **V0.4.2 Phase 9B-4**（Personal Knowledge System：用户长期认知与商业人格）
 - 最近 Git commit：`（提交时更新为最新）`
 - 技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test
 
@@ -45,7 +45,8 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 | lib/agent/loops | **Business Operating Loop（晨报/异常检测/晚报）** | **9B-2（本阶段）** |
 | lib/agent/scheduler | **Agent Scheduler（App 打开/手动/测试触发）** | **9B-2** |
 | lib/agent/events | Agent Event 总线（旁路 emit/subscribe） | 9B-2 |
-| lib/skills | **Skill System（BizSkill/Registry/选品/竞品）** | **9B-3（本阶段）** |
+| lib/skills | Skill System（BizSkill/Registry/选品/竞品） | 9B-3 |
+| lib/knowledge | **Personal Knowledge（习惯/判断方式/经验/案例 + 确认机制）** | **9B-4（本阶段）** |
 | lib/supabase | 浏览器/服务端客户端 + 统一错误 | 1/4A |
 | lib/migration | localStorage → Supabase 迁移工具 | 5A |
 | app/ | 首页/商机/项目/训练/我的 + /api/ai + /api/external-research | V0.1-9B-1 |
@@ -95,6 +96,7 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 
 - ~~9B-2~~ ✅ Operating Loop：晨报/日间监控/晚报 + Scheduler + Event（已完成）
 - ~~9B-3~~ ✅ Skill System：可插拔技能（选品/竞品）+ skill_tool（已完成）
+- ~~9B-4~~ ✅ Personal Knowledge：用户长期认知（AI 候选 → 用户确认 → 进入 Context）（已完成）
 - **9B-3** Skill System：可插拔技能（首批 product_selection + competitor_analysis）
 - **9B-4** Personal Knowledge：习惯/判断/经验/案例 + 确认机制
 - **9B-5** 多端就绪：PWA + SettingsRepository + 数据同步落地
@@ -140,3 +142,15 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **原则**：Skill 不复制引擎逻辑，只编排；未注入 research 时诚实标记「需研究验证」，不伪造来源。
 - **测试**：249/249（新增 6：Registry/调用/product_selection/competitor_analysis/Memory 注入/AgentRuntime 调用技能）。
 - **下一阶段**：9B-4 Personal Knowledge（习惯/判断/经验/案例）→ 9B-5 多端就绪（PWA）。
+
+---
+
+## 13. Phase 9B-4 完成记录（Personal Knowledge System）
+
+- **Knowledge 架构**：`lib/knowledge/` —— KnowledgeRecord（habit/judgment_style/industry_experience/success_case/failure_case；source：user_input/ai_suggestion/review/decision；confidence；confirmed）+ KnowledgeRepository（save/list/findByType/confirm/remove，Local 先实现，Supabase 预留）+ KnowledgeEngine（captureFromUserInput / captureFromDecision / captureFromReview / confirm）+ knowledgeInsights 辅助。
+- **Memory 与 Knowledge 区别**：Memory 记录「发生过什么」（决策/事件）；Knowledge 总结「这个用户是什么样的人」（习惯/判断方式/偏好/经验）。
+- **确认机制**：AI（规则）提取候选 → confirmed=false 入库 → 用户 confirm() → confirmed=true → 才进入 Agent Context；未确认只能作为临时建议，不影响核心决策。
+- **数据流**：决策记忆/每日复盘/用户输入 → KnowledgeEngine 提取候选 → 用户确认 → Context.knowledgeRecords → Agent 运行时与 Skill 读取（选品参考价格/风险偏好，竞品参考行业经验）。
+- **Agent 集成**：AgentContext.knowledgeRecords（恢复时只加载 confirmed）；knowledge_tool（retrieve/capture）；AgentRun.knowledgeReads/knowledgeWrites。
+- **测试**：255/255（新增 6：CRUD/Capture/确认/未确认不进 Context/确认后加载/Skill 读取/AgentRuntime 调用）。
+- **下一阶段**：9B-5 多端就绪（PWA + SettingsRepository + 数据同步落地）。

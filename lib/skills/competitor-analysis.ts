@@ -4,6 +4,7 @@
  * 输出定位/定价/内容/流量/优势/弱点/可复制策略。
  */
 import { sectionOf } from "./research-adapter";
+import { knowledgeInsights } from "../knowledge/knowledge-engine";
 import type { BizSkill, CompetitorAnalysisInput, CompetitorAnalysisResult, SkillDeps, SkillOutput } from "./types";
 
 export function createCompetitorAnalysisSkill(deps: SkillDeps): BizSkill {
@@ -22,7 +23,10 @@ export function createCompetitorAnalysisSkill(deps: SkillDeps): BizSkill {
       // 1) Memory：历史模式（经验注入）
       const memoryPatterns = deps.memory ? await deps.memory.retrieve({ domain: "ecommerce" }) : [];
 
-      // 2) Research（可选）
+      // 2) 用户长期知识（已确认）
+      const userKnowledge = await knowledgeInsights(deps.knowledge, ["industry_experience", "judgment_style"]);
+
+      // 3) Research（可选）
       const research = deps.runResearch ? await deps.runResearch({ name, description }) : undefined;
 
       // 3) 提取
@@ -54,6 +58,7 @@ export function createCompetitorAnalysisSkill(deps: SkillDeps): BizSkill {
         weaknesses,
         replicableStrategies,
         memoryPatterns: memoryPatterns.slice(0, 5),
+        userKnowledge,
       };
 
       const evidence: SkillOutput["evidence"] = [

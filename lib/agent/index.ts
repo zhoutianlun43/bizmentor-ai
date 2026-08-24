@@ -13,6 +13,7 @@ export { createExecutionTool } from "./tools/execution";
 export { createMemoryTool } from "./tools/memory";
 export { createMorningBriefingTool, createEveningReviewTool, createMonitoringTool } from "./tools/loops";
 export { createSkillTool } from "./tools/skill";
+export { createKnowledgeTool } from "./tools/knowledge";
 export type { ResearchToolDeps } from "./tools/research";
 export type { DecisionToolDeps } from "./tools/decision";
 export type { ExecutionToolDeps } from "./tools/execution";

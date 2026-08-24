@@ -27,6 +27,7 @@ function makeContext(): AgentContext {
     identity: { userId: "test-user", source: "fixed" },
     memoryPatterns: [],
     recentEvents: [],
+    knowledgeRecords: [],
     createdAt: NOW,
   };
 }

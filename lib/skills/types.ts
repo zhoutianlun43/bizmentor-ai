@@ -4,6 +4,7 @@
  */
 import type { AgentContext } from "../agent/types";
 import type { MemoryEngine } from "../memory/service";
+import type { KnowledgeEngine } from "../knowledge/knowledge-engine";
 import type { DecisionMemoryRecord, MemoryPattern } from "../memory/types";
 import type { ResearchArea, SourceDocument } from "../research/types";
 
@@ -20,6 +21,8 @@ export interface SkillDeps {
   runResearch?: (input: { name: string; description: string }) => Promise<SkillResearchResult>;
   /** 记忆引擎（可选） */
   memory?: MemoryEngine;
+  /** 个人知识引擎（可选：Skill 读取已确认的用户长期知识） */
+  knowledge?: KnowledgeEngine;
 }
 
 /** 技能输出（统一结构） */
@@ -63,6 +66,8 @@ export interface ProductSelectionResult {
   suggestedActions: string[];
   /** 历史类似案例（MemoryEngine.similar） */
   historicalCases: Array<{ decisionId: string; opportunityName: string; outcome: string; domain?: string; lesson: string }>;
+  /** 用户已确认的长期知识（价格偏好/风险偏好/供应链等） */
+  userKnowledge?: string[];
 }
 
 /** 竞品拆解输入 */
@@ -86,6 +91,8 @@ export interface CompetitorAnalysisResult {
   replicableStrategies: string[];
   /** 历史 Memory 模式（经验注入） */
   memoryPatterns: MemoryPattern[];
+  /** 用户已确认的长期知识 */
+  userKnowledge?: string[];
 }
 
 export type { AgentContext, DecisionMemoryRecord, MemoryPattern };
