@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/layout/AppHeader";
+import { ExportDataButton } from "@/components/migration/ExportDataButton";
 import { Card } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { ScoreBar } from "@/components/ui/ScoreBar";
@@ -43,6 +44,9 @@ export default function ProfilePage() {
           ))}
         </div>
       </Card>
+
+      {/* 数据迁移（V0.4.1 Phase 5B）：导出 localStorage → Supabase */}
+      <ExportDataButton />
 
       <p className="mt-4 rounded-xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
         V0.1 为 mock 数据。未来 AI 会根据你的训练成绩、商机判断与项目验证结果自动计算并更新能力画像。
