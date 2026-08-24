@@ -1,0 +1,352 @@
+{
+  "currentVersion": "V0.7.0 Product Release",
+  "localOnly": [
+    "git history (no remote)",
+    "localStorage 数据：profiles/knowledge/memory/conversations/agentRuns/settings/theme/onboarded",
+    ".env.local",
+    "outputs/ 41 份报告",
+    "work/ 临时文件"
+  ],
+  "project": "BizMentor AI",
+  "schemaVersion": "1.0",
+  "techStack": [
+    "Next.js 16.3.2 (App Router, Turbopack)",
+    "React 19",
+    "TypeScript 5",
+    "TailwindCSS 4",
+    "Supabase",
+    "zod",
+    "node:test",
+    "lucide-react",
+    "pnpm 11"
+  ],
+  "libModules": [
+    {
+      "id": "ai",
+      "keyFiles": [
+        "lib/ai/gateway.ts",
+        "lib/ai/router.ts",
+        "lib/ai/providers/openai.ts",
+        "lib/ai/providers/deepseek.ts",
+        "lib/ai/usage.ts",
+        "lib/ai/types.ts"
+      ],
+      "purpose": "AI Gateway：多 Provider（OpenAI/DeepSeek）+ Router（capability simple/research/reasoning）+ fallback + 计价 + ai_usage"
+    },
+    {
+      "id": "research",
+      "keyFiles": [
+        "lib/research/pipeline.ts",
+        "lib/research/service.ts",
+        "lib/research/types.ts",
+        "lib/research/prompts.ts",
+        "lib/research/scoring.ts",
+        "lib/research/stages/*.ts"
+      ],
+      "purpose": "商业研究引擎：9 阶段 Pipeline（Analyzer→Planner→External→Extraction→Validation→Synthesis→Scoring→ValidationPlan→Summary）+ Evidence/Source/Score"
+    },
+    {
+      "id": "decision",
+      "keyFiles": [
+        "lib/decision/service.ts",
+        "lib/decision/thesis.ts",
+        "lib/decision/unit-economics.ts",
+        "lib/decision/examiner.ts",
+        "lib/decision/execution.ts",
+        "lib/decision/validation.ts",
+        "lib/decision/types.ts"
+      ],
+      "purpose": "决策引擎：Investment Thesis + Unit Economics + AI Examiner + 可执行验证方案；Execution Engine（状态机/超期/摘要）"
+    },
+    {
+      "id": "external",
+      "keyFiles": [
+        "lib/external/factory.ts",
+        "lib/external/providers/tavily.ts",
+        "lib/external/router.ts",
+        "lib/external/standardize.ts"
+      ],
+      "purpose": "外部情报层：Tavily + DuckDuckGo fallback，统一标准化，meta 追踪"
+    },
+    {
+      "id": "domain",
+      "keyFiles": [
+        "lib/domain/detect.ts",
+        "lib/domain/registry.ts",
+        "lib/domain/types.ts"
+      ],
+      "purpose": "Business Domain：8 领域检测/画像（ecommerce/saas/...），research/decision 上下文注入"
+    },
+    {
+      "id": "memory",
+      "keyFiles": [
+        "lib/memory/builder.ts",
+        "lib/memory/service.ts",
+        "lib/memory/retrieval.ts",
+        "lib/memory/supabase-repository.ts"
+      ],
+      "purpose": "商业记忆：Decision Memory（AI vs 用户 vs 实际）+ 事件归档 + 模式检索（Cloud/Local）"
+    },
+    {
+      "id": "knowledge",
+      "keyFiles": [
+        "lib/knowledge/knowledge-engine.ts",
+        "lib/knowledge/repository.ts"
+      ],
+      "purpose": "个人知识：习惯/判断方式/经验/案例；AI 候选→用户确认→长期认知"
+    },
+    {
+      "id": "context",
+      "keyFiles": [
+        "lib/context/context-builder.ts",
+        "lib/context/types.ts"
+      ],
+      "purpose": "统一经营上下文：BusinessOSContext + Builder（Profile+Business+Knowledge+Memory+Repository）"
+    },
+    {
+      "id": "profile",
+      "keyFiles": [
+        "lib/profile/local-repository.ts",
+        "lib/profile/supabase-repository.ts"
+      ],
+      "purpose": "Personal Profile（用户是谁）Local + Supabase 预留"
+    },
+    {
+      "id": "business",
+      "keyFiles": [
+        "lib/business/local-repository.ts",
+        "lib/business/supabase-repository.ts"
+      ],
+      "purpose": "Business Profile（经营世界，businessTypes 通用枚举，不绑行业）"
+    },
+    {
+      "id": "agent",
+      "keyFiles": [
+        "lib/agent/runtime.ts",
+        "lib/agent/lifecycle.ts",
+        "lib/agent/tool-registry.ts",
+        "lib/agent/context.ts",
+        "lib/agent/loops/*.ts",
+        "lib/agent/tools/*.ts"
+      ],
+      "purpose": "Agent Runtime：生命周期状态机 + Tool Registry + 上下文恢复 + Run 审计 + Operating Loop（晨报/监控/晚报）+ Scheduler + Event"
+    },
+    {
+      "id": "skills",
+      "keyFiles": [
+        "lib/skills/registry.ts",
+        "lib/skills/product-selection.ts",
+        "lib/skills/competitor-analysis.ts"
+      ],
+      "purpose": "可插拔商业技能：product_selection / competitor_analysis，AgentRuntime 经 skill_tool 调用"
+    },
+    {
+      "id": "llm",
+      "keyFiles": [
+        "lib/llm/index.ts",
+        "lib/llm/openai-compatible.ts"
+      ],
+      "purpose": "产品层 LLM：OpenAI-compatible + DeepSeek，generate(messages)，BusinessContext 注入提示"
+    },
+    {
+      "id": "conversation",
+      "keyFiles": [
+        "lib/conversation/local-repository.ts"
+      ],
+      "purpose": "对话历史：Conversation，Local 优先 + Supabase 预留"
+    },
+    {
+      "id": "settings",
+      "keyFiles": [
+        "lib/settings/repository.ts"
+      ],
+      "purpose": "用户设置：Local + Supabase(user_settings) + 缓存降级"
+    },
+    {
+      "id": "sync",
+      "keyFiles": [
+        "lib/sync/manager.ts",
+        "lib/sync/agent-state-repository.ts"
+      ],
+      "purpose": "数据同步：SyncManager（LWW）+ AgentStateRepository 预留"
+    },
+    {
+      "id": "identity",
+      "keyFiles": [
+        "lib/identity/resolver.ts",
+        "lib/identity/auth-provider.ts"
+      ],
+      "purpose": "身份：local-user 默认 + AuthIdentityProvider（Auth Ready）+ resolver 优先级"
+    },
+    {
+      "id": "repository",
+      "keyFiles": [
+        "lib/repository/provider.ts"
+      ],
+      "purpose": "Repository Provider：Supabase/Local 切换（opportunity/research/decision/memory/profile/business）"
+    },
+    {
+      "id": "supabase",
+      "keyFiles": [
+        "lib/supabase/client.ts",
+        "lib/supabase/server.ts",
+        "lib/supabase/errors.ts"
+      ],
+      "purpose": "Supabase 客户端（浏览器 anon / 服务端 service role）+ 统一错误"
+    },
+    {
+      "id": "migration",
+      "keyFiles": [
+        "lib/migration/migrate.ts",
+        "scripts/migrate-localstorage.ts"
+      ],
+      "purpose": "localStorage→Supabase 迁移 CLI（8 表）"
+    },
+    {
+      "id": "pwa",
+      "keyFiles": [
+        "lib/pwa/manifest.ts",
+        "public/sw.js"
+      ],
+      "purpose": "PWA manifest 共享源"
+    }
+  ],
+  "commands": [
+    "pnpm dev",
+    "pnpm test",
+    "pnpm lint",
+    "pnpm build",
+    "pnpm exec tsc --noEmit",
+    "pnpm test:integration",
+    "node scripts/migrate-localstorage.ts --file X.json --dry-run"
+  ],
+  "supabaseTables": [
+    {
+      "applied": true,
+      "name": "opportunities",
+      "purpose": "商机",
+      "cloudCount": 1
+    },
+    {
+      "applied": true,
+      "name": "research_runs",
+      "purpose": "研究运行",
+      "cloudCount": 1
+    },
+    {
+      "applied": true,
+      "name": "decisions",
+      "purpose": "决策",
+      "cloudCount": 2
+    },
+    {
+      "applied": true,
+      "name": "decision_reviews",
+      "purpose": "AI 评审"
+    },
+    {
+      "applied": true,
+      "name": "validation_plans",
+      "purpose": "验证计划"
+    },
+    {
+      "applied": true,
+      "name": "validation_results",
+      "purpose": "验证结果"
+    },
+    {
+      "applied": true,
+      "name": "learning_events",
+      "purpose": "学习事件",
+      "cloudCount": 2
+    },
+    {
+      "applied": true,
+      "name": "score_updates",
+      "purpose": "评分更新"
+    },
+    {
+      "applied": true,
+      "name": "ai_usage",
+      "purpose": "AI 用量（service role）"
+    },
+    {
+      "applied": false,
+      "name": "memory_records",
+      "purpose": "决策记忆"
+    },
+    {
+      "applied": false,
+      "name": "profiles",
+      "purpose": "个人画像"
+    },
+    {
+      "applied": false,
+      "name": "business_profiles",
+      "purpose": "经营画像"
+    },
+    {
+      "applied": false,
+      "name": "user_settings",
+      "purpose": "用户设置"
+    },
+    {
+      "applied": false,
+      "name": "conversations",
+      "purpose": "对话历史"
+    }
+  ],
+  "description": "Personal Business Operating System / AI Business Assistant",
+  "keyDocs": [
+    "docs/BizMentor-System-State.md",
+    "docs/BizMentor-Asset-Inventory.md",
+    "docs/BizMentor-Master.md"
+  ],
+  "deployment": {
+    "env": "/opt/bizmentor/.env.production",
+    "url": "https://bizmentor.top",
+    "code": "/opt/bizmentor",
+    "domain": "bizmentor.top (DNSPod)",
+    "server": "Tencent Cloud Lighthouse HK 43.129.179.207 Ubuntu 24.04 2C2G",
+    "https": "Caddy",
+    "process": "systemd bizmentor -> next start 127.0.0.1:3000"
+  },
+  "routes": [
+    "/(home)",
+    "/chat",
+    "/skills",
+    "/knowledge",
+    "/onboarding",
+    "/profile",
+    "/opportunities",
+    "/opportunities/new",
+    "/opportunities/[id]",
+    "/projects",
+    "/training",
+    "/training/[id]",
+    "/api/ai",
+    "/api/chat",
+    "/api/skill",
+    "/api/review",
+    "/api/knowledge-candidate",
+    "/api/external-research"
+  ],
+  "envVars": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY(未配置)",
+    "OPENAI_API_KEY",
+    "OPENAI_BASE_URL",
+    "OPENAI_RESEARCH_MODEL",
+    "OPENAI_REASONING_MODEL",
+    "OPENAI_*_PRICE_PER_1M",
+    "DEEPSEEK_API_KEY",
+    "DEEPSEEK_BASE_URL",
+    "DEEPSEEK_MODEL",
+    "DEEPSEEK_*_PRICE_PER_1M",
+    "NEXT_PUBLIC_APP_URL",
+    "AI_USAGE_FILE",
+    "TAVILY_API_KEY",
+    "EXTERNAL_INTELLIGENCE_PROVIDERS"
+  ]
+}

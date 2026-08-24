@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BizMentor-Master</title>
+<style>
+  body{font-family:"Microsoft YaHei",-apple-system,sans-serif;max-width:860px;margin:0 auto;padding:32px 20px;color:#1f2937;line-height:1.7;background:#fff}
+  h1{border-bottom:2px solid #4f46e5;padding-bottom:10px;color:#111827}
+  h2{margin-top:36px;border-left:4px solid #4f46e5;padding-left:10px;color:#111827}
+  h3{margin-top:24px;color:#1f2937}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid #d1d5db;padding:6px 10px;text-align:left}
+  th{background:#eef2ff}
+  code{background:#f3f4f6;padding:2px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;overflow:auto;font-size:13px}
+  blockquote{border-left:4px solid #9ca3af;margin:12px 0;padding:4px 14px;color:#4b5563;background:#f9fafb}
+  hr{border:none;border-top:1px solid #e5e7eb;margin:28px 0}
+</style></head>
+<body><h1>BizMentor-Master（完整项目圣经）</h1>
+<blockquote>
+<p>版本：V0.7.0 Product Release（审计日期 2026-08-24）<br>目的：<strong>任何设备、任何 AI，只读本文件即可完完整整接手 BizMentor</strong>（架构、代码、数据、部署、规范、阶段史、下一步）。<br>配套：<code>docs/bizmentor-manifest.json</code>（机器可读清单）、<code>docs/BizMentor-System-State.md</code>（状态+规则）、<code>docs/BizMentor-Asset-Inventory.md</code>（资产位置）。</p>
+</blockquote>
+<hr>
+<h2>1. 一句话定位</h2>
+<p>BizMentor = <strong>Personal Business Operating System（个人 AI 商业助手）</strong>：用户描述「我是谁、我做什么业务」，系统完成<br><strong>发现商机 → AI 研究 → 用户判断 → AI 评审 → 真实验证 → 评分更新 → 复盘 → 长期认知</strong>的闭环，并提供每日经营简报与 AI 对话。<br><strong>不是聊天机器人，不是女装工具</strong>——行业能力通过 Domain/Profile 通用化，未来用 Domain Plugin 扩展。</p>
+<h2>2. 技术栈</h2>
+<ul>
+<li>Next.js 16.3.2（App Router + Turbopack）、React 19、TypeScript 5（strict）、TailwindCSS 4、pnpm 11</li>
+<li>Supabase（PostgREST + RLS，单用户 local-user）、zod、node:test、lucide-react</li>
+<li>PWA（app/manifest.ts + public/sw.js 离线缓存 + sync 重同步）</li>
+<li>部署：腾讯云 Lighthouse（香港 2C2G）+ Caddy HTTPS + systemd</li>
+</ul>
+<h2>3. 目录结构与模块总览（完整）</h2>
+<pre><code>bizmentor-ai/
+├─ app/                    产品页面 + API（20 路由）
+│  ├─ page.tsx             首页 Dashboard（AI Daily Assistant + 今日经营状态 + 入口）
+│  ├─ onboarding/          首次进入：填个人+经营画像 → 保存 → BusinessContext
+│  ├─ chat/                问 AI（自动加载 BusinessContext + 历史 + 认知确认）
+│  ├─ skills/              技能中心（选品/竞品）
+│  ├─ knowledge/           我的AI认知（确认/删除/新增 + 复盘）
+│  ├─ profile/             我的（业务画像 + 认知入口 + 导出）
+│  ├─ opportunities|projects|training/  商机/项目/训练（V0.1 页面）
+│  └─ api/                 ai | chat | skill | review | knowledge-candidate | external-research
+├─ components/             home(DailyAssistant/TodayBriefing/OnboardingGuard) · layout(BottomNav/UserStatusBar) · decision · research · ui · providers · migration
+├─ lib/                    24 个领域模块（见下）
+├─ public/                 sw.js + icons（PWA）
+├─ supabase/schema.sql     全部表 DDL（含已应用/未应用）
+├─ deploy/                 部署脚本（deploy-app.sh / Caddyfile / bizmentor.service / setup-server.sh）
+├─ docs/                   本文件 + System-State + Asset-Inventory + manifest.json（双版本 .md/.html）
+├─ scripts/migrate-localstorage.ts  localStorage→Supabase 迁移 CLI
+└─ outputs/（工作区外）     41 份 Phase 报告 + screenshots/
+</code></pre>
+<h3>lib/ 模块清单（职责 + 关键文件）</h3>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>职责</th>
+<th>关键文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ai</td>
+<td>AI Gateway：OpenAI/DeepSeek 多 Provider；Router（simple/research/reasoning 三级能力 + 自动升级 + 降级矩阵）；计价；ai_usage</td>
+<td>gateway.ts / router.ts / providers/ / usage.ts</td>
+</tr>
+<tr>
+<td>research</td>
+<td>商业研究引擎：9 阶段 Pipeline；Evidence（FACT/AI_INFERENCE/ASSUMPTION/NEEDS_VALIDATION 严格分级）；Source 追溯；Score v1 确定性计算</td>
+<td>pipeline.ts / service.ts / types.ts / prompts.ts / scoring.ts / stages/</td>
+</tr>
+<tr>
+<td>decision</td>
+<td>决策引擎：Investment Thesis + Unit Economics + AI Examiner（枚举规范化）+ 可执行验证方案；Execution 状态机/超期/摘要</td>
+<td>service.ts / thesis.ts / unit-economics.ts / examiner.ts / execution.ts / validation.ts</td>
+</tr>
+<tr>
+<td>external</td>
+<td>外部情报层：Tavily（真实）+ DuckDuckGo fallback；统一标准化；meta 追踪（provider/degraded/attempts）</td>
+<td>factory.ts / providers/tavily.ts / router.ts / standardize.ts</td>
+</tr>
+<tr>
+<td>domain</td>
+<td>8 领域（ecommerce/saas/local_service/content_media/marketplace/physical_product/ai_service/unknown）：检测 + 画像 + research/decision 上下文注入</td>
+<td>detect.ts / registry.ts / types.ts</td>
+</tr>
+<tr>
+<td>memory</td>
+<td>商业记忆：Decision Memory（AI prediction vs User prediction vs Actual result）；事件归档；模式检索；Cloud/Local</td>
+<td>builder.ts / service.ts / retrieval.ts / supabase-repository.ts</td>
+</tr>
+<tr>
+<td>knowledge</td>
+<td>个人知识：习惯/判断方式/行业经验/成功失败案例；<strong>AI 候选→用户确认→长期认知</strong></td>
+<td>knowledge-engine.ts / repository.ts</td>
+</tr>
+<tr>
+<td>context</td>
+<td>统一经营上下文：BusinessOSContext + BusinessContextBuilder</td>
+<td>context-builder.ts / types.ts</td>
+</tr>
+<tr>
+<td>profile</td>
+<td>Personal Profile（用户是谁）Local + Supabase 预留</td>
+<td>local-repository.ts / supabase-repository.ts</td>
+</tr>
+<tr>
+<td>business</td>
+<td>Business Profile（经营世界，businessTypes 通用枚举）</td>
+<td>local-repository.ts / supabase-repository.ts</td>
+</tr>
+<tr>
+<td>agent</td>
+<td>Agent Runtime：生命周期状态机 / Tool Registry / 上下文恢复 / Run 审计 / Operating Loop（晨报/监控/晚报）/ Scheduler / Event 总线</td>
+<td>runtime.ts / lifecycle.ts / tool-registry.ts / context.ts / loops/ / tools/</td>
+</tr>
+<tr>
+<td>skills</td>
+<td>可插拔技能：product_selection / competitor_analysis</td>
+<td>registry.ts / product-selection.ts / competitor-analysis.ts</td>
+</tr>
+<tr>
+<td>llm</td>
+<td>产品层 LLM：OpenAI-compatible + DeepSeek；generate(messages)；BusinessContext 注入提示</td>
+<td>index.ts / openai-compatible.ts / deepseek.ts</td>
+</tr>
+<tr>
+<td>conversation</td>
+<td>对话历史（Local 优先 + Supabase 预留）</td>
+<td>local-repository.ts</td>
+</tr>
+<tr>
+<td>settings</td>
+<td>用户设置（Local + Supabase + 缓存降级）</td>
+<td>repository.ts / supabase-repository.ts</td>
+</tr>
+<tr>
+<td>sync</td>
+<td>SyncManager（updated_at LWW）+ AgentStateRepository 预留</td>
+<td>manager.ts / agent-state-repository.ts</td>
+</tr>
+<tr>
+<td>identity</td>
+<td>身份：默认 local-user；AuthIdentityProvider（Auth Ready）；优先级 override &gt; auth &gt; env &gt; local-user</td>
+<td>resolver.ts / auth-provider.ts</td>
+</tr>
+<tr>
+<td>repository</td>
+<td>Repository Provider：Supabase/Local 切换（opportunity/research/decision/memory/profile/business）</td>
+<td>provider.ts</td>
+</tr>
+<tr>
+<td>supabase</td>
+<td>客户端（浏览器 anon / 服务端 service role）+ SupabaseRepositoryError</td>
+<td>client.ts / server.ts / errors.ts</td>
+</tr>
+<tr>
+<td>migration</td>
+<td>localStorage→Supabase 迁移（8 表）</td>
+<td>migrate.ts</td>
+</tr>
+<tr>
+<td>pwa</td>
+<td>PWA manifest 共享源</td>
+<td>manifest.ts</td>
+</tr>
+</tbody></table>
+<h2>4. 核心数据模型（关键 TS 类型，AI 据此理解数据流）</h2>
+<pre><code class="language-ts">// 商机
+Opportunity { id, name, description, source:&quot;ai&quot;|&quot;user&quot;, status:&quot;researching&quot;|&quot;validating&quot;|&quot;validated&quot;|&quot;abandoned&quot;, score?, createdAt, notes? }
+
+// 研究运行（research_runs，report 为 jsonb）
+ResearchRun { runId, opportunityId, status, stages[], findings[], scoreHistory[], sourceDocuments[], report? }
+ResearchReport { opportunityName, executiveSummary, sections[], score, validationPlan[], nextActions[], sources[], conflicts[], competitors[], thesis?, unitEconomics?, meta{degraded,domain,...} }
+EvidenceItem { claim, evidenceClass:&quot;FACT&quot;|&quot;AI_INFERENCE&quot;|&quot;ASSUMPTION&quot;|&quot;NEEDS_VALIDATION&quot;, confidence, sourceRef? }
+ScoreVersion { version, overall_score, score_breakdown[], confidence, assumptions, unknowns, validation_required, createdAt }
+
+// 决策
+UserDecision { id, opportunityId, runId?, decision:&quot;proceed&quot;|&quot;validate&quot;|&quot;continue_research&quot;|&quot;pause&quot;|&quot;abandon&quot;, differentFromAi, judgment, aiScoreSnapshot?, createdAt, updatedAt }
+UserDecisionReview { id, decisionId, score, strengths[], weaknesses[], reasoningGaps[], missingEvidence[], recommendedActions[], abilitySignals[], provider, provider_degraded }
+ValidationTask { id, planId, assumption, hypothesis, method, sampleSize, successCriteria, failureCriteria, deadline, costEstimate, owner, relatedDimension?, priority?, status:&quot;pending&quot;|&quot;running&quot;|&quot;completed&quot;|&quot;failed&quot;|&quot;cancelled&quot;, stateHistory[], resultId?, outcome? }
+InvestmentThesis { coreHypothesis, logicChain[], keyAssumptions[], invalidators[], expectedUpside, decisionGate, confidence }
+UnitEconomicsModel { domain, inputs{}, derived{grossMarginRate, contributionPerUnit, contributionRate, cac, paybackUnits, ltv, ltvCac}, assumptions[] }
+
+// 记忆
+DecisionMemoryRecord { decisionId, aiPrediction, userPrediction, outcome:&quot;confirmed&quot;|&quot;rejected&quot;|&quot;uncertain&quot;|&quot;unknown&quot;, scoreDelta?, lesson, skills[], tags[] }
+MemoryPattern { domain?, decision?, count, confirmRate, avgScore?, commonLessons[], records[] }
+
+// 知识
+KnowledgeRecord { id, userId, type:&quot;habit&quot;|&quot;judgment_style&quot;|&quot;industry_experience&quot;|&quot;success_case&quot;|&quot;failure_case&quot;, content, tags[], source:&quot;user_input&quot;|&quot;ai_suggestion&quot;|&quot;review&quot;|&quot;decision&quot;, confidence, confirmed, createdAt }
+// 原则：AI 只能生成 confirmed=false 候选；用户 confirm 后才进入长期认知
+
+// 上下文（Agent 每次运行统一入口）
+BusinessOSContext { userId, personalProfile, businessProfile, confirmedKnowledge[], memoryPatterns[], activeProjects[], preferences{}, updatedAt }
+AgentContext { userId, identity, activeOpportunity?, activeDecision?, executionSummary?, memoryPatterns[], recentEvents[], knowledgeRecords[], businessContext, createdAt }
+
+// 对话
+Conversation { id, userId, messages[{role,content,createdAt}], createdAt, updatedAt }
+</code></pre>
+<h2>5. AI 架构</h2>
+<ul>
+<li><strong>能力三级</strong>：<code>simple</code>(DeepSeek 默认) / <code>research</code>(OpenAI Research) / <code>reasoning</code>(OpenAI Reasoning)；Router 按任务类型自动升级（examiner/final_report→reasoning；unit_economics/business_model→research）</li>
+<li><strong>降级</strong>：DeepSeek 失败→OpenAI；OpenAI 失败→DeepSeek（普通任务），<strong>Examiner/最终报告禁止静默降级</strong>（返回 provider_degraded）</li>
+<li><strong>计价</strong>：每 Provider 可配输入/输出 $/1M tokens，ai_usage 记录 provider/model/task/agent/tokens/cost/duration</li>
+<li><strong>产品层 LLM</strong>（lib/llm）：DeepSeek 优先；<code>buildBusinessSystemPrompt(context)</code> 把 BusinessOSContext 注入个性化 system（非固定模板）</li>
+<li>安全：Key 只在环境变量；禁止 NEXT_PUBLIC_ 暴露服务端 Key；禁止打印/提交</li>
+</ul>
+<h2>6. 研究引擎（Research Pipeline，9 阶段）</h2>
+<pre><code>Opportunity → 1 Analyzer → 2 Planner → 3 External Research(真实搜索) → 4 Evidence Extraction
+→ 5 Evidence Validation → 6 Synthesis → 7 Scoring(AI提案+确定性聚合 Score v1)
+→ 8 Validation Plan → 9 Summary → ResearchReport
+</code></pre>
+<ul>
+<li>证据纪律：无来源不得标 FACT；无外部证据明确提示「证据不足」；多来源冲突显式显示；FACT 必须绑定 Source</li>
+<li>评分：AI 只给维度提案，overall/confidence 由确定性函数计算（可复算）；Score v1/v2 版本化</li>
+</ul>
+<h2>7. 决策与执行</h2>
+<ul>
+<li>Investment Thesis（AI 提炼投资论点）、Unit Economics（按领域 AI 提案输入 + 确定性计算毛利/回本/LTV）</li>
+<li>AI Examiner：评审用户判断（10 类弱点/12 能力信号），<strong>输出枚举已做规范化</strong>（防降级模型硬失败）</li>
+<li>Execution Engine：任务状态机（pending→running→completed/failed/cancelled，白名单+历史+actor）+ 超期检测 + 计划进度/摘要</li>
+<li>Validation Result：<strong>只由用户输入，AI 不参与</strong>；Score v2 用真实验证结果确定性更新</li>
+</ul>
+<h2>8. 记忆 / 知识 / 上下文</h2>
+<ul>
+<li>Memory 记录「发生过什么」；Knowledge 总结「这个用户是什么样的人」（AI 候选→用户确认）</li>
+<li>BusinessContextBuilder 每次聚合 Profile + Business + confirmed Knowledge + Memory 模式 + 当前状态</li>
+<li>Agent 恢复流程：Identity → BusinessContextBuilder → AgentContext（换设备/重开 App 可恢复）</li>
+</ul>
+<h2>9. Agent Runtime / Skill / Operating Loop</h2>
+<ul>
+<li>AgentRuntime.run(trigger, input)：恢复上下文 → planning(选工具) → executing → observing → reflecting → 记录 Run 审计</li>
+<li>工具：research_tool / decision_tool / execution_tool / memory_tool / skill_tool / knowledge_tool / morning_briefing_tool / evening_review_tool / monitoring_tool</li>
+<li>技能：product_selection（选品：Research+Memory 历史案例）、competitor_analysis（竞品拆解）</li>
+<li>经营闭环：Morning Briefing（晨报）→ AnomalyDetector（日间监控）→ Evening Review（晚报复盘+沉淀记忆）</li>
+<li>Scheduler：App 打开/手动/测试触发（未来 cron/推送）</li>
+</ul>
+<h2>10. 产品（页面 + API + 用户流程）</h2>
+<pre><code>首次访问 → /onboarding（个人+经营画像）→ 首页 Dashboard
+  → AI Daily Assistant（今日关注/风险/下一步 + 为什么这样建议）
+  → 今日经营状态（商机/研究/验证/超期）
+  → 问AI（/chat：BusinessContext + 历史 + [确认加入AI认知]）
+  → 技能中心（/skills）→ 我的AI认知（/knowledge：确认/删除/新增 + 复盘）
+  → 我的（/profile：业务画像）
+API：/api/chat（LLM）、/api/skill、/api/review、/api/knowledge-candidate、/api/ai、/api/external-research
+底部导航：首页 / AI / 商机 / 技能 / 我的；顶部用户状态条
+</code></pre>
+<h2>11. 数据层与数据库</h2>
+<ul>
+<li>存储抽象：Repository Provider（配置 Supabase → 云端，否则 Local）；localStorage 仅缓存/离线</li>
+<li><strong>生产 Supabase 已建表</strong>：opportunities / research_runs / decisions / decision_reviews / validation_plans / validation_results / learning_events / score_updates / ai_usage</li>
+<li><strong>schema.sql 已设计未应用</strong>：memory_records / profiles / business_profiles / user_settings / conversations（需在 Supabase SQL 编辑器执行 schema.sql 补齐；当前 profile/business 走本地回退）</li>
+<li>RLS：单用户 <code>user_id=&#39;local-user&#39;</code>；未来 Auth 升级 <code>auth.uid()::text</code></li>
+</ul>
+<h2>12. 环境变量（仅名称；用途）</h2>
+<ul>
+<li><code>NEXT_PUBLIC_SUPABASE_URL</code> / <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>：Supabase</li>
+<li><code>SUPABASE_SERVICE_ROLE_KEY</code>：<strong>未配置</strong>（服务端专用，未来）</li>
+<li><code>OPENAI_API_KEY</code> / <code>OPENAI_BASE_URL</code> / <code>OPENAI_RESEARCH_MODEL</code> / <code>OPENAI_REASONING_MODEL</code> + 4 项计价</li>
+<li><code>DEEPSEEK_API_KEY</code> / <code>DEEPSEEK_BASE_URL</code> / <code>DEEPSEEK_MODEL</code> + 2 项计价</li>
+<li><code>NEXT_PUBLIC_APP_URL</code>、<code>AI_USAGE_FILE</code>、<code>TAVILY_API_KEY</code>、<code>EXTERNAL_INTELLIGENCE_PROVIDERS</code>、<code>IDENTITY_USER_ID</code>(可选)</li>
+</ul>
+<h2>13. 部署</h2>
+<ul>
+<li>生产：腾讯云 Lighthouse 香港 <code>43.129.179.207</code>（SSH <code>ubuntu</code> + <code>~/.ssh/id_ed25519_bizmentor</code>），代码 <code>/opt/bizmentor</code></li>
+<li>Caddy HTTPS → 127.0.0.1:3000（Next.js <code>next start</code>，systemd <code>bizmentor</code>）</li>
+<li>域名 <code>bizmentor.top</code>（DNSPod）；环境变量 <code>/opt/bizmentor/.env.production</code></li>
+<li>部署：<code>deploy/deploy-app.sh</code>（tar 排除 .env*/node_modules/.git → scp → pnpm build → systemctl）</li>
+</ul>
+<h2>14. 命令</h2>
+<pre><code class="language-bash">pnpm dev            # 开发（0.0.0.0:3000）
+pnpm test           # 单元测试（tsc + node:test，285 项）
+pnpm lint           # eslint（0 warning 要求）
+pnpm build          # next build（20 路由）
+pnpm exec tsc --noEmit -p tsconfig.json   # 严格类型检查
+pnpm test:integration # 真实 Supabase 集成测试
+node scripts/migrate-localstorage.ts --file X.json --dry-run  # 迁移 dry-run
+</code></pre>
+<h2>15. 开发规范 / 安全（AI 接手必须遵守）</h2>
+<ol>
+<li>不改数据库 schema（除非明确授权）；扩展字段进 jsonb</li>
+<li>不修改既有 Pipeline 主流程；新能力走独立模块 + Repository 抽象</li>
+<li>不删/不改旧测试；新增保持 <code>pnpm test</code> 全绿；验收 = test + lint(0) + build + tsc</li>
+<li>安全：API Key 只存环境变量；禁止打印/提交/写报告；禁止 NEXT_PUBLIC_ 暴露服务端 Key</li>
+<li>Agent 只编排不复制业务逻辑；领域经验进 registry 配置</li>
+<li>报告双版本 <code>.md</code> + <code>.html</code>（<code>work/md2html.mjs</code>）；每个 Phase 更新 <code>docs/BizMentor-System-State.md</code></li>
+<li>不绑定行业；行业能力通过 Domain/Profile 通用化</li>
+</ol>
+<h2>16. 阶段史（一句话）</h2>
+<ul>
+<li>V0.1 首页/商机/训练/项目（mock）</li>
+<li>V0.2 AI Gateway（OpenAI/DeepSeek 多 Provider + Router + 计价）</li>
+<li>V0.3-A 研究引擎（9 阶段 + Evidence/Source/Score）；V0.3-B 外部证据（Web Research）；V0.3-C 决策/验证/评分/学习闭环</li>
+<li>V0.4 在线化（腾讯云+Caddy+域名）；V0.4.1 数据层（Supabase/Repository/迁移）</li>
+<li>V0.5.0 10A 数据基础（Profile/Business/Context）</li>
+<li>V0.6.0 MVP 产品层（LLM/对话/技能/认知/简报）；V0.6.1 可用性（Onboarding/历史/AI 建议/认知确认）</li>
+<li>V0.7.0 发布（App Shell + 全流程闭环，已部署 bizmentor.top）</li>
+</ul>
+<h2>17. 已知问题 / 未完成</h2>
+<ol>
+<li><strong>无 git remote</strong>（git 历史只在本机）——最优先修复</li>
+<li>新表未应用生产（profiles/business_profiles/memory_records/user_settings/conversations）</li>
+<li>用户知识/对话/记忆在 localStorage（未上云，清缓存即丢）</li>
+<li>无 SUPABASE_SERVICE_ROLE_KEY</li>
+<li>深度研究未接技能（/api/skill 目前 memory+确定性）</li>
+<li>聊天历史/设置未上云；无推送通知；无真实经营数据（订单/广告/库存）接入</li>
+<li>OpenAI 当前不可用（研究/推理降级 DeepSeek，独立问题）</li>
+</ol>
+<h2>18. AI 快速接手指南</h2>
+<ol>
+<li>读本文件（完整掌握架构/数据/规范/阶段）。</li>
+<li>读 <code>docs/BizMentor-System-State.md</code>（当前状态+规则+最近记录）+ <code>docs/bizmentor-manifest.json</code>（机器清单）。</li>
+<li>若要改代码：打开 <code>bizmentor-ai/</code>，先 <code>pnpm test</code> 确认基线。</li>
+<li>若要上线/部署：见第 13 节；改数据先看 <code>supabase/schema.sql</code> 应用状态。</li>
+<li>任何问题按第 15 节规范处理；完成后更新 System-State + 双版本报告。</li>
+</ol>
+<blockquote>
+<p>本文件 + manifest.json + System-State = 便携完整知识；配合代码（可打包 zip 传到任何设备），即可无断点继续 BizMentor。</p>
+</blockquote>
+</body></html>
