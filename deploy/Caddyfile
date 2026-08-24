@@ -1,7 +1,7 @@
 # BizMentor 生产 Caddy 配置
 # 部署时把 DOMAIN_PLACEHOLDER 替换为真实域名（例如 bizmentor.ai）
 # 注意：Cloudflare 记录请使用「仅 DNS（灰云）」，让 Caddy 直接签发 Let's Encrypt 证书（HTTP-01）
-DOMAIN_PLACEHOLDER {
+DOMAIN_PLACEHOLDER, www.DOMAIN_PLACEHOLDER {
     encode zstd gzip
 
     # 前端静态资源长缓存
