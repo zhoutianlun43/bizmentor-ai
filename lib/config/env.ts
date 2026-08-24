@@ -52,6 +52,16 @@ export const env = {
   externalReadLimit: toNum(process.env.EXTERNAL_READ_LIMIT, 2),
   /** 外部请求超时（ms） */
   externalTimeoutMs: toNum(process.env.EXTERNAL_TIMEOUT_MS, 15000),
+  // ---------- External Intelligence（V0.4.1 Phase 6.2-A） ----------
+  /** 情报 Provider 有序列表（逗号分隔，按顺序尝试；默认仅 duckduckgo） */
+  externalIntelligenceProviders: (process.env.EXTERNAL_INTELLIGENCE_PROVIDERS ?? "duckduckgo")
+    .split(",").map((s) => s.trim()).filter(Boolean),
+  /** 未来搜索服务（仅服务端；接口就绪，暂不接入） */
+  tavilyApiKey: process.env.TAVILY_API_KEY ?? "",
+  bingApiKey: process.env.BING_API_KEY ?? "",
+  googleSearchApiKey: process.env.GOOGLE_SEARCH_API_KEY ?? "",
+  googleSearchCx: process.env.GOOGLE_SEARCH_CX ?? "",
+
   // ---------- AI 用量落盘 ----------
   /** ai_usage JSONL 文件路径；留空则默认 .data/ai_usage.jsonl */
   aiUsageFile: process.env.AI_USAGE_FILE ?? "",
