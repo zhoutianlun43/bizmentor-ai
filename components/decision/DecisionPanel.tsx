@@ -5,16 +5,13 @@ import { Brain, ClipboardList, FlaskConical, GitCompare, Scale, Sparkles, Trendi
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SelectField, TextArea, TextField } from "@/components/ui/FormField";
-import { useLocalData } from "@/lib/hooks/use-local-data";
 import {
   ABILITY_LABELS,
   DECISION_LABELS,
   WEAKNESS_LABELS,
   DecisionService,
-  LocalDecisionRepository,
-  readDecisionDataSync,
 } from "@/lib/decision";
-import { LocalResearchRepository, createApiRunAi } from "@/lib/research";
+import { createApiRunAi } from "@/lib/research";
 import type {
   DecisionType,
   ValidationResultInput,
@@ -22,9 +19,10 @@ import type {
 } from "@/lib/decision";
 import type { Opportunity } from "@/lib/types";
 import type { ResearchRun } from "@/lib/research";
+import { useDecisionData } from "@/lib/decision/hooks/use-decision-data";
+import { getDecisionRepository, getResearchRepository } from "@/lib/repository/provider";
 import { formatScore } from "@/lib/utils/format";
 
-const EMPTY_DATA = { decisions: [], reviews: [], plans: [], results: [], events: [], updates: [] };
 
 const DECISION_OPTIONS: DecisionType[] = ["proceed", "validate", "continue_research", "pause", "abandon"];
 const STATUS_OPTIONS = ["pending", "running", "completed", "failed", "cancelled"] as const;
@@ -42,7 +40,8 @@ const EMPTY_JUDGMENT = {
 
 /** 商业决策与验证闭环（V0.3-C） */
 export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; run?: ResearchRun }) {
-  const data = useLocalData(readDecisionDataSync, EMPTY_DATA);
+  const decisionData = useDecisionData(opportunity.id);
+  const data = decisionData.data;
   const decisions = data.decisions
     .filter((d) => d.opportunityId === opportunity.id)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
@@ -56,8 +55,8 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
   const service = useMemo(
     () =>
       new DecisionService({
-        decisionRepository: new LocalDecisionRepository(),
-        researchRepository: new LocalResearchRepository(),
+        decisionRepository: getDecisionRepository(),
+        researchRepository: getResearchRepository(),
         runAi: createApiRunAi(),
         userId: "local-user",
       }),

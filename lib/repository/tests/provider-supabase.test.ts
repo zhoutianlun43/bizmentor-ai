@@ -21,3 +21,10 @@ test("provider：配置了 Supabase → SupabaseResearchRepository", async () =>
   const repo = getResearchRepository();
   assert.ok(repo instanceof SupabaseResearchRepository);
 });
+
+test("provider：配置了 Supabase → SupabaseDecisionRepository", async () => {
+  const { getDecisionRepository } = await import("../provider");
+  const { SupabaseDecisionRepository } = await import("../../decision/supabase-repository");
+  const repo = getDecisionRepository();
+  assert.ok(repo instanceof SupabaseDecisionRepository);
+});

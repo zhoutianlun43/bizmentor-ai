@@ -14,9 +14,13 @@ import type { OpportunityRepository } from "../opportunity/repository";
 import { SupabaseResearchRepository } from "../research/supabase-repository";
 import { LocalResearchRepositoryWrapper } from "../research/local-repository";
 import type { ResearchRepository } from "../research/repository";
+import { SupabaseDecisionRepository } from "../decision/supabase-repository";
+import { LocalDecisionRepositoryWrapper } from "../decision/local-repository";
+import type { DecisionRepository } from "../decision/repository";
 
 let cachedOpportunity: OpportunityRepository | undefined;
 let cachedResearch: ResearchRepository | undefined;
+let cachedDecision: DecisionRepository | undefined;
 
 /** 获取商机仓库（进程内单例；便于测试注入） */
 export function getOpportunityRepository(): OpportunityRepository {
@@ -44,8 +48,22 @@ export function getResearchRepository(): ResearchRepository {
   return cachedResearch;
 }
 
+/** 获取决策仓库（进程内单例；配置 Supabase → Supabase，否则 Local fallback） */
+export function getDecisionRepository(): DecisionRepository {
+  if (cachedDecision) return cachedDecision;
+  if (env.supabaseUrl && env.supabaseAnonKey) {
+    cachedDecision = new SupabaseDecisionRepository(getSupabaseBrowserClient(), {
+      userId: "local-user",
+    });
+  } else {
+    cachedDecision = new LocalDecisionRepositoryWrapper();
+  }
+  return cachedDecision;
+}
+
 /** 测试用：重置缓存（注入替代实现） */
 export function __resetRepositories(): void {
   cachedOpportunity = undefined;
   cachedResearch = undefined;
+  cachedDecision = undefined;
 }
