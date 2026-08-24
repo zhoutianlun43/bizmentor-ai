@@ -4,6 +4,8 @@ import { loadEnvLocal, requireSupabaseClient } from "./helpers";
 
 /**
  * Schema 集成测试：验证 9 张业务表存在。
+ * 说明：anon 无法查询 information_schema（PGRST205），改为逐表 select 探测：
+ * 表不存在 → PostgREST "Could not find the table" 错误；存在 → 返回（可能为空）无错误。
  */
 loadEnvLocal();
 
@@ -21,14 +23,8 @@ const EXPECTED_TABLES = [
 
 test("schema：9 张业务表均已创建", async () => {
   const client = requireSupabaseClient();
-  const { data, error } = await client
-    .from("information_schema.tables")
-    .select("table_name")
-    .eq("table_schema", "public");
-  assert.equal(error, null, error?.message);
-  const names = (data as Array<{ table_name: string }> | null)?.map((r) => r.table_name) ?? [];
-  for (const t of EXPECTED_TABLES) {
-    assert.ok(names.includes(t), "缺少表: " + t);
+  for (const table of EXPECTED_TABLES) {
+    const { error } = await client.from(table).select("*").limit(1);
+    assert.equal(error, null, "表 " + table + " 不可访问: " + (error?.message ?? "未知错误"));
   }
-  assert.ok(names.length >= 8, "数据表总数应 >= 8");
 });
