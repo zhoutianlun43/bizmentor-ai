@@ -93,7 +93,7 @@ export default function KnowledgePage() {
       <Card className="mt-3">
         <h3 className="text-sm font-semibold">新增认知</h3>
         <div className="mt-2 flex gap-2">
-          <input value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="例如：我主做女装，偏好低库存" className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-900" />
+          <input value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="例如：我偏好低库存、快速验证" className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-900" />
           <Button onClick={add}>新增</Button>
         </div>
       </Card>

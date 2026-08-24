@@ -47,6 +47,8 @@ export interface Opportunity {
   createdAt: string;
   /** 用户备注（可选） */
   notes?: string;
+  /** AI 商业雷达发现（V0.8；source=ai 时携带） */
+  radar?: RadarFinding;
 }
 
 /** 新增商机表单输入（与存储结构分离，便于未来校验/扩展） */
@@ -55,4 +57,27 @@ export interface OpportunityInput {
   description: string;
   source: OpportunitySource;
   notes?: string;
+  /** AI 雷达发现（V0.8） */
+  radar?: RadarFinding;
+}
+
+/** AI 商业雷达发现（V0.8）：AI 主动扫描全球市场生成的机会情报（行业无关） */
+export interface RadarFinding {
+  /** 机会名称（如「AI 个人知识管理服务增长机会」） */
+  name: string;
+  /** 为什么现在值得关注 */
+  description: string;
+  /** 数据来源 / 发现逻辑 */
+  source: string;
+  /** 领域标签（科技/消费/服务/制造/贸易/互联网/AI应用…，行业无关） */
+  category: string;
+  marketSize: string;
+  growth: string;
+  competition: string;
+  entryBarrier: string;
+  profitability: string;
+  /** 综合评分 0-100 */
+  score: number;
+  suggestion: "值得研究" | "继续观察" | "不建议进入";
+  scannedAt: string;
 }

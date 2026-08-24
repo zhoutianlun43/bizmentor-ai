@@ -91,7 +91,7 @@ export default function OnboardingPage() {
           <option value="zh-CN">简体中文</option>
           <option value="en">English</option>
         </select>
-        <Field label="工作身份" value={form.role} onChange={(v) => set("role", v)} placeholder="例如：电商运营 / 店主 / 自由职业" />
+        <Field label="工作身份" value={form.role} onChange={(v) => set("role", v)} placeholder="例如：创业者 / 店主 / 自由职业" />
       </Card>
       <Card className="mt-3">
         <h3 className="text-sm font-semibold">你的业务</h3>
@@ -99,8 +99,8 @@ export default function OnboardingPage() {
         <select className={inputCls} value={form.businessType} onChange={(e) => set("businessType", e.target.value)}>
           {BUSINESS_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <Field label="行业" value={form.industry} onChange={(v) => set("industry", v)} placeholder="例如：女装零售" />
-        <Field label="产品/服务" value={form.productService} onChange={(v) => set("productService", v)} placeholder="例如：女装（连衣裙/针织衫）" />
+        <Field label="行业" value={form.industry} onChange={(v) => set("industry", v)} placeholder="例如：消费零售 / 科技服务" />
+        <Field label="产品/服务" value={form.productService} onChange={(v) => set("productService", v)} placeholder="例如：你的产品或服务" />
         <Field label="你的目标" value={form.goal} onChange={(v) => set("goal", v)} placeholder="例如：三个月内验证一个新款" />
       </Card>
       {error && <p className="mt-3 text-xs text-red-500">{error}</p>}

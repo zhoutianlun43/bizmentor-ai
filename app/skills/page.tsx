@@ -26,7 +26,7 @@ export default function SkillsPage() {
       const res = await fetch("/api/skill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill: active, input: { productIdea: inputText, category: "女装" } }),
+        body: JSON.stringify({ skill: active, input: { productIdea: inputText } }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "技能调用失败");

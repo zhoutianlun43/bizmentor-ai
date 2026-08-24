@@ -33,6 +33,7 @@ export function addOpportunity(input: OpportunityInput): Opportunity {
     status: "researching",
     createdAt: new Date().toISOString(),
     notes: input.notes?.trim() || undefined,
+    radar: input.radar,
   };
   saveOpportunities([opportunity, ...loadOpportunities()]);
   return opportunity;

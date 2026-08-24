@@ -28,6 +28,7 @@ function toRow(o: Opportunity, userId: string): Row {
     source: o.source,
     status: o.status,
     score: o.score ?? null,
+    radar: o.radar ?? null,
     notes: o.notes ?? null,
     created_at: o.createdAt,
     updated_at: new Date().toISOString(),
@@ -49,6 +50,7 @@ function fromRow(row: Row): Opportunity {
     source: row.source as OpportunitySource,
     status: row.status as OpportunityStatus,
     score: (row.score as Opportunity["score"]) ?? undefined,
+    radar: (row.radar as Opportunity["radar"]) ?? undefined,
     notes: (row.notes as Opportunity["notes"]) ?? undefined,
     createdAt: String(row.created_at),
   };
@@ -75,6 +77,7 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
       status: "researching",
       createdAt: now,
       notes: input.notes?.trim() || undefined,
+      radar: input.radar,
     };
     const { error } = await this.supabase.from(this.table).insert(toRow(opportunity, this.userId));
     if (error) throw new SupabaseRepositoryError("createOpportunity", error.message);
@@ -112,6 +115,7 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
     if (patch.source !== undefined) updates.source = patch.source;
     if (patch.status !== undefined) updates.status = patch.status;
     if (patch.score !== undefined) updates.score = patch.score ?? null;
+    if (patch.radar !== undefined) updates.radar = patch.radar ?? null;
     if (patch.notes !== undefined) updates.notes = patch.notes ?? null;
 
     const { data, error } = await this.supabase

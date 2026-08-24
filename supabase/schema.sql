@@ -289,3 +289,6 @@ create table if not exists public.business_profiles (
 alter table public.business_profiles enable row level security;
 create policy "single user business_profiles" on public.business_profiles
   for all using (user_id = 'local-user') with check (user_id = 'local-user');
+
+-- V0.8：AI 商业雷达发现（industry-agnostic）
+alter table public.opportunities add column if not exists radar jsonb;
