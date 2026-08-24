@@ -126,9 +126,10 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
   }
 
   async deleteOpportunity(id: string): Promise<boolean> {
+    // count=exact：PostgREST DELETE 默认不返回 count，需显式请求
     const { error, count } = await this.supabase
       .from(this.table)
-      .delete()
+      .delete({ count: "exact" })
       .eq("id", id)
       .eq("user_id", this.userId);
     if (error) throw new SupabaseRepositoryError("deleteOpportunity", error.message);
