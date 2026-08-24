@@ -6,6 +6,8 @@
  *   const outcome = await layer.search("...");            // 带 fallback 的搜索
  */
 export { createExternalIntelligence, createDefaultExternalIntelligence, createExternalResearchFn } from "./factory";
+export { classifySourceType, toExternalSearchResult } from "./standardize";
+export type { StandardSearchInput } from "./standardize";
 export { ExternalIntelligenceError, safeMessage, safeTypeOf } from "./errors";
 export { IntelligenceRegistry } from "./registry";
 export { routeRead, routeSearch } from "./router";

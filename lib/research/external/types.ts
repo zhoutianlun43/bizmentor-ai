@@ -13,6 +13,8 @@ export interface ExternalSearchResult {
   publisher: string;
   sourceType: "EXTERNAL_WEB" | "OFFICIAL_SOURCE";
   retrievedAt: string;
+  /** 产生该结果的 Provider（V0.4.1 Phase 6.2-B：证据来源可追溯） */
+  provider?: string;
 }
 
 /** 读取到的网页文档（可作证据来源） */
@@ -48,6 +50,13 @@ export interface ExternalResearchOutput {
   }>;
   /** 去重后的全部文档 */
   documents: SourceDocument[];
+  /** 情报层元数据（V0.4.1 Phase 6.2-B）：实际 Provider / 降级状态 / 尝试链，用于证据可追溯 */
+  meta?: {
+    provider: string;
+    degraded: boolean;
+    attempts: Array<{ provider: string; ok: boolean; error?: string; durationMs: number }>;
+    retrievedAt: string;
+  };
 }
 
 export type ExternalResearchFn = (input: ExternalResearchInput) => Promise<ExternalResearchOutput>;

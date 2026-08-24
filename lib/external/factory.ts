@@ -79,9 +79,18 @@ export function createExternalResearchFn(layer?: ExternalIntelligenceLayer): Ext
   return async (input: ExternalResearchInput): Promise<ExternalResearchOutput> => {
     const limit = input.limit ?? env.externalSearchLimit;
     let results: ExternalResearchOutput["searches"][number]["results"] = [];
+    const meta: NonNullable<ExternalResearchOutput["meta"]> = {
+      provider: "none",
+      degraded: false,
+      attempts: [],
+      retrievedAt: new Date().toISOString(),
+    };
     try {
       const outcome = await l.search(input.query, { limit });
       results = outcome.results;
+      meta.provider = outcome.provider;
+      meta.degraded = outcome.degraded;
+      meta.attempts = outcome.attempts;
     } catch {
       // 搜索失败：返回空结果（上层标记证据不足）
     }
@@ -108,6 +117,7 @@ export function createExternalResearchFn(layer?: ExternalIntelligenceLayer): Ext
         },
       ],
       documents,
+      meta,
     };
   };
 }

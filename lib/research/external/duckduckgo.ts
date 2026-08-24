@@ -8,6 +8,7 @@
  * - 部分环境（如中国大陆）需要服务端代理（NODE_USE_ENV_PROXY + HTTPS_PROXY）
  */
 import { env } from "../../config/env";
+import { classifySourceType } from "../../external/standardize";
 import { readWebPage } from "./http-reader";
 import type { ExternalResearchProvider, ExternalSearchResult, ExtractedDocument } from "./types";
 
@@ -45,7 +46,7 @@ export function parseDuckDuckGoHtml(html: string): ExternalSearchResult[] {
       url,
       snippet,
       publisher,
-      sourceType: /\.gov\b|\.edu\b|\.gov\.|\.edu\./i.test(url) ? "OFFICIAL_SOURCE" : "EXTERNAL_WEB",
+      sourceType: classifySourceType(url),
       retrievedAt: new Date().toISOString(),
     });
   }

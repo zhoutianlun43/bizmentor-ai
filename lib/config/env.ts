@@ -58,6 +58,7 @@ export const env = {
     .split(",").map((s) => s.trim()).filter(Boolean),
   /** 未来搜索服务（仅服务端；接口就绪，暂不接入） */
   tavilyApiKey: process.env.TAVILY_API_KEY ?? "",
+  tavilyBaseUrl: process.env.TAVILY_BASE_URL ?? "https://api.tavily.com/search",
   bingApiKey: process.env.BING_API_KEY ?? "",
   googleSearchApiKey: process.env.GOOGLE_SEARCH_API_KEY ?? "",
   googleSearchCx: process.env.GOOGLE_SEARCH_CX ?? "",

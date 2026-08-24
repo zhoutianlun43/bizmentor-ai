@@ -9,7 +9,6 @@ import { createExternalIntelligence, createDefaultExternalIntelligence, External
 import { IntelligenceRegistry } from "../registry";
 import { routeSearch } from "../router";
 import { duckduckgoIntelligenceProvider } from "../providers/duckduckgo";
-import { createTavilyProvider } from "../providers/tavily";
 import { createBingProvider } from "../providers/bing";
 import { createGoogleProvider } from "../providers/google";
 import { runResearchPipeline } from "../../research/pipeline";
@@ -218,26 +217,20 @@ test("DuckDuckGo 适配器：id/priority/isConfigured", () => {
   assert.ok(duckduckgoIntelligenceProvider.read, "应提供 read");
 });
 
-test("骨架 Provider：未配置 → isConfigured=false 且路由跳过；配置但未接入 → 明确 NOT_IMPLEMENTED", async () => {
-  // 1) 未配置 Key：isConfigured=false，强制调用抛「未配置」错误（路由应跳过）
-  const tavily = createTavilyProvider({ apiKey: "" });
+test("骨架 Provider：Bing/Google 未配置 → isConfigured=false 且强制调用抛「未配置」；配置但未接入 → NOT_IMPLEMENTED", async () => {
+  // 未配置 Key：isConfigured=false，强制调用抛「未配置」错误（路由应跳过）
   const bing = createBingProvider({ apiKey: "" });
   const google = createGoogleProvider({ apiKey: "", cx: "" });
-  assert.equal(tavily.isConfigured(), false);
   assert.equal(bing.isConfigured(), false);
   assert.equal(google.isConfigured(), false);
-  await assert.rejects(tavily.search("q"), /未配置/);
   await assert.rejects(bing.search("q"), /未配置/);
   await assert.rejects(google.search("q"), /未配置/);
 
-  // 2) 配置了 Key（接口就绪但未接入商业数据源）：明确抛 NOT_IMPLEMENTED，禁止静默返回
-  const tavilyReady = createTavilyProvider({ apiKey: "tk-test" });
+  // 配置了 Key（接口就绪但未接入商业数据源）：明确抛 NOT_IMPLEMENTED，禁止静默返回
   const bingReady = createBingProvider({ apiKey: "bk-test" });
   const googleReady = createGoogleProvider({ apiKey: "gk-test", cx: "cx-test" });
-  assert.equal(tavilyReady.isConfigured(), true);
   assert.equal(bingReady.isConfigured(), true);
   assert.equal(googleReady.isConfigured(), true);
-  await assert.rejects(tavilyReady.search("q"), /尚未接入商业数据源/);
   await assert.rejects(bingReady.search("q"), /尚未接入商业数据源/);
   await assert.rejects(googleReady.search("q"), /尚未接入商业数据源/);
 });
