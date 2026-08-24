@@ -21,6 +21,8 @@ export const env = {
   /** 未来：Supabase（当前仅预留，未使用） */
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  /** 服务端专用（禁止 NEXT_PUBLIC_ 前缀；Phase 2 数据层使用） */
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
 
   // ---------- OpenAI（仅服务端） ----------
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
