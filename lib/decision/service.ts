@@ -12,7 +12,13 @@ import type { ResearchRepository } from "../research/repository";
 import { reviewUserDecision } from "./examiner";
 import { generateInvestmentThesis as buildInvestmentThesis } from "./thesis";
 import { generateUnitEconomics as buildUnitEconomics } from "./unit-economics";
-import { generateLearningEvents } from "./learning";
+import { createExecutionLearningEvents, generateLearningEvents } from "./learning";
+import {
+  applyTaskTransition,
+  buildExecutionSummary,
+  isOverdue,
+  ValidationExecutionError,
+} from "./execution";
 import { LocalDecisionRepository } from "./repository";
 import type { DecisionRepository } from "./repository";
 import { computeScoreV2 } from "./scoring";
@@ -133,25 +139,114 @@ export class DecisionService {
     return plan;
   }
 
-  /** 验证任务状态流转 */
-  async updateTaskStatus(taskId: string, status: ValidationTaskStatus): Promise<ValidationTask> {
+  /** 验证任务状态流转（V0.4.1 Phase 7B-2：状态机 + 历史记录 + actor；非法转移抛错） */
+  async updateTaskStatus(taskId: string, status: ValidationTaskStatus, opts: { actor?: string; note?: string } = {}): Promise<ValidationTask> {
     const plan = await this.getPlanByTask(taskId);
     if (!plan) throw new Error("验证任务不存在");
     const task = plan.tasks.find((t) => t.id === taskId);
     if (!task) throw new Error("验证任务不存在");
-    task.status = status;
-    task.updatedAt = new Date().toISOString();
-    plan.updatedAt = task.updatedAt;
+    const next = applyTaskTransition(task, status, { actor: opts.actor ?? "user", note: opts.note });
+    if (next === task) return task; // 同状态 no-op
+    plan.tasks = plan.tasks.map((t) => (t.id === taskId ? next : t));
+    plan.updatedAt = next.updatedAt;
     await this.decisions.savePlan(plan);
-    return task;
+    return next;
+  }
+
+  // ---------- 4.0 验证执行（V0.4.1 Phase 7B-2） ----------
+
+  /** 开始验证任务（pending → running） */
+  async startTask(taskId: string, opts: { actor?: string; note?: string } = {}): Promise<ValidationTask> {
+    return this.transitionTask(taskId, "running", opts);
+  }
+
+  /** 完成验证任务（running → completed） */
+  async completeTask(taskId: string, opts: { actor?: string; note?: string } = {}): Promise<ValidationTask> {
+    return this.transitionTask(taskId, "completed", opts);
+  }
+
+  /** 标记验证任务失败（running → failed） */
+  async failTask(taskId: string, reason?: string, opts: { actor?: string } = {}): Promise<ValidationTask> {
+    return this.transitionTask(taskId, "failed", { actor: opts.actor, note: reason });
+  }
+
+  /** 取消验证任务（pending/running → cancelled） */
+  async cancelTask(taskId: string, reason?: string, opts: { actor?: string } = {}): Promise<ValidationTask> {
+    return this.transitionTask(taskId, "cancelled", { actor: opts.actor, note: reason });
+  }
+
+  /** 重试失败任务（failed → running） */
+  async retryTask(taskId: string, opts: { actor?: string; note?: string } = {}): Promise<ValidationTask> {
+    return this.transitionTask(taskId, "running", opts);
+  }
+
+  /** 统一转移入口（加载 plan → applyTaskTransition → 保存 + 学习事件） */
+  private async transitionTask(taskId: string, to: ValidationTaskStatus, opts: { actor?: string; note?: string } = {}): Promise<ValidationTask> {
+    const plan = await this.getPlanByTask(taskId);
+    if (!plan) throw new Error("验证任务不存在");
+    const task = plan.tasks.find((t) => t.id === taskId);
+    if (!task) throw new Error("验证任务不存在");
+    const next = applyTaskTransition(task, to, { actor: opts.actor ?? "user", note: opts.note });
+    if (next === task) return task;
+    plan.tasks = plan.tasks.map((t) => (t.id === taskId ? next : t));
+    plan.updatedAt = next.updatedAt;
+    await this.decisions.savePlan(plan);
+
+    const decision = await this.decisions.getDecision(plan.decisionId);
+    const action =
+      to === "running"
+        ? "task_started"
+        : to === "completed"
+          ? "task_completed"
+          : to === "failed"
+            ? "task_failed"
+            : to === "cancelled"
+              ? "task_cancelled"
+              : undefined;
+    if (action) {
+      const events = createExecutionLearningEvents({
+        userId: this.userId,
+        opportunityId: plan.opportunityId,
+        decisionId: plan.decisionId,
+        action,
+        task: next,
+        actor: opts.actor,
+      });
+      await this.decisions.saveEvents(events);
+      void decision;
+    }
+    return next;
+  }
+
+  /** 执行摘要（计划级状态 + 进度 + 每任务状态/结果） */
+  async getExecutionSummary(decisionId: string) {
+    const plan = await this.decisions.getPlan(decisionId);
+    if (!plan) throw new Error("验证计划不存在");
+    const results = await this.decisions.listResults(plan.id);
+    return buildExecutionSummary(plan, results);
+  }
+
+  /** 超期且未完成的任务（可限定决策） */
+  async listOverdueTasks(decisionId?: string): Promise<ValidationTask[]> {
+    const plans = decisionId
+      ? (([await this.decisions.getPlan(decisionId)] as (ValidationPlan | undefined)[]).filter(Boolean) as ValidationPlan[])
+      : await this.decisions.listPlans();
+    const overdue: ValidationTask[] = [];
+    for (const p of plans) for (const t of p.tasks) if (isOverdue(t)) overdue.push(t);
+    return overdue;
   }
 
   // ---------- 4. Validation Result（仅用户输入，AI 不参与） ----------
 
-  /** 提交验证结果（真实数据；绝不调用 AI 生成） */
-  async submitValidationResult(input: ValidationResultInput): Promise<{ result: ValidationResult; events: LearningEvent[] }> {
+  /** 提交验证结果（V0.4.1 Phase 7B-2：仅 running/completed 可提交；回写任务 resultId/outcome/状态历史） */
+  async submitValidationResult(input: ValidationResultInput, opts: { actor?: string } = {}): Promise<{ result: ValidationResult; events: LearningEvent[] }> {
     const plan = await this.getPlanByTask(input.taskId);
     if (!plan) throw new Error("验证任务不存在");
+    const task = plan.tasks.find((t) => t.id === input.taskId);
+    if (!task) throw new Error("验证任务不存在");
+    if (task.status === "cancelled") {
+      throw new ValidationExecutionError(`任务状态 cancelled 不允许提交结果`);
+    }
     const result: ValidationResult = {
       id: uid(),
       taskId: input.taskId,
@@ -170,13 +265,47 @@ export class DecisionService {
       submittedAt: new Date().toISOString(),
     };
     await this.decisions.saveResult(result);
+
+    // 任务回写：提交结果 = 自动完成（cancelled 除外）；写入 resultId / outcome / completedAt / stateHistory
+    const at = new Date().toISOString();
+    const updated: ValidationTask =
+      task.status === "completed"
+        ? { ...task, resultId: result.id, outcome: result.outcome, updatedAt: at }
+        : {
+            ...task,
+            status: "completed",
+            resultId: result.id,
+            outcome: result.outcome,
+            startedAt: task.startedAt ?? at,
+            completedAt: at,
+            updatedAt: at,
+            stateHistory: [
+              ...(task.stateHistory ?? []),
+              { from: task.status, to: "completed", at, actor: opts.actor ?? "user", note: "提交验证结果（自动完成）" },
+            ],
+          };
+    plan.tasks = plan.tasks.map((t) => (t.id === input.taskId ? updated : t));
+    plan.updatedAt = at;
+    await this.decisions.savePlan(plan);
+
     const decision = await this.decisions.getDecision(plan.decisionId);
-    const events = generateLearningEvents({
-      userId: this.userId,
-      opportunityId: plan.opportunityId,
-      decision: decision ?? undefined,
-      results: [result],
-    });
+    const events = [
+      ...generateLearningEvents({
+        userId: this.userId,
+        opportunityId: plan.opportunityId,
+        decision: decision ?? undefined,
+        results: [result],
+      }),
+      ...createExecutionLearningEvents({
+        userId: this.userId,
+        opportunityId: plan.opportunityId,
+        decisionId: plan.decisionId,
+        action: "result_submitted",
+        task: updated,
+        result,
+        actor: opts.actor,
+      }),
+    ];
     await this.decisions.saveEvents(events);
     return { result, events };
   }

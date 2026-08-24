@@ -50,5 +50,6 @@ export function materializeValidationTasks(
     costEstimate: item.costEstimate ?? "待估算",
     owner: item.owner ?? "本人",
     relatedDimension: item.relatedDimension ?? mapDimensionByDomain(opts.domain, i),
+    priority: item.priority ?? "medium",
   }));
 }

@@ -241,6 +241,8 @@ export interface ValidationPlanItem {
   costEstimate?: string;
   owner?: string;
   relatedDimension?: ScoreDimension;
+  /** 优先级（V0.4.1 Phase 7B-2，缺省 medium） */
+  priority?: "high" | "medium" | "low";
 }
 
 /** 报告元信息：降级状态 / 外部证据情况 */

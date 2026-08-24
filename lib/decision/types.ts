@@ -114,6 +114,19 @@ export interface UserDecisionReview {
 /** 验证任务状态 */
 export type ValidationTaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
+/** 验证任务优先级（V0.4.1 Phase 7B-2） */
+export type TaskPriority = "high" | "medium" | "low";
+
+/** 状态转移历史条目（V0.4.1 Phase 7B-2：含执行者 actor） */
+export interface TaskStateEntry {
+  from: ValidationTaskStatus;
+  to: ValidationTaskStatus;
+  at: string;
+  /** 执行者（用户 / 系统 / 特定角色） */
+  actor?: string;
+  note?: string;
+}
+
 /** 验证任务（ValidationPlan 的组成部分） */
 export interface ValidationTask {
   id: string;
@@ -129,7 +142,19 @@ export interface ValidationTask {
   owner: string;
   /** 关联评分维度（Score v2 调整用） */
   relatedDimension?: ScoreDimension;
+  /** 优先级（V0.4.1 Phase 7B-2，缺省 medium） */
+  priority?: TaskPriority;
   status: ValidationTaskStatus;
+  /** 状态历史（V0.4.1 Phase 7B-2：每次转移记录，含 actor） */
+  stateHistory?: TaskStateEntry[];
+  /** 最近一次验证结果 id */
+  resultId?: string;
+  /** 结果结论回写 */
+  outcome?: "confirmed" | "rejected" | "uncertain";
+  /** 开始时间 */
+  startedAt?: string;
+  /** 完成时间 */
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -211,6 +236,8 @@ export interface ValidationTaskInput {
   costEstimate: string;
   owner: string;
   relatedDimension?: ScoreDimension;
+  /** 优先级（V0.4.1 Phase 7B-2，缺省 medium） */
+  priority?: TaskPriority;
 }
 /** 验证结果输入（用户填写，AI 不参与） */
 export interface ValidationResultInput {

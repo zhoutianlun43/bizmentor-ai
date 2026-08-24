@@ -4,6 +4,19 @@ export { generateInvestmentThesis } from "./thesis";
 export { computeUnitEconomics, generateUnitEconomics } from "./unit-economics";
 export { materializeValidationTasks, mapDimensionByDomain, defaultDeadline } from "./validation";
 export { normalizeDecisionReviewOutput, normalizeWeaknessCategory, normalizeAbilitySkill, normalizeSignal } from "./normalize";
+export {
+  applyTaskTransition,
+  buildExecutionSummary,
+  canTransition,
+  computeProgress,
+  derivePlanStatus,
+  isOverdue,
+  isTerminal,
+  listOverdueTasks,
+  ValidationExecutionError,
+} from "./execution";
+export type { PlanStatus, TaskExecutionSummary } from "./execution";
+export { createExecutionLearningEvents } from "./learning";
 export type { DecisionServiceDeps } from "./service";
 export { reviewUserDecision } from "./examiner";
 export { computeScoreV2 } from "./scoring";
