@@ -3,6 +3,8 @@
 import { AlertTriangle, CheckCircle2, FileText, Globe, Info, Link2 } from "lucide-react";
 import { ExecutiveDecisionCard } from "@/components/decision/ExecutiveDecisionCard";
 import { BusinessJudgmentView } from "@/components/decision/BusinessJudgmentView";
+import { EvidenceCenter } from "./EvidenceCenter";
+import { EvidenceScoreCard } from "./EvidenceScoreCard";
 import { Card } from "@/components/ui/Card";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { EvidenceBadge } from "./EvidenceBadge";
@@ -284,6 +286,7 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
         opportunityName={report.opportunityName}
       />
       {report.judgment ? <BusinessJudgmentView judgment={report.judgment} /> : null}
+      {report.evidenceScore ? <EvidenceScoreCard score={report.evidenceScore} /> : null}
 
       <Card className="mt-3">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">执行摘要</h3>
@@ -315,6 +318,8 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
         </div>
       </Card>
 
+      <EvidenceCenter sections={report.sections} />
+
       <div className="mt-3 space-y-2">
         {report.sections.map((section) => (
           <Card key={section.area} className="py-3">
@@ -326,7 +331,10 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-slate-300">{section.content}</p>
+            <details className="mt-1">
+              <summary className="cursor-pointer text-[11px] text-slate-400 hover:text-indigo-500">展开结论原文</summary>
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-slate-300">{section.content}</p>
+            </details>
             <EvidenceList items={section.evidence} />
           </Card>
         ))}

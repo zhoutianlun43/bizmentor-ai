@@ -13,6 +13,7 @@ import { reviewUserDecision } from "./examiner";
 import { generateInvestmentThesis as buildInvestmentThesis } from "./thesis";
 import { generateUnitEconomics as buildUnitEconomics } from "./unit-economics";
 import { generateBusinessJudgment as buildBusinessJudgment } from "./judgment";
+import { generateEvidenceScore as buildEvidenceScore } from "./evidence-score";
 import { createExecutionLearningEvents, generateLearningEvents } from "./learning";
 import {
   applyTaskTransition,
@@ -24,7 +25,7 @@ import { LocalDecisionRepository } from "./repository";
 import type { DecisionRepository } from "./repository";
 import { computeScoreV2 } from "./scoring";
 import { uid } from "../store/storage";
-import type { BusinessJudgment } from "../research/types";
+import type { BusinessJudgment, EvidenceScore } from "../research/types";
 import type {
   DecisionType,
   LearningEvent,
@@ -398,6 +399,24 @@ export class DecisionService {
     run.updatedAt = new Date().toISOString();
     await this.research.saveRun(run);
     return judgment;
+  }
+
+  // ---------- 5. Evidence Score（V0.9.1：证据关联评分） ----------
+
+  /** 生成 Evidence Score：6 维度证据关联评分（总分按权重确定性计算） */
+  async generateEvidenceScore(opportunityId: string): Promise<EvidenceScore> {
+    const run = await this.research.getRun(opportunityId);
+    if (!run || !run.report) throw new Error("研究运行不存在或未完成");
+    const evidenceScore = await buildEvidenceScore({
+      runAi: this.runAi,
+      report: run.report,
+      runId: run.runId,
+      opportunity: { id: opportunityId, name: run.report.opportunityName },
+    });
+    run.report.evidenceScore = evidenceScore;
+    run.updatedAt = new Date().toISOString();
+    await this.research.saveRun(run);
+    return evidenceScore;
   }
 
   // ---------- 查询 ----------

@@ -39,7 +39,13 @@ export async function POST(request: Request) {
       runAi,
     });
     const judgment = await service.generateJudgment(opportunityId);
-    return NextResponse.json({ judgment });
+    let evidenceScore = null;
+    try {
+      evidenceScore = await service.generateEvidenceScore(opportunityId);
+    } catch {
+      // Evidence Score 失败不影响 AI 商业判断
+    }
+    return NextResponse.json({ judgment, evidenceScore });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 300) : "商业判断生成失败";
     return NextResponse.json({ error: "JUDGMENT_FAILED", message }, { status: 500 });

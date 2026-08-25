@@ -114,3 +114,20 @@ export function businessJudgmentPrompt(report: {
     user: `请基于以下研究报告输出 AI 商业判断。\n\n商机：${report.opportunityName}${report.domainLabel ? `\n领域：${report.domainLabel}` : ""}\n综合评分：${report.overallScore}/10（置信度 ${report.confidence}）\n\n执行摘要：${report.executiveSummary}${thesisLines}\n\n验证方案：\n${report.validationPlan.map((v) => `- ${v.assumption}（方法：${v.method}；成功标准：${v.successCriteria}）`).join("\n")}\n\n建议的下一步：\n${report.nextActions.map((a) => `- ${a}`).join("\n")}\n\nJSON 格式：\n{"recommendation":"recommend_enter|conditional_enter|continue_observe|not_recommend","oneLineJudgment":"一句话判断","biggestOpportunity":"最大机会","biggestRisk":"最大风险","suggestedAction":"建议动作","entryDirection":"推荐切入方向","notDoList":["不建议做什么1","不建议做什么2"],"day90Plan":[{"phase":"第1-2周","title":"阶段标题","actions":["动作1","动作2"],"successMetric":"成功度量"}],"firstCustomers":{"targetSegment":"目标客户","channels":["渠道1","渠道2"],"offer":"切入卖点/免费试用","firstBatchGoal":"首批客户目标","steps":["步骤1","步骤2"]},"confidence":0.6}`,
   };
 }
+
+// ===================== V0.9.1：Evidence Score（证据关联评分） =====================
+
+/** Evidence Score 提示词：从 AI 主观评分改为「证据关联评分」 */
+export function evidenceScorePrompt(report: {
+  opportunityName: string;
+  executiveSummary: string;
+  sections: Array<{ title: string; content: string; confidence: number }>;
+  validationPlan: Array<{ assumption: string; method: string }>;
+}): PromptParts {
+  return {
+    system: `你是 BizMentor 的「证据评分官」。对商机按 6 个维度做 Evidence Score（0-10）：市场机会 20%、用户需求 20%、商业化 20%、竞争机会 15%、技术可行性 15%、风险 10%。
+每个维度评分必须关联证据（evidence）：每条证据写 claim + evidenceClass（FACT=有真实来源；AI_INFERENCE=推断；ASSUMPTION=假设；NEEDS_VALIDATION=待验证）+ confidence + 可选 credibilityLevel/verificationMethod。
+总分由系统按权重确定性计算，你只给各维度分。证据不足时给低置信度，不要为了高分编造证据。\n${JSON_INSTRUCTION}`,
+    user: `请基于以下研究报告输出 Evidence Score。\n\n商机：${report.opportunityName}\n\n执行摘要：${report.executiveSummary}\n\n研究章节：\n${report.sections.map((s) => `【${s.title}】${s.content}`).join("\n")}\n\n验证方案：\n${report.validationPlan.map((v) => `- ${v.assumption}（方法：${v.method}）`).join("\n")}\n\nJSON 格式：\n{"dimensions":[{"dimension":"market_opportunity|user_demand|monetization|competitive_opportunity|technical_feasibility|risk","label":"市场机会","weight":0.2,"score":6.5,"confidence":0.6,"rationale":"理由","evidence":[{"claim":"证据","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.6,"credibilityLevel":"high|medium|low|unverified","verificationMethod":"验证方式"}]}],"confidence":0.55}`,
+  };
+}

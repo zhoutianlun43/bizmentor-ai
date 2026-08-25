@@ -22,6 +22,7 @@ import type { ResearchRun } from "@/lib/research";
 import { useDecisionData } from "@/lib/decision/hooks/use-decision-data";
 import { getDecisionRepository, getResearchRepository } from "@/lib/repository/provider";
 import { formatScore } from "@/lib/utils/format";
+import { DecisionCommittee } from "./DecisionCommittee";
 
 
 const DECISION_OPTIONS: DecisionType[] = ["proceed", "validate", "continue_research", "pause", "abandon"];
@@ -36,6 +37,9 @@ const EMPTY_JUDGMENT = {
   mostImportantAssumption: "",
   expectedOutcome: "",
   differentJudgment: "",
+  myBusinessAssumption: "",
+  myStrengths: "",
+  aiMayBeWrongAbout: "",
 };
 
 /** 商业决策与验证闭环（V0.3-C） */
@@ -105,6 +109,9 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
           mostImportantAssumption: judgment.mostImportantAssumption,
           expectedOutcome: judgment.expectedOutcome,
           differentJudgment: differentFromAi ? judgment.differentJudgment : undefined,
+          myBusinessAssumption: judgment.myBusinessAssumption,
+          myStrengths: judgment.myStrengths,
+          aiMayBeWrongAbout: judgment.aiMayBeWrongAbout,
         },
       });
       if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
@@ -225,6 +232,9 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
 
   return (
     <div className="mt-3 space-y-3">
+      {/* AI 商业决策委员会（V0.9.1） */}
+      <DecisionCommittee run={run} decisions={decisions} results={results} updates={updates} />
+
       {/* 决策 */}
       {!decision ? (
         <Card>
@@ -265,6 +275,9 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
             <TextArea label="最大风险" id="judgment-risk" className="min-h-14" value={judgment.biggestRisk} onChange={(e) => setField("biggestRisk", e.target.value)} />
             <TextArea label="最重要假设" id="judgment-assumption" className="min-h-14" value={judgment.mostImportantAssumption} onChange={(e) => setField("mostImportantAssumption", e.target.value)} />
             <TextArea label="预计结果" id="judgment-expected" className="min-h-14" value={judgment.expectedOutcome} onChange={(e) => setField("expectedOutcome", e.target.value)} />
+            <TextArea label="我的商业假设" id="judgment-assumption2" className="min-h-14" value={judgment.myBusinessAssumption} onChange={(e) => setField("myBusinessAssumption", e.target.value)} placeholder="创始人判断：你相信什么是对的" />
+            <TextArea label="我的优势" id="judgment-strength" className="min-h-14" value={judgment.myStrengths} onChange={(e) => setField("myStrengths", e.target.value)} placeholder="创始人判断：你有什么别人没有的资源/能力" />
+            <TextArea label="AI 可能错误的位置" id="judgment-aiwrong" className="min-h-14" value={judgment.aiMayBeWrongAbout} onChange={(e) => setField("aiMayBeWrongAbout", e.target.value)} placeholder="创始人判断：AI 哪里可能判断错了" />
           </div>
           <Button type="button" className="mt-3 w-full" disabled={busy === "decision"} onClick={handleCreateDecision}>
             确认决策
@@ -373,8 +386,20 @@ export function DecisionPanel({ opportunity, run }: { opportunity: Opportunity; 
         <Card>
           <div className="flex items-center gap-2">
             <ClipboardList className="size-4 text-sky-500" />
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">验证计划</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">验证任务中心</h3>
           </div>
+          {plan ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[
+                { label: "未开始", n: plan.tasks.filter((t) => t.status === "pending").length, cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
+                { label: "进行中", n: plan.tasks.filter((t) => t.status === "running").length, cls: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" },
+                { label: "完成", n: plan.tasks.filter((t) => t.status === "completed").length, cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
+                { label: "失败/取消", n: plan.tasks.filter((t) => t.status === "failed" || t.status === "cancelled").length, cls: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300" },
+              ].map((s) => (
+                <span key={s.label} className={"rounded-full px-2 py-0.5 text-[10px] font-medium " + s.cls}>{s.label} {s.n}</span>
+              ))}
+            </div>
+          ) : null}
           {!plan ? (
             <>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">创建验证任务：假设 → 假设描述 → 方法 → 样本 → 成功/失败标准 → 截止 → 成本 → 负责人 → 关联评分维度。</p>

@@ -161,3 +161,36 @@ export const businessJudgmentSchema = z.object({
 });
 
 export type BusinessJudgmentOutput = z.infer<typeof businessJudgmentSchema>;
+
+// ===================== V0.9.1：Evidence Score（证据关联评分） =====================
+
+/** Evidence Score 单维度输出 Schema（V0.9.1；总分由系统加权确定性计算，AI 不算分） */
+export const evidenceScoreDimensionSchema = z.object({
+  dimension: z.enum(["market_opportunity", "user_demand", "monetization", "competitive_opportunity", "technical_feasibility", "risk"]),
+  label: z.string().min(1),
+  weight: z.number().min(0).max(1),
+  score: z.number().min(0).max(10),
+  confidence: z.number().min(0).max(1),
+  rationale: z.string().min(1),
+  evidence: z
+    .array(
+      z.object({
+        claim: z.string().min(1),
+        evidenceClass: z.enum(["FACT", "AI_INFERENCE", "ASSUMPTION", "NEEDS_VALIDATION"]),
+        confidence: z.number().min(0).max(1),
+        credibilityLevel: z.enum(["high", "medium", "low", "unverified"]).optional(),
+        verificationMethod: z.string().optional(),
+        sourceRef: z
+          .union([z.string(), z.object({ sourceType: z.string(), sourceId: z.string().optional(), url: z.string().optional(), title: z.string().optional() }), z.null()])
+          .optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const evidenceScoreSchema = z.object({
+  dimensions: z.array(evidenceScoreDimensionSchema).min(6).max(6),
+  confidence: z.number().min(0).max(1),
+});
+
+export type EvidenceScoreOutput = z.infer<typeof evidenceScoreSchema>;

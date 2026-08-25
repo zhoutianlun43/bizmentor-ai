@@ -2,6 +2,7 @@
 export { DecisionService } from "./service";
 export { generateInvestmentThesis } from "./thesis";
 export { generateBusinessJudgment } from "./judgment";
+export { generateEvidenceScore, computeEvidenceCoverage } from "./evidence-score";
 export { computeUnitEconomics, generateUnitEconomics } from "./unit-economics";
 export { materializeValidationTasks, mapDimensionByDomain, defaultDeadline } from "./validation";
 export { normalizeDecisionReviewOutput, normalizeWeaknessCategory, normalizeAbilitySkill, normalizeSignal } from "./normalize";

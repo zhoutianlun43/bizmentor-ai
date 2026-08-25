@@ -25,6 +25,12 @@ export interface UserJudgment {
   expectedOutcome: string;
   /** 「我有不同判断」时填写（可选） */
   differentJudgment?: string;
+  /** 创始人判断（V0.9.1）：我的商业假设 */
+  myBusinessAssumption?: string;
+  /** 创始人判断（V0.9.1）：我的优势 */
+  myStrengths?: string;
+  /** 创始人判断（V0.9.1）：AI 可能错误的位置 */
+  aiMayBeWrongAbout?: string;
 }
 
 /** AI 当时的判断快照（研究报告评分） */

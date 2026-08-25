@@ -22,6 +22,13 @@ export const WEAKNESS_LABELS: Record<WeaknessCategory, string> = {
   validation_plan_issue: "验证方案问题",
 };
 
+export const RECOMMENDATION_LABELS: Record<string, string> = {
+  recommend_enter: "建议进入",
+  conditional_enter: "条件进入",
+  continue_observe: "继续观察",
+  not_recommend: "不建议进入",
+};
+
 export const ABILITY_LABELS: Record<AbilitySkill, string> = {
   opportunity_discovery: "机会发现",
   user_research: "用户研究",

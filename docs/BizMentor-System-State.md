@@ -307,3 +307,17 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **ChatGPT 模式**：延续 V0.8.1（默认简洁 300-800 字，/指令 触发专业模式）。
 - **验证**：311/311 测试通过（新增 4：judgment 生成/重试/不伪造/保存）、lint 0、tsc/build 通过；线上 /api/judgment 实测生成完整判断（conditional_enter + 4 阶段 90 天计划 + 首批客户），Supabase 持久化确认。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID llZmU-gdkQXnuxXuavdCe / eD41-Dn6fE34d5yjJz4fd）。
+
+
+---
+
+## 25. V0.9.1 AI 商业决策系统完成记录（证据中心 + Evidence Score + 决策委员会 + 验证任务中心）
+
+- **商业证据中心 EvidenceCenter**：components/research/EvidenceCenter.tsx，每个研究维度展示 数据来源/来源类型/数据时间/可信度 + AI 推理比例（数据支持 = FACT 有真实来源占比）；报告章节原文折叠为「展开结论原文」，减少 AI 推断式长文。
+- **Evidence Score**：新增 6 维度证据关联评分（市场机会20%/用户需求20%/商业化20%/竞争机会15%/技术可行性15%/风险10%）；AI 只给各维度分+证据，总分按权重确定性计算；证据覆盖（数据支持/AI推理比例）由证据类别确定性计算；lib/decision/evidence-score.ts + schema + prompt；DecisionService.generateEvidenceScore；/api/judgment 同时生成 judgment + evidenceScore（失败不阻塞）；报告页新增 EvidenceScoreCard。
+- **AI 商业决策委员会**：components/decision/DecisionCommittee.tsx，报告/决策区顶部展示 AI 建议（推进/先验证/继续观察/暂停 + 理由）、决策依据（支持因素/反对因素/关键变量）、决策记录、AI 复盘（预测 vs 实际 + Score 版本变化）。
+- **创始人判断**：UserJudgment 新增 我的商业假设 / 我的优势 / AI 可能错误的位置（表单 + 存储 + 评审上下文）。
+- **验证任务中心**：决策面板「验证计划」升级为「验证任务中心」，显示任务状态统计（未开始/进行中/完成/失败取消）+ 状态徽章；任务由未验证假设自动生成（既有 Validation Execution Engine）。
+- **真实数据研究框架**：延续外部研究（Tavily/Bing/DuckDuckGo）+ 来源可信度；竞品矩阵含 价格/目标用户/功能/优势；V0.9 证据字段（credibilityLevel/verificationMethod）进入研究提示词。
+- **验证**：315/315 测试通过（新增 4：Evidence Score 生成/覆盖/不伪造/持久化）、lint 0、tsc/build 通过；线上 /api/judgment 实测同时生成 judgment + evidenceScore（6 维度，overall 4.7，数据支持 6.7%），Supabase 持久化确认。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID kjnY9rbt1sU5agXNo14N3）。

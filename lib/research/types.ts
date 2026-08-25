@@ -337,6 +337,64 @@ export interface CustomerAcquisitionPlan {
   steps: string[];
 }
 
+/** Evidence Score 维度（V0.9.1：从 AI 主观评分改为证据关联评分） */
+export type EvidenceScoreDimensionKey =
+  | "market_opportunity"
+  | "user_demand"
+  | "monetization"
+  | "competitive_opportunity"
+  | "technical_feasibility"
+  | "risk";
+
+/** Evidence Score 单维度（每个评分必须关联证据） */
+export interface EvidenceScoreDimension {
+  dimension: EvidenceScoreDimensionKey;
+  label: string;
+  /** 权重（如 0.2） */
+  weight: number;
+  /** 0-10 */
+  score: number;
+  /** 0-1 */
+  confidence: number;
+  rationale: string;
+  evidence: EvidenceItem[];
+}
+
+/** Evidence Score（V0.9.1：证据关联评分） */
+export interface EvidenceScore {
+  id: string;
+  opportunityId: string;
+  runId: string;
+  dimensions: EvidenceScoreDimension[];
+  /** 加权总分 0-10（系统确定性计算） */
+  overall: number;
+  /** 0-1 */
+  confidence: number;
+  /** 数据支持比例 / AI 推理比例（0-1，由证据类别确定性计算） */
+  evidenceCoverage: { dataSupported: number; aiInferred: number };
+  createdAt: string;
+}
+
+/** Evidence Score 维度权重（V0.9.1） */
+export const EVIDENCE_SCORE_WEIGHTS: Record<EvidenceScoreDimensionKey, number> = {
+  market_opportunity: 0.2,
+  user_demand: 0.2,
+  monetization: 0.2,
+  competitive_opportunity: 0.15,
+  technical_feasibility: 0.15,
+  risk: 0.1,
+};
+
+/** Evidence Score 维度中文名 */
+export const EVIDENCE_SCORE_LABELS: Record<EvidenceScoreDimensionKey, string> = {
+  market_opportunity: "市场机会",
+  user_demand: "用户需求",
+  monetization: "商业化",
+  competitive_opportunity: "竞争机会",
+  technical_feasibility: "技术可行性",
+  risk: "风险",
+};
+
 /** AI 商业判断（V0.9：决策型报告核心，从「研究型」升级为「决策型」） */
 export interface BusinessJudgment {
   id: string;
@@ -392,6 +450,8 @@ export interface ResearchReport {
   unitEconomics?: UnitEconomicsModel;
   /** AI 商业判断（V0.9：决策型报告核心） */
   judgment?: BusinessJudgment;
+  /** Evidence Score（V0.9.1：证据关联评分） */
+  evidenceScore?: EvidenceScore;
   meta: ReportMeta;
 }
 
