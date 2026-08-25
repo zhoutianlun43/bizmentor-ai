@@ -30,10 +30,12 @@ export function addOpportunity(input: OpportunityInput): Opportunity {
     name: input.name.trim(),
     description: input.description.trim(),
     source: input.source,
-    status: "researching",
+    status: input.status ?? (input.source === "ai" ? "discovered" : "researching"),
     createdAt: new Date().toISOString(),
     notes: input.notes?.trim() || undefined,
     radar: input.radar,
+    sourceType: input.radar ? "ai_radar" : "manual_create",
+    scanId: input.radar?.scanId,
   };
   saveOpportunities([opportunity, ...loadOpportunities()]);
   return opportunity;

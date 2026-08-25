@@ -13,6 +13,8 @@ export const OPPORTUNITY_SOURCE_LABELS: Record<OpportunitySource, string> = {
 
 /** 商机状态中文标签 */
 export const OPPORTUNITY_STATUS_LABELS: Record<OpportunityStatus, string> = {
+  discovered: "已发现",
+  reviewing: "收集中",
   researching: "研究中",
   validating: "验证中",
   validated: "已验证",

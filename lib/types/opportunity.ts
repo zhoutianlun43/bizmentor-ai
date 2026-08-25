@@ -6,8 +6,13 @@
 /** 商机来源：AI 发现 / 用户自己发现 */
 export type OpportunitySource = "ai" | "user";
 
-/** 商机状态：研究中 / 验证中 / 已验证 / 已放弃 */
+/** 商机来源类型（V1.2.1）：手动创建 / AI 雷达发现 */
+export type OpportunitySourceType = "manual_create" | "ai_radar";
+
+/** 商机状态：已发现 / 收集中 / 研究中 / 验证中 / 已验证 / 已放弃 */
 export type OpportunityStatus =
+  | "discovered"
+  | "reviewing"
   | "researching"
   | "validating"
   | "validated"
@@ -49,6 +54,10 @@ export interface Opportunity {
   notes?: string;
   /** AI 商业雷达发现（V0.8；source=ai 时携带） */
   radar?: RadarFinding;
+  /** 来源类型（V1.2.1）：manual_create / ai_radar（由 radar 是否携带推导） */
+  sourceType?: OpportunitySourceType;
+  /** 所属雷达扫描（V1.2.1：scanId） */
+  scanId?: string;
 }
 
 /** 新增商机表单输入（与存储结构分离，便于未来校验/扩展） */
@@ -59,6 +68,8 @@ export interface OpportunityInput {
   notes?: string;
   /** AI 雷达发现（V0.8） */
   radar?: RadarFinding;
+  /** 状态（V1.2.1：缺省由来源决定——ai→discovered，user→researching） */
+  status?: OpportunityStatus;
 }
 
 /** AI 商业雷达发现（V0.8）：AI 主动扫描全球市场生成的机会情报（行业无关） */
@@ -80,4 +91,6 @@ export interface RadarFinding {
   score: number;
   suggestion: "值得研究" | "继续观察" | "不建议进入";
   scannedAt: string;
+  /** 所属扫描（V1.2.1：持久化用） */
+  scanId?: string;
 }

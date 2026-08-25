@@ -390,3 +390,18 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **验证**：320/320 测试通过（新增 3：来源采集/生成完整/版本递增）、lint 0、tsc/build 通过；线上 /api/operation 实测生成 23KB 完整报告（6 真实来源 gminsights/myzaker/ithome/aliyun 等；10 产品候选/8 竞品/30 内容/3 广告/4 阶段；无真实数据处标注「暂无真实来源，需要验证」），入库确认。
 - **部署**：bizmentor.top（BUILD_ID Em8mYvRpqQ5E0InhJKiEa）。
 - **截图**：outputs/screenshots/v12/（8 张：市场验证 01/产品矩阵 02/竞品 03/供应链定价 04/页面优化 05/内容30 06/90天 07/投资判断 08）。
+
+---
+
+## 30. V1.2.1 AI 商业雷达数据持久化完成记录（长期机会资产库）
+
+- **问题**：雷达扫描结果只存前端 state，离开页面即丢失；只有点击后才保存。
+- **新流程**：AI 扫描 → 生成机会 → /api/radar/scan 服务端自动写入数据库（status=discovered，携带 scanId）→ 进入「发现机会池」→ 用户选择 收藏/进入研究。
+- **数据模型**：OpportunityStatus 新增 discovered/reviewing（已发现/收集中）；Opportunity 新增 sourceType（manual_create/ai_radar）、scanId；RadarFinding 新增 scanId；OpportunityInput 新增 status。
+- **扫描历史**：lib/radar/service.ts buildScanHistory —— 从机会列表按 scanId 分组推导（扫描时间/发现数量/进入研究数量），无需新表；再次进入页面自动恢复最近扫描（含真实评分/分类，从 notes 解析降级）。
+- **持久化兼容**：线上 opportunities.radar 列仍未执行迁移 → 采用「scanId 编码进 notes」零迁移方案（scanId=xxx），fromRow 从 radar 或 notes 解析；V0.8 缺列降级继续生效。
+- **页面**：雷达页新增 本次扫描发现/累计 AI 发现机会/扫描历史/重新扫描（不删历史）；收藏→reviewing、进入研究→researching+跳转；商机列表新增「已发现」筛选；详情页 discovered→researching 自动流转。
+- **验收**（真实浏览器+数据库）：扫描 5 个自动入库；刷新后自动恢复最近扫描；重新登录（新浏览器）12 个 AI 机会仍在并恢复；点击进入研究后状态 researching（DB 分布 researching:3 / discovered:9，仅点过的进入研究）。
+- **测试**：323/323（新增 3：批量入库/重读仍在/扫描历史统计）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID GjaP2cME07utUYUXxKbNl 起）。
+- **截图**：outputs/screenshots/v121/（01 扫描自动保存/02 进入研究跳转/03 状态流转/04 重新登录恢复）。

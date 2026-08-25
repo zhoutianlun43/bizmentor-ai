@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, FlaskConical, Landmark } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
@@ -24,7 +24,7 @@ export default function OpportunityDetailPage() {
   const idStr = String(id);
   const [tab, setTab] = useState<Tab>("research");
 
-  const { opportunities, loading } = useOpportunities();
+  const { opportunities, loading, update } = useOpportunities();
   const opportunity = opportunities.find((o) => o.id === idStr);
 
   // 商机研究运行（V0.4.1）：异步 hook 读取
@@ -36,6 +36,13 @@ export default function OpportunityDetailPage() {
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const researchVersion = researchRun ? sameRuns.findIndex((r) => r.runId === researchRun.runId) + 1 : 0;
   const decisionVersion = researchRun?.report?.judgment?.version ?? null;
+
+  // V1.2.1：已发现（discovered）机会一旦开始研究 → 自动流转为「研究中」
+  useEffect(() => {
+    if (opportunity && opportunity.status === "discovered" && researchRun && !loading) {
+      update(opportunity.id, { status: "researching" });
+    }
+  }, [opportunity, researchRun, loading, update]);
 
   if (loading) {
     return (

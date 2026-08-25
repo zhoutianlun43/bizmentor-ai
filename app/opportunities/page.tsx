@@ -15,12 +15,13 @@ import { formatDate } from "@/lib/utils/format";
 import type { Opportunity } from "@/lib/types";
 
 /** 列表筛选项：混合了来源（AI发现/我发现的）与状态（研究中/验证中/已验证/已放弃） */
-type Filter = "all" | "ai" | "user" | "researching" | "validating" | "validated" | "abandoned";
+type Filter = "all" | "ai" | "user" | "discovered" | "researching" | "validating" | "validated" | "abandoned";
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "全部" },
   { value: "ai", label: "AI雷达发现" },
   { value: "user", label: "我的想法" },
+  { value: "discovered", label: "已发现" },
   { value: "researching", label: "研究中" },
   { value: "validating", label: "验证中" },
   { value: "validated", label: "已验证" },

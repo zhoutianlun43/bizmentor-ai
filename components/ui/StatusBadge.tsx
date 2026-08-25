@@ -4,6 +4,10 @@ import type { OpportunityStatus } from "@/lib/types";
 
 /** 状态 → 徽章配色 */
 const STATUS_STYLES: Record<OpportunityStatus, string> = {
+  discovered:
+    "bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:ring-indigo-800",
+  reviewing:
+    "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800",
   researching:
     "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:ring-sky-800",
   validating:

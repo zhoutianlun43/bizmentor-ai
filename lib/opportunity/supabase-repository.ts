@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "../supabase/server";
 import { SupabaseRepositoryError } from "../supabase/errors";
 export { SupabaseRepositoryError };
+import { extractScanIdFromNotes } from "../radar/service";
 import { uid } from "../store/storage";
 import type { Opportunity, OpportunityInput, OpportunitySource, OpportunityStatus } from "../types";
 import type { OpportunityRepository } from "./repository";
@@ -66,6 +67,8 @@ function fromRow(row: Row): Opportunity {
     radar: (row.radar as Opportunity["radar"]) ?? undefined,
     notes: (row.notes as Opportunity["notes"]) ?? undefined,
     createdAt: String(row.created_at),
+    sourceType: row.radar ? "ai_radar" : "manual_create",
+    scanId: (row.radar as Opportunity["radar"])?.scanId ?? extractScanIdFromNotes(String(row.notes ?? "")),
   };
 }
 
@@ -87,7 +90,7 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
       name: input.name.trim(),
       description: input.description.trim(),
       source: input.source,
-      status: "researching",
+      status: input.status ?? (input.source === "ai" ? "discovered" : "researching"),
       createdAt: now,
       notes: input.notes?.trim() || undefined,
       radar: input.radar,
