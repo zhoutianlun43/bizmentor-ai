@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { FlaskConical, Landmark } from "lucide-react";
+import { Bot, FlaskConical, Landmark } from "lucide-react";
 import { BackButton } from "@/components/common/BackButton";
+import { ProjectAgentPanel } from "@/components/project/ProjectAgentPanel";
 import { stripRadarMeta } from "@/lib/radar/service";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
@@ -18,7 +19,7 @@ import { OPPORTUNITY_SOURCE_LABELS } from "@/lib/constants";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { formatDate } from "@/lib/utils/format";
 
-type Tab = "research" | "decision";
+type Tab = "research" | "decision" | "agent";
 
 /** 商机详情（V1.0：机会研究中心 / 创业执行决策 双 Tab；V1.x 智能返回 + 面包屑） */
 function OpportunityDetailContent() {
@@ -136,8 +137,8 @@ function OpportunityDetailContent() {
         )}
       </Card>
 
-      {/* V1.0：双 Tab —— 机会研究中心 / 创业执行决策 */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      {/* V1.5：三 Tab —— 机会研究中心 / 创业执行决策 / AI项目主理人 */}
+      <div className="mt-4 grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => setTab("research")}
@@ -166,13 +167,28 @@ function OpportunityDetailContent() {
           创业执行决策
           {decisionVersion ? <span className="text-[10px] opacity-80">v{decisionVersion}</span> : null}
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("agent")}
+          className={
+            "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors " +
+            (tab === "agent"
+              ? "border-violet-500 bg-violet-600 text-white"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300")
+          }
+        >
+          <Bot className="size-4" />
+          AI项目主理人
+        </button>
       </div>
 
       <div className="mt-3">
         {tab === "research" ? (
           <ResearchPanel opportunity={opportunity} run={researchRun} version={researchVersion || undefined} />
-        ) : (
+        ) : tab === "decision" ? (
           <ExecutiveDecisionPanel opportunity={opportunity} run={researchRun} />
+        ) : (
+          <ProjectAgentPanel projectId={opportunity.id} />
         )}
       </div>
     </div>
