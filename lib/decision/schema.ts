@@ -128,3 +128,36 @@ export type UnitEconomicsInput =
   | z.infer<typeof ecommerceUnitEconomicsSchema>
   | z.infer<typeof saasUnitEconomicsSchema>
   | z.infer<typeof genericUnitEconomicsSchema>;
+
+// ===================== V0.9：AI 商业判断（决策型报告） =====================
+
+/** AI 商业判断输出 Schema（V0.9） */
+export const businessJudgmentSchema = z.object({
+  recommendation: z.enum(["recommend_enter", "conditional_enter", "continue_observe", "not_recommend"]),
+  oneLineJudgment: z.string().min(1),
+  biggestOpportunity: z.string().min(1),
+  biggestRisk: z.string().min(1),
+  suggestedAction: z.string().min(1),
+  entryDirection: z.string().min(1),
+  notDoList: z.array(z.string()).min(1),
+  day90Plan: z
+    .array(
+      z.object({
+        phase: z.string().min(1),
+        title: z.string().min(1),
+        actions: z.array(z.string()).min(1),
+        successMetric: z.string().min(1),
+      }),
+    )
+    .min(1),
+  firstCustomers: z.object({
+    targetSegment: z.string().min(1),
+    channels: z.array(z.string()).min(1),
+    offer: z.string().min(1),
+    firstBatchGoal: z.string().min(1),
+    steps: z.array(z.string()).min(1),
+  }),
+  confidence: z.number().min(0).max(1),
+});
+
+export type BusinessJudgmentOutput = z.infer<typeof businessJudgmentSchema>;

@@ -85,3 +85,32 @@ export function unitEconomicsPrompt(report: { opportunityName: string; executive
     user: `请基于研究结论，为以下商机提案单位经济输入。\n\n商机：${report.opportunityName}\n领域：${report.domain}\n\n${domainHint}\n\n研究摘要：${report.executiveSummary}\n\nJSON 格式：\n{"inputs":{"<字段名>":数值},"assumptions":["关键假设1"],"confidence":0.6}`,
   };
 }
+// ===================== V0.9：AI 商业判断（决策型报告） =====================
+
+/** AI 商业判断提示词：从「研究型」升级为「决策型」 */
+export function businessJudgmentPrompt(report: {
+  opportunityName: string;
+  executiveSummary: string;
+  overallScore: number;
+  confidence: number;
+  nextActions: string[];
+  domainLabel?: string;
+  thesis?: { coreHypothesis: string; logicChain: string[]; invalidators: string[]; decisionGate: string };
+  validationPlan: Array<{ assumption: string; method: string; successCriteria: string }>;
+}): PromptParts {
+  const thesisLines = report.thesis
+    ? [
+        `\n投资论点：`,
+        `- 核心假设：${report.thesis.coreHypothesis}`,
+        `- 逻辑链：${report.thesis.logicChain.join(" → ")}`,
+        `- 证伪条件：${report.thesis.invalidators.join("；")}`,
+        `- 决策门：${report.thesis.decisionGate}`,
+      ].join("\n")
+    : "";
+  return {
+    system: `你是 BizMentor 的「商业决策官」（Business Judgment Officer）。基于研究报告给出决策型判断，而不是研究总结。
+你要回答：是否建议进入、推荐切入方向、不建议做什么、90 天验证计划、第一批客户获取方案。
+判断要克制、诚实：证据不足时就降低置信度并体现在「继续观察/条件进入」里；不要为了给出建议而编造事实。\n${JSON_INSTRUCTION}`,
+    user: `请基于以下研究报告输出 AI 商业判断。\n\n商机：${report.opportunityName}${report.domainLabel ? `\n领域：${report.domainLabel}` : ""}\n综合评分：${report.overallScore}/10（置信度 ${report.confidence}）\n\n执行摘要：${report.executiveSummary}${thesisLines}\n\n验证方案：\n${report.validationPlan.map((v) => `- ${v.assumption}（方法：${v.method}；成功标准：${v.successCriteria}）`).join("\n")}\n\n建议的下一步：\n${report.nextActions.map((a) => `- ${a}`).join("\n")}\n\nJSON 格式：\n{"recommendation":"recommend_enter|conditional_enter|continue_observe|not_recommend","oneLineJudgment":"一句话判断","biggestOpportunity":"最大机会","biggestRisk":"最大风险","suggestedAction":"建议动作","entryDirection":"推荐切入方向","notDoList":["不建议做什么1","不建议做什么2"],"day90Plan":[{"phase":"第1-2周","title":"阶段标题","actions":["动作1","动作2"],"successMetric":"成功度量"}],"firstCustomers":{"targetSegment":"目标客户","channels":["渠道1","渠道2"],"offer":"切入卖点/免费试用","firstBatchGoal":"首批客户目标","steps":["步骤1","步骤2"]},"confidence":0.6}`,
+  };
+}

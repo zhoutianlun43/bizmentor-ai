@@ -1,6 +1,8 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, FileText, Globe, Info, Link2 } from "lucide-react";
+import { ExecutiveDecisionCard } from "@/components/decision/ExecutiveDecisionCard";
+import { BusinessJudgmentView } from "@/components/decision/BusinessJudgmentView";
 import { Card } from "@/components/ui/Card";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { EvidenceBadge } from "./EvidenceBadge";
@@ -18,6 +20,13 @@ import type {
   SourceDocument,
 } from "@/lib/research";
 import { formatScore } from "@/lib/utils/format";
+
+const EVIDENCE_CRED_LABEL: Record<string, string> = {
+  high: "高",
+  medium: "中",
+  low: "低",
+  unverified: "未验证",
+};
 
 const CREDIBILITY_LABEL: Record<SourceCredibility["level"], string> = {
   official: "官方",
@@ -64,7 +73,13 @@ function EvidenceList({ items }: { items: EvidenceItem[] }) {
                     </a>
                   ) : null}
                 </span>
-                {item.sourceRef.retrievedAt ? ` · 抓取 ${item.sourceRef.retrievedAt.slice(0, 10)}` : ""}
+                {item.sourceRef.retrievedAt ? " · 抓取 " + item.sourceRef.retrievedAt.slice(0, 10) : ""}
+              </span>
+            ) : null}
+            {item.credibilityLevel || item.verificationMethod ? (
+              <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+                {item.credibilityLevel ? "可信度等级：" + EVIDENCE_CRED_LABEL[item.credibilityLevel] + " · " : ""}
+                {item.verificationMethod ? "验证方式：" + item.verificationMethod : ""}
               </span>
             ) : null}
             {item.note ? <span className="block text-[10px] text-amber-600 dark:text-amber-400">{item.note}</span> : null}
@@ -261,6 +276,15 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
         </div>
       ) : null}
 
+      <ExecutiveDecisionCard
+        judgment={report.judgment}
+        score={report.score.overall_score}
+        confidence={report.score.confidence}
+        thesis={report.thesis}
+        opportunityName={report.opportunityName}
+      />
+      {report.judgment ? <BusinessJudgmentView judgment={report.judgment} /> : null}
+
       <Card className="mt-3">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">执行摘要</h3>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{report.executiveSummary}</p>
@@ -272,13 +296,20 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
       <CompetitorMatrixCard run={run} />
 
       <Card className="mt-3">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">验证方案</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">商业验证实验</h3>
+          <span className="text-[10px] text-slate-400">AI 自动生成 · {report.validationPlan.length} 个实验</span>
+        </div>
         <div className="mt-2 space-y-2">
           {report.validationPlan.map((item, i) => (
-            <div key={i} className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-              <p className="font-medium text-slate-700 dark:text-slate-200">{item.assumption}</p>
-              <p className="mt-0.5">方法：{item.method}（effort: {item.effort}）</p>
-              <p className="mt-0.5">成功标准：{item.successCriteria}</p>
+            <div key={i} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/60">
+              <div className="flex items-center gap-2">
+                <span className="flex size-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">{i + 1}</span>
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">effort {item.effort}</span>
+              </div>
+              <p className="mt-1.5 text-xs font-medium text-slate-700 dark:text-slate-200">假设：{item.assumption}</p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">方法：{item.method}</p>
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">成功标准：{item.successCriteria}</p>
             </div>
           ))}
         </div>

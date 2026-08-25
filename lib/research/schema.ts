@@ -32,6 +32,8 @@ export const evidenceItemSchema = z.object({
   confidence: z.number().min(0).max(1),
   sourceRef: sourceRefInputSchema,
   note: z.string().optional(),
+  credibilityLevel: z.enum(["high", "medium", "low", "unverified"]).optional(),
+  verificationMethod: z.string().optional(),
 });
 
 export const analyzerOutputSchema = z.object({
@@ -252,6 +254,8 @@ export function toEvidenceItem(raw: ValidatedEvidenceItem): EvidenceItem {
     confidence: raw.confidence,
     sourceRef: normalizeSourceRef(raw.sourceRef),
     note: raw.note,
+    credibilityLevel: raw.credibilityLevel,
+    verificationMethod: raw.verificationMethod,
   };
 }
 

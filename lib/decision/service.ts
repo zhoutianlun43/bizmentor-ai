@@ -12,6 +12,7 @@ import type { ResearchRepository } from "../research/repository";
 import { reviewUserDecision } from "./examiner";
 import { generateInvestmentThesis as buildInvestmentThesis } from "./thesis";
 import { generateUnitEconomics as buildUnitEconomics } from "./unit-economics";
+import { generateBusinessJudgment as buildBusinessJudgment } from "./judgment";
 import { createExecutionLearningEvents, generateLearningEvents } from "./learning";
 import {
   applyTaskTransition,
@@ -23,6 +24,7 @@ import { LocalDecisionRepository } from "./repository";
 import type { DecisionRepository } from "./repository";
 import { computeScoreV2 } from "./scoring";
 import { uid } from "../store/storage";
+import type { BusinessJudgment } from "../research/types";
 import type {
   DecisionType,
   LearningEvent,
@@ -378,6 +380,24 @@ export class DecisionService {
     });
     await this.decisions.saveEvents(events);
     return { next, update: persistedUpdate };
+  }
+
+  // ---------- 4. AI 商业判断（V0.9：决策型报告核心） ----------
+
+  /** 生成 AI 商业判断：是否建议进入 / 切入方向 / 不建议做什么 / 90 天计划 / 首批客户 */
+  async generateJudgment(opportunityId: string): Promise<BusinessJudgment> {
+    const run = await this.research.getRun(opportunityId);
+    if (!run || !run.report) throw new Error("研究运行不存在或未完成");
+    const judgment = await buildBusinessJudgment({
+      runAi: this.runAi,
+      report: run.report,
+      runId: run.runId,
+      opportunity: { id: opportunityId, name: run.report.opportunityName },
+    });
+    run.report.judgment = judgment;
+    run.updatedAt = new Date().toISOString();
+    await this.research.saveRun(run);
+    return judgment;
   }
 
   // ---------- 查询 ----------

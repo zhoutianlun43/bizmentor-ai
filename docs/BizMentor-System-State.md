@@ -290,3 +290,20 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **品牌设计**：主色 #6366F1，辅助 #8B5CF6 / #06B6D4 / #F59E0B，浅色为主；用户气泡品牌色、AI 气泡白色卡片 + Markdown。
 - **验证**：307/307 测试通过（新增 9：Markdown 解析 7 + 会话 title/排序 2）、lint 0 警告、tsc/build 通过；线上 /chat 200、新 UI 元素齐备、/api/chat 正常（DeepSeek）。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID -xFgNyey1G7toXtM-Lgz1）。
+
+
+---
+
+## 24. V0.9 决策型报告完成记录（AI 商业判断 + Executive Decision Card + 证据增强）
+
+- **定位升级**：商业报告从「研究型」升级为「决策型」；新增 AI 商业判断模块（lib/decision/judgment.ts + businessJudgmentSchema + businessJudgmentPrompt）。
+- **AI 商业判断输出**：是否建议进入（recommend_enter/conditional_enter/continue_observe/not_recommend）、一句话判断、推荐切入方向、不建议做什么、90 天验证计划（时间线）、第一批客户获取方案、置信度；绑定 opportunityId/runId 可追溯。
+- **存储**：BusinessJudgment 写入 research_runs.report.judgment（jsonb，零 schema 迁移）；DecisionService.generateJudgment 生成并持久化；/api/judgment 服务端路由（anon key 直连 Supabase + AI Gateway，OpenAI 不可用时自动降级 DeepSeek）。
+- **Executive Decision Card**：components/decision/ExecutiveDecisionCard.tsx，报告首页展示 机会评分/一句话判断/最大机会/最大风险/建议动作；无判断时用评分+投资论点降级展示。
+- **BusinessJudgmentView**：完整判断视图（推荐徽章/切入方向/不建议清单/90天时间线/首批客户方案）。
+- **证据增强**：EvidenceItem 新增 credibilityLevel(high/medium/low/unverified) + verificationMethod；evidenceItemSchema + toEvidenceItem 透传；报告证据列表显示「可信度等级 + 验证方式 + 来源」。
+- **实验模块**：验证方案渲染升级为「商业验证实验」编号卡片（假设/方法/成功标准/effort）。
+- **阅读体验**：卡片化、评分、时间线、行动列表；避免长文本。
+- **ChatGPT 模式**：延续 V0.8.1（默认简洁 300-800 字，/指令 触发专业模式）。
+- **验证**：311/311 测试通过（新增 4：judgment 生成/重试/不伪造/保存）、lint 0、tsc/build 通过；线上 /api/judgment 实测生成完整判断（conditional_enter + 4 阶段 90 天计划 + 首批客户），Supabase 持久化确认。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID llZmU-gdkQXnuxXuavdCe / eD41-Dn6fE34d5yjJz4fd）。

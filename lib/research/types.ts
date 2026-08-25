@@ -124,6 +124,10 @@ export interface EvidenceItem {
   /** FACT 必须有可验证来源；缺失时由 enforceEvidenceRules 自动降级 */
   sourceRef?: SourceReference;
   note?: string;
+  /** 可信度等级（V0.9：high/medium/low/unverified） */
+  credibilityLevel?: "high" | "medium" | "low" | "unverified";
+  /** 验证方式（V0.9：如「外部来源核对」「用户访谈」「问卷」「A/B 测试」） */
+  verificationMethod?: string;
 }
 
 /** 研究任务（Research Planner 产出） */
@@ -311,6 +315,56 @@ export interface UnitEconomicsModel {
   createdAt: string;
 }
 
+/** 是否建议进入（AI 商业判断，V0.9） */
+export type BusinessRecommendation = "recommend_enter" | "conditional_enter" | "continue_observe" | "not_recommend";
+
+/** 90 天验证计划步骤（V0.9：时间线） */
+export interface Day90Step {
+  /** 阶段，如「第1-2周」 */
+  phase: string;
+  title: string;
+  actions: string[];
+  /** 该阶段的成功度量 */
+  successMetric: string;
+}
+
+/** 第一批客户获取方案（V0.9） */
+export interface CustomerAcquisitionPlan {
+  targetSegment: string;
+  channels: string[];
+  offer: string;
+  firstBatchGoal: string;
+  steps: string[];
+}
+
+/** AI 商业判断（V0.9：决策型报告核心，从「研究型」升级为「决策型」） */
+export interface BusinessJudgment {
+  id: string;
+  opportunityId: string;
+  runId: string;
+  /** 是否建议进入 */
+  recommendation: BusinessRecommendation;
+  /** 一句话判断 */
+  oneLineJudgment: string;
+  /** 最大机会 */
+  biggestOpportunity: string;
+  /** 最大风险 */
+  biggestRisk: string;
+  /** 建议动作 */
+  suggestedAction: string;
+  /** 推荐切入方向 */
+  entryDirection: string;
+  /** 不建议做什么 */
+  notDoList: string[];
+  /** 90 天验证计划（时间线） */
+  day90Plan: Day90Step[];
+  /** 第一批客户获取方案 */
+  firstCustomers: CustomerAcquisitionPlan;
+  /** 0-1 */
+  confidence: number;
+  createdAt: string;
+}
+
 /** 最终研究报告（结构化，非一段文本） */
 export interface ResearchReport {
   opportunityId: string;
@@ -336,6 +390,8 @@ export interface ResearchReport {
   thesis?: InvestmentThesis;
   /** 单位经济模型（Business Model Analyzer 生成，V0.4.1 Phase 7A） */
   unitEconomics?: UnitEconomicsModel;
+  /** AI 商业判断（V0.9：决策型报告核心） */
+  judgment?: BusinessJudgment;
   meta: ReportMeta;
 }
 
