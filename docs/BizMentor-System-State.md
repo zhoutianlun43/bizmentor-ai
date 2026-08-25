@@ -263,3 +263,17 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **验证**：292/292 测试通过、lint/tsc/build 通过；用真实 Supabase（anon key + 真实仓库代码）端到端验证 CREATE（降级成功）→ GET → DELETE 清理。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID y0buE9z0lpQZ7bEkjRyux），/、/opportunities、/radar 均 200。
 - **仍待办**：在 Supabase SQL Editor 执行 `alter table public.opportunities add column if not exists radar jsonb;` 后，雷达数据将改为结构化 jsonb 存储。
+
+
+---
+
+## 22. V0.8.1 AI 对话体验升级完成记录（个人 AI 商业伙伴）
+
+- **角色重定义**：System Prompt 改为「用户的个人AI商业伙伴」——任务不是输出报告，而是陪伴用户进行商业判断（理解问题 → 简洁判断 → 关键追问 → 逐步深入）。
+- **默认轻量对话**：默认回复 300-800 字、口语化自然；不再默认输出长篇报告。
+- **画像读取**：system 注入 用户（称呼/地区/身份）、经营（行业/类型/产品/服务）、目标、偏好、已验证长期认知（优势/资源/经验/判断/案例）、历史决策模式（含验证率）、当前商机状态。
+- **高级指令（深度能力保留）**：lib/llm/commands.ts 新增 /深度分析、/商业报告、/市场研究、/机会评估（含英文 deep/report/market/evaluate），触发时自动切深度模式并从消息中剥离指令令牌；/chat 页顶部新增指令快捷按钮。
+- **知识记忆增强**：/api/knowledge-candidate 扩展提炼范围（优势/资源/目标/偏好/判断/经验/案例 + 类型映射）；仍需用户确认才进入长期 Knowledge。
+- **UI**：/chat 标题改为「BizMentor AI / 你的个人商业智能助手」，气泡增加角色标签（你 / BizMentor AI）+ 指令快捷入口。
+- **验证**：298/298 测试通过（新增 6）、lint/tsc/build 通过；线上实测：普通对话简洁追问、/深度分析 输出结构化深度内容（DeepSeek）。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID FsCcaV91ryM04hDIYT7iO）。

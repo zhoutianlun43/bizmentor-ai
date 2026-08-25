@@ -24,7 +24,10 @@ interface Candidate {
   content: string;
 }
 
-/** AI 对话页（V0.6.1）：历史持久化 + BusinessContext + AI 认知候选确认 */
+/** 高级指令（V0.8.1）：点击即插入输入框，主动触发深度能力 */
+const QUICK_COMMANDS = ["/深度分析", "/商业报告", "/市场研究", "/机会评估"];
+
+/** AI 对话页（V0.8.1）：个人 AI 商业伙伴 —— 默认轻量对话，历史持久化 + BusinessContext + 认知候选确认 */
 export default function ChatPage() {
   const [convoRepo] = useState(() => new LocalConversationRepository(createBrowserConversationStorage()));
   const [context, setContext] = useState<BusinessOSContext | null>(null);
@@ -89,7 +92,7 @@ export default function ChatPage() {
     setCandidate(null);
     setSavedCandidate(false);
     try {
-      // 历史摘要：只发送最近 10 条 + 首条摘要占位（避免过长）
+      // 历史：只发送最近 10 条（避免过长）
       const history: Msg[] = next.slice(-10);
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -139,20 +142,34 @@ export default function ChatPage() {
 
   return (
     <div className="px-5 pb-4">
-      <AppHeader title="问 AI" subtitle="你的 Business Agent" />
+      <AppHeader title="BizMentor AI" subtitle="你的个人商业智能助手" />
+      <div className="mt-2 flex flex-wrap gap-2">
+        {QUICK_COMMANDS.map((c) => (
+          <button
+            key={c}
+            onClick={() => setInput((v) => (v.trim() ? v + " " + c : c + " "))}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-600 transition-colors hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-400"
+          >
+            {c}
+          </button>
+        ))}
+      </div>
       {context && (
-        <p className="mb-3 text-[11px] text-slate-400">
+        <p className="mb-3 mt-2 text-[11px] text-slate-400">
           已加载上下文：{context.personalProfile?.name ?? "未命名"} · {context.businessProfile?.name ?? "未设置经营"} · 长期认知 {context.confirmedKnowledge.length} 条 · 商机 {context.activeProjects.length} 个
         </p>
       )}
       <Card className="flex min-h-[50vh] flex-col gap-3">
         <div className="flex-1 space-y-2">
           {messages.length === 0 && (
-            <p className="text-sm text-slate-500">问 AI：例如「分析一下我现在应该做什么」或「帮我评估这个想法」。</p>
+            <p className="text-sm text-slate-500">我是你的个人 AI 商业伙伴。直接问我，或用上方指令触发深度分析。</p>
           )}
           {messages.map((m, i) => (
-            <div key={i} className={`rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-100" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"}`}>
-              {m.content}
+            <div key={i} className="space-y-1">
+              <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">{m.role === "user" ? "你" : "BizMentor AI"}</p>
+              <div className={"rounded-xl px-3 py-2 text-sm whitespace-pre-wrap " + (m.role === "user" ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-100" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100")}>
+                {m.content}
+              </div>
             </div>
           ))}
           {busy && <p className="text-xs text-slate-400">AI 思考中…</p>}

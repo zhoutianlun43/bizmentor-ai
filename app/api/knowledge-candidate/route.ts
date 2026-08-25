@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const result = await llm.generate([
       {
         role: "system",
-        content: "你是个人商业助手的知识提炼器。从对话中找出「关于用户本人」的重要、可长期记忆的信息（偏好/判断方式/经验/案例）。如果没有可提炼的信息，输出 {\"found\":false}。只输出 JSON：{\"found\":true,\"type\":\"habit|judgment_style|industry_experience|success_case|failure_case\",\"content\":\"一句话\"}。不要编造。",
+        content: "你是个人商业助手的知识提炼器。从对话中找出「关于用户本人」的重要、可长期记忆的信息，包括：优势/资源、目标、商业偏好、判断方式、行业经验、成功或失败案例。如果没有可提炼的信息，输出 {\"found\":false}。只输出 JSON：{\"found\":true,\"type\":\"habit|judgment_style|industry_experience|success_case|failure_case\",\"content\":\"一句话\"}。类型映射：优势/资源/经验→industry_experience，目标/习惯→habit，判断方式→judgment_style，成功案例→success_case，失败案例→failure_case。不要编造。",
       },
       { role: "user", content: `最近对话：\n${recent}` },
     ]);

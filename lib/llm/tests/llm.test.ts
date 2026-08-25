@@ -86,3 +86,18 @@ test("buildBusinessSystemPrompt：空上下文 → 通用提示", () => {
   const prompt = buildBusinessSystemPrompt(undefined);
   assert.ok(prompt.includes("BizMentor"));
 });
+
+test("buildBusinessSystemPrompt：个人AI商业伙伴角色 + 简洁回复要求", () => {
+  const prompt = buildBusinessSystemPrompt(makeCtx());
+  assert.ok(prompt.includes("个人AI商业伙伴"));
+  assert.ok(prompt.includes("300-800 字"));
+  assert.ok(prompt.includes("不要默认输出长篇报告"));
+  assert.ok(prompt.includes("我了解你的情况"));
+});
+
+test("buildBusinessSystemPrompt：高级指令 → 深度输出引导", () => {
+  const prompt = buildBusinessSystemPrompt(makeCtx(), { deep: true, command: "report" });
+  assert.ok(prompt.includes("商业报告"));
+  const plain = buildBusinessSystemPrompt(makeCtx());
+  assert.ok(plain.includes("300-800 字"));
+});
