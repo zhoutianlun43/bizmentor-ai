@@ -53,7 +53,7 @@ export function plannerPrompt(input: ResearchInput, analyzer: { definition: stri
 export function externalExtractionPrompt(task: ResearchTask, docs: SourceDocument[]): PromptParts {
   return {
     system: `你是 BizMentor 的「证据提取器」。${EVIDENCE_RULES}\n${JSON_INSTRUCTION}\n只能引用下面提供的真实文档（sourceRef.sourceId = doc id，sourceRef.sourceType = EXTERNAL_WEB）。没有出现在文档里的信息，不得标 FACT。`,
-    user: `研究任务：${task.question}\n研究领域：${task.area}\n\n真实来源文档：\n${documentsText(docs)}\n\nJSON 格式：\n{"taskId":"${task.id}","area":"${task.area}","summary":"研究结论摘要","evidence":[{"claim":"结论（必须来自上述文档）","evidenceClass":"FACT|AI_INFERENCE|NEEDS_VALIDATION","confidence":0.5,"sourceRef":{"sourceType":"EXTERNAL_WEB","sourceId":"doc-id"}}],"confidence":0.5,"unknowns":["待验证项"]}`,
+    user: `研究任务：${task.question}\n研究领域：${task.area}\n\n真实来源文档：\n${documentsText(docs)}\n\nJSON 格式：\n{"taskId":"${task.id}","area":"${task.area}","summary":"研究结论摘要","evidence":[{"claim":"结论（必须来自上述文档）","evidenceClass":"FACT|AI_INFERENCE|NEEDS_VALIDATION","confidence":0.5,"sourceRef":{"sourceType":"EXTERNAL_WEB","sourceId":"doc-id"},"credibilityLevel":"high|medium|low|unverified","verificationMethod":"外部来源核对/用户访谈/问卷等"}],"confidence":0.5,"unknowns":["待验证项"]}`,
   };
 }
 
@@ -61,7 +61,7 @@ export function externalExtractionPrompt(task: ResearchTask, docs: SourceDocumen
 export function aiResearchPrompt(task: ResearchTask, input: ResearchInput): PromptParts {
   return {
     system: `你是 BizMentor 的「研究执行器」。${EVIDENCE_RULES}\n本任务没有外部来源，禁止标记 FACT；所有结论标 AI_INFERENCE 或 NEEDS_VALIDATION。\n${JSON_INSTRUCTION}`,
-    user: `研究任务：${task.question}\n研究领域：${task.area}\n\n商机：${input.opportunity.name}\n描述：${input.opportunity.description}\n用户资料：\n${materialsText(input.materials)}\n\nJSON 格式：\n{"taskId":"${task.id}","area":"${task.area}","summary":"研究结论摘要","evidence":[{"claim":"推断结论","evidenceClass":"AI_INFERENCE|NEEDS_VALIDATION","confidence":0.5,"sourceRef":null}],"confidence":0.5,"unknowns":["待验证项"]}`,
+    user: `研究任务：${task.question}\n研究领域：${task.area}\n\n商机：${input.opportunity.name}\n描述：${input.opportunity.description}\n用户资料：\n${materialsText(input.materials)}\n\nJSON 格式：\n{"taskId":"${task.id}","area":"${task.area}","summary":"研究结论摘要","evidence":[{"claim":"推断结论","evidenceClass":"AI_INFERENCE|NEEDS_VALIDATION","confidence":0.5,"sourceRef":null,"credibilityLevel":"low|unverified","verificationMethod":"用户访谈/问卷/外部数据验证"}],"confidence":0.5,"unknowns":["待验证项"]}`,
   };
 }
 
@@ -82,14 +82,14 @@ export function synthesisPrompt(
     system: `你是 BizMentor 的「研究综合器」。${EVIDENCE_RULES}\n${JSON_INSTRUCTION}\n每条结论的 evidence 必须保留其 sourceRef（来源可追溯）；没有来源的结论保持 AI_INFERENCE/NEEDS_VALIDATION。`,
     user: `把以下研究产出综合为结构化章节，并自动发现竞品、生成竞品矩阵。\n\n商机：${input.opportunity.name}\n定义：${analyzer.definition}\n\n各任务产出：\n${findings
       .map((f) => `【${f.area}】${f.summary}\n证据：${JSON.stringify(f.evidence)}\n未知：${f.unknowns.join("；") || "（无）"}`)
-      .join("\n\n")}\n\nJSON 格式：\n{"sections":[{"area":"targetUser|painPoint|demandStrength|market|competition|willingnessToPay|businessModel|moat|risk","title":"章节标题","content":"综合结论","confidence":0.5,"evidence":[{"claim":"...","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.5,"sourceRef":null}]}],"competitors":[{"name":"竞品名","url":"真实来源URL","description":"描述","evidence":[{"claim":"...","evidenceClass":"FACT|AI_INFERENCE","confidence":0.5,"sourceRef":{"sourceType":"EXTERNAL_WEB","sourceId":"doc-id"}}]}],"competitorMatrix":{"competitors":["竞品A","竞品B"],"dimensions":["价格","目标用户","核心功能","优势"],"rows":[{"competitor":"竞品A","cells":[{"dimension":"价格","value":"...","sourceRef":null}]}]}}`,
+      .join("\n\n")}\n\nJSON 格式：\n{"sections":[{"area":"targetUser|painPoint|demandStrength|market|competition|willingnessToPay|businessModel|moat|risk","title":"章节标题","content":"综合结论","confidence":0.5,"evidence":[{"claim":"...","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.5,"sourceRef":null,"credibilityLevel":"high|medium|low|unverified","verificationMethod":"用户访谈/问卷/外部来源核对/A-B测试等"}]}],"competitors":[{"name":"竞品名","url":"真实来源URL","description":"描述","evidence":[{"claim":"...","evidenceClass":"FACT|AI_INFERENCE","confidence":0.5,"sourceRef":{"sourceType":"EXTERNAL_WEB","sourceId":"doc-id"},"credibilityLevel":"high|medium|low|unverified","verificationMethod":"外部来源核对"}]}],"competitorMatrix":{"competitors":["竞品A","竞品B"],"dimensions":["价格","目标用户","核心功能","优势"],"rows":[{"competitor":"竞品A","cells":[{"dimension":"价格","value":"...","sourceRef":null}]}]}}`,
   };
 }
 
 export function scoringPrompt(input: ResearchInput, sections: Array<{ area: string; content: string }>): PromptParts {
   return {
     system: `你是 BizMentor 的「评分器」。你只提供评分提案（score proposal + confidence + rationale + evidence），最终总分由系统确定性计算。${EVIDENCE_RULES}\n${JSON_INSTRUCTION}`,
-    user: `根据研究章节，对 7 个维度打分（0-10）：需求 demand、市场 market、竞争 competition、付费 willingnessToPay、壁垒 moat、获客 customerAcquisition、风险 risk。竞争/获客/风险越高分越不利（系统按 (10-score) 处理）。\n\n商机：${input.opportunity.name}\n\n研究章节：\n${sections.map((s) => `【${s.area}】${s.content}`).join("\n")}\n\nJSON 格式：\n{"dimensions":[{"dimension":"demand|market|competition|willingnessToPay|moat|customerAcquisition|risk","score":7.5,"confidence":0.6,"rationale":"理由","evidence":[{"claim":"...","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.5,"sourceRef":null}]}]}`,
+    user: `根据研究章节，对 7 个维度打分（0-10）：需求 demand、市场 market、竞争 competition、付费 willingnessToPay、壁垒 moat、获客 customerAcquisition、风险 risk。竞争/获客/风险越高分越不利（系统按 (10-score) 处理）。\n\n商机：${input.opportunity.name}\n\n研究章节：\n${sections.map((s) => `【${s.area}】${s.content}`).join("\n")}\n\nJSON 格式：\n{"dimensions":[{"dimension":"demand|market|competition|willingnessToPay|moat|customerAcquisition|risk","score":7.5,"confidence":0.6,"rationale":"理由","evidence":[{"claim":"...","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.5,"sourceRef":null,"credibilityLevel":"high|medium|low|unverified","verificationMethod":"用户访谈/问卷/外部来源核对/A-B测试等"}]}]}`,
   };
 }
 
