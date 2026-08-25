@@ -347,3 +347,33 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **Tab 边界保持**：机会研究中心回答「值不值得做」（证据/评分/自动验证），创业执行决策回答「如何做成功」（10 项执行方案/路线图/验证任务），内容不重复。
 - **验证**：316/316 测试通过（管线 10 阶段断言更新）、lint 0、tsc/build 通过；线上 /api/judgment 实测输出新路线图格式（3 阶段 × 目标/AI动作/用户动作/成功标准/风险）。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID AbA1qzDH2XmMd5e1fQcmQ）。
+
+---
+
+## 28. V1.1.1 调试任务完成记录（真实链路检查 + 生产修复）
+
+### 检查结论（按用户 5 点）
+1. **Research Progress Timeline**：组件存在，但重新研究时 if(run) 分支不渲染时间线 → 已修复（running 时显示时间线）。
+2. **Pipeline 10 阶段**：确认执行（analyzer→…→evidence-verify→…→summary）。
+3. **evidence-verify 触发**：确认触发（真实运行 4 领域 recovered）。
+4. **外部结果入库**：❌ 根因——/api/external-research 只接旧 DuckDuckGo provider（被反爬 202 → 0 结果），Tavily（已配 key）未接入路由 → 已修复（改用新情报层 createExternalResearchFn，Tavily+DDG 兜底）。
+5. **Evidence Score 读真实来源**：❌ 原 prompt 只读章节文本 → 已修复（prompt 注入 report.sources 前 20 条真实来源，强制基于真实来源评分）。
+
+### 额外发现并修复的生产 bug
+- **synthesis 输出截断**：DeepSeek 默认 max_tokens≈4096，大 JSON 被截断 → 非法 JSON → 研究失败。callAiStage 支持 maxTokens；synthesis=16384、scoring/validation-plan/summary=8192。实测 synthesis 输出 5304 tokens 成功。
+- **saveRun 失败**（unsupported Unicode escape sequence）：抓取网页正文含孤立代理项/控制字符，Postgres JSONB 拒绝 → SupabaseResearchRepository.toRow 增加 JSON 消毒器（替换孤立代理为 U+FFFD、清除非法控制符）+ 单测。
+- **证据中心/验证卡/章节被折叠隐藏**：V1.0 折叠执行内容的 details 未闭合（缺 </div></details>），导致验证卡/证据中心/全部章节被包进折叠区 → 结构修复（下一步行动移入折叠区，证据内容回到可见区）。
+
+### Prompt 修改（创业合伙人）
+- AI 角色 = 创业合伙人（AI Co-Founder）：AI 负责 市场调研/数据收集/趋势分析/竞品分析/整理；用户只负责 提供资源、渠道、资金、做最终商业决策/审批。
+- 禁止让用户完成市场调研、数据收集、访谈、问卷、抓取等研究类任务；day90Plan 的 aiActions 承担研究类任务，userActions 只能含 资源/决策/审批。
+
+### 真实验证（浏览器 + 数据库）
+- 真实重新研究：10 阶段全完成、外部研究 搜索7/来源12-19、evidence-verify 补 7 来源、synthesis 输出 5304 tokens 成功、无错误入库。
+- 数据库：source_documents=19（真实来源：researchnester/theinsightpartners/woshipm/huxiu/tmtpost 等）；report.verification=recovered(4 领域 targetUser/demandStrength/moat/willingnessToPay)；insufficientEvidence 已清空（市场/竞争/付费意愿均获来源）。
+- 判断（新 prompt）：AI 动作=自动抓取社区/收集竞品/分析访谈/调研渠道；用户动作=提供联系方式/审批/提供资金/提供客户名单——研究类任务全部由 AI 承担。
+- 截图：outputs/screenshots/v111/（13 张：研究时间线 01/02/04、报告 03/05/07/13、证据验证卡 08、证据中心 09、过程记录 10、决策路线图 11、来源卡 12）。
+
+### 验收
+- 317/317 测试通过（新增：saveRun 消毒器单测）、lint 0、tsc/build 通过。
+- 部署：bizmentor.top（最终 BUILD_ID xSWPj5UdGxWVmDK3xT1HM）。
