@@ -13,26 +13,28 @@ export interface PoolActionResult {
   ok: boolean;
 }
 
-/** 对机会池中的 AI 机会执行状态动作（软更新：状态 + 时间戳 + 原因，编码进 notes） */
+/** 对任意商机执行统一生命周期动作（V1.x：收藏/删除/推进/研究，不限于 AI 雷达来源） */
 export async function applyPoolAction(
   opportunityId: string,
   action: PoolAction,
   repo: OpportunityRepository,
-  opts: { reason?: string } = {},
+  opts: { reason?: string; by?: string } = {},
 ): Promise<PoolActionResult> {
   const o = await repo.getOpportunity(opportunityId);
-  if (!o || o.source !== "ai") return { ok: false };
+  if (!o) return { ok: false };
   const now = new Date().toISOString();
   const meta = parseRadarNotes(o.notes);
   const patch: Partial<Omit<Opportunity, "id" | "createdAt">> = {};
 
   switch (action) {
     case "favorite":
-      meta.opportunityStatus = "favorite";
+      meta.isFavorite = true;
+      meta.opportunityStatus = o.source === "ai" ? "favorite" : meta.opportunityStatus;
       meta.favoriteAt = now;
       break;
     case "unfavorite":
-      meta.opportunityStatus = "discovered";
+      meta.isFavorite = false;
+      if (meta.opportunityStatus === "favorite") meta.opportunityStatus = "discovered";
       meta.favoriteAt = undefined;
       break;
     case "research":
@@ -51,10 +53,12 @@ export async function applyPoolAction(
     case "delete":
       meta.opportunityStatus = "deleted";
       meta.deletedAt = now;
+      meta.deletedBy = opts.by ?? "local-user";
       break;
     case "restore":
       meta.opportunityStatus = "discovered";
       meta.deletedAt = undefined;
+      meta.deletedBy = undefined;
       meta.rejectedAt = undefined;
       meta.rejectReason = undefined;
       break;
@@ -65,6 +69,20 @@ export async function applyPoolAction(
   return { opportunity: updated, ok: Boolean(updated) };
 }
 
+/** 统一收藏开关（任意来源商机）：true→收藏，false→取消 */
+export async function toggleFavorite(
+  opportunityId: string,
+  repo: OpportunityRepository,
+  opts: { by?: string } = {},
+): Promise<{ ok: boolean; favorite: boolean }> {
+  const o = await repo.getOpportunity(opportunityId);
+  if (!o) return { ok: false, favorite: false };
+  const current = o.isFavorite === true;
+  const action: PoolAction = current ? "unfavorite" : "favorite";
+  const res = await applyPoolAction(opportunityId, action, repo, opts);
+  return { ok: res.ok, favorite: !current };
+}
+
 /** AI 推荐排序：AI 优先级评分 → 最新发现 → 用户关注（favorite/promoting 优先） */
 export function sortPool(list: Opportunity[]): Opportunity[] {
   return [...list].sort((a, b) => {
@@ -72,8 +90,8 @@ export function sortPool(list: Opportunity[]): Opportunity[] {
     const pb = priorityScore(b);
     if (pb !== pa) return pb - pa;
     if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
-    const fa = a.opportunityStatus === "favorite" || a.opportunityStatus === "promoting" ? 1 : 0;
-    const fb = b.opportunityStatus === "favorite" || b.opportunityStatus === "promoting" ? 1 : 0;
+    const fa = a.isFavorite || a.opportunityStatus === "promoting" ? 1 : 0;
+    const fb = b.isFavorite || b.opportunityStatus === "promoting" ? 1 : 0;
     return fb - fa;
   });
 }
@@ -83,7 +101,7 @@ export function priorityScore(o: Opportunity): number {
   const meta = parseRadarNotes(o.notes);
   const base = meta.score ?? 0;
   const bonus = meta.suggestion === "值得研究" ? 10 : meta.suggestion === "继续观察" ? 0 : -15;
-  const userBump = o.opportunityStatus === "favorite" ? 5 : o.opportunityStatus === "promoting" ? 8 : 0;
+  const userBump = o.isFavorite ? 5 : o.opportunityStatus === "promoting" ? 8 : 0;
   return Math.min(100, Math.max(0, base + bonus + userBump));
 }
 

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowLeft, FlaskConical, Landmark } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { FlaskConical, Landmark } from "lucide-react";
+import { BackButton } from "@/components/common/BackButton";
+import { stripRadarMeta } from "@/lib/radar/service";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
 import { ExecutiveDecisionPanel } from "@/components/decision/ExecutiveDecisionPanel";
@@ -18,10 +20,14 @@ import { formatDate } from "@/lib/utils/format";
 
 type Tab = "research" | "decision";
 
-/** 商机详情（V1.0：机会研究中心 / 创业执行决策 双 Tab） */
-export default function OpportunityDetailPage() {
+/** 商机详情（V1.0：机会研究中心 / 创业执行决策 双 Tab；V1.x 智能返回 + 面包屑） */
+function OpportunityDetailContent() {
   const { id } = useParams<{ id: string }>();
   const idStr = String(id);
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
+  const backHref = from === "pool" ? "/radar/pool" : from === "radar" ? "/radar" : from === "favorites" ? "/opportunities/favorites" : "/opportunities";
+  const backLabel = from === "pool" ? "返回机会池" : from === "radar" ? "返回AI雷达" : from === "favorites" ? "返回收藏" : "返回商机";
   const [tab, setTab] = useState<Tab>("research");
 
   const { opportunities, loading, update } = useOpportunities();
@@ -71,13 +77,15 @@ export default function OpportunityDetailPage() {
 
   return (
     <div className="px-5 pb-4">
-      <Link
-        href="/opportunities"
-        className="mb-1 inline-flex items-center gap-1 pt-3 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-      >
-        <ArrowLeft className="size-4" />
-        返回商机
-      </Link>
+      <BackButton href={backHref} label={backLabel} />
+      {/* 面包屑（V1.x） */}
+      <div className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+        <Link href="/" className="hover:text-indigo-500">首页</Link>
+        <span className="mx-1">›</span>
+        <Link href="/opportunities" className="hover:text-indigo-500">商机</Link>
+        <span className="mx-1">›</span>
+        <span className="text-slate-600 dark:text-slate-300">{opportunity.name.slice(0, 12)}</span>
+      </div>
 
       <div className="mt-1 flex items-center justify-between gap-3">
         <h2 className="text-xl font-bold leading-snug text-slate-900 dark:text-white">
@@ -105,7 +113,7 @@ export default function OpportunityDetailPage() {
           <>
             <h3 className="mt-4 text-sm font-semibold text-slate-900 dark:text-white">备注</h3>
             <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-              {opportunity.notes}
+              {stripRadarMeta(opportunity.notes)}
             </p>
           </>
         ) : null}
@@ -168,5 +176,13 @@ export default function OpportunityDetailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OpportunityDetailPage() {
+  return (
+    <Suspense fallback={<div className="px-5 pt-8 text-center text-xs text-slate-400">加载中…</div>}>
+      <OpportunityDetailContent />
+    </Suspense>
   );
 }

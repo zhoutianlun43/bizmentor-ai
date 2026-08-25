@@ -69,12 +69,16 @@ export interface Opportunity {
   scanId?: string;
   /** 机会池状态（V1.3：discovered/favorite/researching/promoting/rejected/deleted） */
   opportunityStatus?: OpportunityPoolStatus;
+  /** 统一收藏（V1.x：所有来源商机共享） */
+  isFavorite?: boolean;
   favoriteAt?: string;
   promotedAt?: string;
   rejectedAt?: string;
   deletedAt?: string;
   /** 放弃原因（V1.3：保留供 AI 复盘） */
   rejectReason?: string;
+  /** 软删除操作者（V1.x） */
+  deletedBy?: string;
 }
 
 /** 新增商机表单输入（与存储结构分离，便于未来校验/扩展） */
@@ -89,11 +93,13 @@ export interface OpportunityInput {
   status?: OpportunityStatus;
   /** 机会池状态（V1.3） */
   opportunityStatus?: OpportunityPoolStatus;
+  isFavorite?: boolean;
   favoriteAt?: string;
   promotedAt?: string;
   rejectedAt?: string;
   deletedAt?: string;
   rejectReason?: string;
+  deletedBy?: string;
 }
 
 /** AI 商业雷达发现（V0.8）：AI 主动扫描全球市场生成的机会情报（行业无关） */

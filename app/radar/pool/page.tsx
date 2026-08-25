@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { BackButton } from "@/components/common/BackButton";
 import { Card } from "@/components/ui/Card";
 import { OpportunityCard } from "@/components/radar/OpportunityCard";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
@@ -67,6 +68,7 @@ function PoolContent() {
 
   return (
     <div className="px-5 pb-4">
+      <BackButton href="/radar" label="返回AI商业雷达" />
       <AppHeader title="AI 发现机会池" subtitle="全部 AI 自动发现 · 按 AI 优先级排序" />
 
       <div className="mt-2 flex gap-1.5 overflow-x-auto">

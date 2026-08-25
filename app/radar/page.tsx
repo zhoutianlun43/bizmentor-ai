@@ -84,7 +84,7 @@ export default function RadarPage() {
   const statCards = [
     { label: "本次扫描发现", value: latestItems.length, href: "/radar/latest", icon: <Radar className="size-4 text-indigo-500" /> },
     { label: "AI累计发现机会", value: totalAI, href: "/radar/pool", icon: <Target className="size-4 text-emerald-500" /> },
-    { label: "我的收藏", value: favoriteCount, href: "/radar/pool?tab=favorite", icon: <Bookmark className="size-4 text-amber-500" /> },
+    { label: "我的收藏", value: favoriteCount, href: "/opportunities/favorites", icon: <Bookmark className="size-4 text-amber-500" /> },
     { label: "推进项目", value: promotingCount, href: "/radar/pool?tab=promoting", icon: <Rocket className="size-4 text-sky-500" /> },
   ];
 

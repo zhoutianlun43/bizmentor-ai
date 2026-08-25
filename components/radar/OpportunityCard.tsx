@@ -1,10 +1,8 @@
 /**
- * AI 发现机会卡（V1.3）：机会池统一卡片 + 状态动作。
+ * AI 发现机会卡（V1.3；V1.x 统一操作）：机会池卡片 + 状态徽章 + 统一动作。
  */
-import { useRouter } from "next/navigation";
-import { Ban, Bookmark, BookmarkCheck, ExternalLink, Rocket, Sparkles, Trash2, Zap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { OpportunityActions } from "@/components/common/OpportunityActions";
 import { parseRadarNotes } from "@/lib/radar/service";
 import { POOL_STATUS_LABELS, priorityScore } from "@/lib/radar/pool-service";
 import type { Opportunity } from "@/lib/types";
@@ -19,18 +17,15 @@ const SUGGESTION_STYLE: Record<string, string> = {
 interface Props {
   opportunity: Opportunity;
   busy?: boolean;
-  /** 动作回调（父组件执行状态更新/跳转） */
   onAction?: (action: PoolAction, id: string) => void;
 }
 
-/** 机会卡：名称/描述/评分/市场方向/扫描批次/状态 + 操作按钮 */
+/** 机会卡：名称/描述/评分/市场方向/扫描批次/状态 + 统一操作 */
 export function OpportunityCard({ opportunity, busy, onAction }: Props) {
-  const router = useRouter();
   const meta = parseRadarNotes(opportunity.notes);
   const status = opportunity.opportunityStatus ?? "discovered";
   const st = POOL_STATUS_LABELS[status] ?? POOL_STATUS_LABELS.discovered;
   const priority = priorityScore(opportunity);
-  const act = (a: PoolAction) => onAction?.(a, opportunity.id);
 
   return (
     <Card>
@@ -55,46 +50,11 @@ export function OpportunityCard({ opportunity, busy, onAction }: Props) {
         <span>来源：AI商业雷达</span>
         <span>发现于 {opportunity.createdAt.slice(0, 10)}</span>
         {meta.scanId ? <span>批次：{meta.scanId.slice(0, 8)}</span> : null}
+        {opportunity.isFavorite ? <span className="text-amber-500">⭐ 已收藏</span> : null}
         {status === "rejected" && meta.rejectReason ? <span className="text-rose-500">放弃原因：{meta.rejectReason}</span> : null}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {status === "discovered" && (
-          <>
-            <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => act("favorite")}><Bookmark className="size-3.5" />收藏</Button>
-            <Button size="sm" className="flex-1" disabled={busy} onClick={() => act("research")}><Sparkles className="size-3.5" />开始深度研究</Button>
-            <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => act("promote")}><Rocket className="size-3.5" />推进</Button>
-            <Button size="sm" variant="ghost" className="flex-1" disabled={busy} onClick={() => act("reject")}><Ban className="size-3.5" />放弃</Button>
-            <Button size="sm" variant="ghost" className="flex-1" disabled={busy} onClick={() => act("delete")}><Trash2 className="size-3.5" />删除</Button>
-          </>
-        )}
-        {status === "favorite" && (
-          <>
-            <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => act("unfavorite")}><BookmarkCheck className="size-3.5" />取消收藏</Button>
-            <Button size="sm" className="flex-1" disabled={busy} onClick={() => act("research")}><Sparkles className="size-3.5" />开始深度研究</Button>
-            <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => act("promote")}><Rocket className="size-3.5" />推进</Button>
-            <Button size="sm" variant="ghost" className="flex-1" disabled={busy} onClick={() => act("delete")}><Trash2 className="size-3.5" />删除</Button>
-          </>
-        )}
-        {status === "researching" && (
-          <>
-            <Button size="sm" className="flex-1" onClick={() => router.push(`/opportunities/${opportunity.id}`)}><Sparkles className="size-3.5" />查看研究</Button>
-            <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => act("promote")}><Rocket className="size-3.5" />推进</Button>
-          </>
-        )}
-        {status === "promoting" && (
-          <>
-            <Button size="sm" className="flex-1" onClick={() => router.push(`/opportunities/${opportunity.id}`)}><Zap className="size-3.5" />进入创业执行决策</Button>
-            <Button size="sm" variant="ghost" className="flex-1" disabled={busy} onClick={() => act("reject")}><Ban className="size-3.5" />归档/放弃</Button>
-          </>
-        )}
-        {status === "rejected" && (
-          <>
-            <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => act("restore")}><ExternalLink className="size-3.5" />重新开启</Button>
-            <Button size="sm" variant="ghost" className="flex-1" disabled={busy} onClick={() => act("delete")}><Trash2 className="size-3.5" />删除</Button>
-          </>
-        )}
-      </div>
+      <OpportunityActions opportunity={opportunity} busy={busy} onAction={onAction} />
     </Card>
   );
 }

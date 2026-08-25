@@ -3,8 +3,8 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { saveRadarFindings, buildRadarNotes, parseRadarNotes, setRadarMeta, pickPoolFields } from "../service";
-import { applyPoolAction, sortPool, priorityScore } from "../pool-service";
+import { saveRadarFindings, buildRadarNotes, parseRadarNotes, setRadarMeta, pickPoolFields, stripRadarMeta } from "../service";
+import { applyPoolAction, sortPool, priorityScore, toggleFavorite } from "../pool-service";
 import type { OpportunityRepository } from "../../opportunity/repository";
 import type { Opportunity, OpportunityInput, RadarFinding } from "../../types/opportunity";
 
@@ -134,4 +134,39 @@ test("AI 优先级排序：值得研究+高分优先，最新优先", async () =
   const sorted = sortPool([a, b]);
   assert.equal(sorted[0].id, "a", "高优先级在前");
   assert.ok(priorityScore(a) > priorityScore(b));
+});
+
+
+function manualOpp(id: string): Opportunity {
+  return { id, name: "手动商机" + id, description: "d", source: "user", status: "researching", createdAt: "2026-08-25T00:00:00.000Z" };
+}
+
+test("统一收藏：manual 商机 favorite → isFavorite=true，再次 → false", async () => {
+  const store: Opportunity[] = [manualOpp("m1")];
+  const repo = makeRepo(store);
+  const f = await toggleFavorite("m1", repo);
+  assert.equal(f.favorite, true);
+  assert.equal(store[0].isFavorite, true);
+  const u = await toggleFavorite("m1", repo);
+  assert.equal(u.favorite, false);
+  assert.equal(store[0].isFavorite, false);
+});
+
+test("统一删除：manual 商机软删 → deletedAt/deletedBy + 默认列表隐藏但 DB 保留", async () => {
+  const store: Opportunity[] = [manualOpp("m2")];
+  const repo = makeRepo(store);
+  const res = await applyPoolAction("m2", "delete", repo, { by: "tester" });
+  assert.ok(res.ok);
+  const after = await repo.listOpportunities();
+  assert.equal(after[0].opportunityStatus, "deleted");
+  assert.ok(after[0].deletedAt, "保留 deletedAt");
+  assert.equal(after[0].deletedBy, "tester");
+  assert.equal(after.filter((o) => o.opportunityStatus !== "deleted").length, 0, "默认列表隐藏");
+});
+
+test("stripRadarMeta：去掉元数据尾巴保留正文", async () => {
+  const notes = buildRadarNotes(finding(1), "scan-x") + " · isFav=true · favoriteAt=x";
+  assert.ok(stripRadarMeta(notes).startsWith("[AI雷达]"));
+  assert.ok(!stripRadarMeta(notes).includes("isFav"));
+  assert.equal(stripRadarMeta("用户备注 · isFav=true"), "用户备注");
 });

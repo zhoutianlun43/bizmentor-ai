@@ -420,3 +420,19 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **测试**：331/331（新增 8：20 个扫描入库/重读仍在/收藏5/推进3/放弃2保留原因/软删保留/研究流转/notes 往返/优先级排序）、lint 0、tsc/build 通过。
 - **部署**：bizmentor.top（BUILD_ID Ie_a-nQdJVBLCR9aQgjzH1）。
 - **截图**：outputs/screenshots/v13/（01 收藏/02 池全部/03 收藏tab/04 推进tab/05 收藏填充/06 已放弃/07 删除后/08 雷达删除后）。
+
+---
+
+## 32. V1.x 全局商机管理与导航体验优化完成记录
+
+- **统一商机操作系统**：收藏/删除不再专属 AI 雷达，所有来源商机（manual_create / ai_radar）统一支持 收藏 / 删除 / 推进 / 开始研究。
+- **统一字段**：isFavorite（boolean）+ favoriteAt（所有来源共享收藏）；软删除 deletedAt + deletedBy（禁止物理删除）；默认列表隐藏但数据库保留。
+- **统一组件**：components/common/OpportunityActions（收藏/取消收藏/删除+确认弹窗「确定删除该商业机会？删除后不会出现在默认列表，历史数据保留」/开始深度研究/推进/进入执行决策/归档放弃）+ components/common/BackButton（← 返回）。
+- **页面接入**：我的商机列表卡加统一操作 + 「我的收藏」入口 + 详情链接带 from；AI 机会卡/机会池/收藏列表/推进列表全部使用 OpportunityActions；新增 /opportunities/favorites（我的收藏，isFavorite=true 全来源，支持取消收藏/开始研究/进入执行决策）。
+- **智能返回**：详情页按来源返回（from=pool→机会池、from=radar→AI雷达、from=favorites→我的收藏、默认→我的商机）；机会池/本次扫描/我的收藏均加 BackButton；详情页加面包屑（首页 › 商机 › 机会名）。
+- **备注清洗**：详情页备注用 stripRadarMeta 隐藏元数据尾巴（修复历史污染数据展示）。
+- **修复**：setRadarMeta 的 display 提取改用 stripRadarMeta（修复 manual 商机取消收藏后 isFav=true 残留导致 isFavorite 无法取消的 bug）。
+- **验证**（真实浏览器+数据库）：我的商机列表统一按钮；收藏→我的收藏页显示；删除→confirm→默认列表隐藏；详情页 from=pool 显示「返回机会池」+ 面包屑 + 备注清洗；点击返回正确跳转 /radar/pool。
+- **测试**：334/334（新增 3：manual 收藏开关/软删保留/notes 清洗）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID G9141EfsdJnysmpUJSQkt）。
+- **截图**：outputs/screenshots/v1x/（01 列表统一操作/02 我的收藏/03 删除后/04 详情返回+面包屑/05 返回机会池）。

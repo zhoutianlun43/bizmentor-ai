@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
+import { Bookmark, Plus, Sparkles } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { OpportunityActions } from "@/components/common/OpportunityActions";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
+import { getOpportunityRepository } from "@/lib/repository/provider";
+import { applyPoolAction } from "@/lib/radar/pool-service";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
 import type { Opportunity } from "@/lib/types";
+import type { PoolAction } from "@/lib/radar/pool-service";
 
 /** 列表筛选项：混合了来源（AI发现/我发现的）与状态（研究中/验证中/已验证/已放弃） */
 type Filter = "all" | "ai" | "user" | "discovered" | "researching" | "validating" | "validated" | "abandoned";
@@ -35,14 +39,41 @@ function applyFilter(list: Opportunity[], filter: Filter): Opportunity[] {
 }
 
 export default function OpportunitiesPage() {
-  const { opportunities: list, loading, error } = useOpportunities();
+  const { opportunities: list, loading, error, list: refresh } = useOpportunities();
   const [filter, setFilter] = useState<Filter>("all");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const filtered = useMemo(() => applyFilter(list, filter), [list, filter]);
+  // V1.x：软删除的不显示在默认列表
+  const filtered = useMemo(() => applyFilter(list.filter((o) => o.opportunityStatus !== "deleted" && !o.deletedAt), filter), [list, filter]);
+
+  async function handleAction(action: PoolAction, id: string) {
+    setBusyId(id);
+    try {
+      const repo = getOpportunityRepository();
+      if (action === "reject") {
+        const reason = window.prompt("放弃原因（保留供 AI 复盘）：", "");
+        if (reason === null) return;
+        await applyPoolAction(id, "reject", repo, { reason });
+      } else {
+        await applyPoolAction(id, action, repo);
+      }
+      await refresh();
+    } catch {
+      // 忽略
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div className="px-5 pb-4">
-      <AppHeader title="商机" subtitle="可能值得研究的机会" />
+      <div className="flex items-center justify-between pr-5">
+        <AppHeader title="商机" subtitle="可能值得研究的机会" />
+        <Link href="/opportunities/favorites" className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+          <Bookmark className="mr-1 inline size-3.5" />
+          我的收藏
+        </Link>
+      </div>
 
       {/* V0.8：双入口 —— 创建商机 + AI商业雷达 */}
       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -95,8 +126,8 @@ export default function OpportunitiesPage() {
       ) : (
         <div className="mt-4 space-y-3">
           {filtered.map((opp) => (
-            <Link key={opp.id} href={`/opportunities/${opp.id}`}>
-              <Card className="transition-colors hover:border-indigo-300 dark:hover:border-indigo-700">
+            <Card key={opp.id} className="transition-colors hover:border-indigo-300 dark:hover:border-indigo-700">
+              <Link href={`/opportunities/${opp.id}?from=opportunities`}>
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-sm font-semibold leading-snug text-slate-900 dark:text-white">
                     {opp.name}
@@ -106,14 +137,16 @@ export default function OpportunitiesPage() {
                 <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                   {opp.description}
                 </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <StatusBadge status={opp.status} />
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {formatDate(opp.createdAt)}
-                  </span>
-                </div>
-              </Card>
-            </Link>
+              </Link>
+              <div className="mt-2 flex items-center gap-2">
+                <StatusBadge status={opp.status} />
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  {formatDate(opp.createdAt)}
+                </span>
+                {opp.isFavorite ? <span className="text-xs text-amber-500">⭐</span> : null}
+              </div>
+              <OpportunityActions opportunity={opp} busy={busyId === opp.id} onAction={handleAction} />
+            </Card>
           ))}
         </div>
       )}

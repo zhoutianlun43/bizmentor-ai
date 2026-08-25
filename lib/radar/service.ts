@@ -17,23 +17,27 @@ export interface RadarMeta {
   suggestion?: RadarFinding["suggestion"];
   scanId?: string;
   opportunityStatus?: OpportunityPoolStatus;
+  isFavorite?: boolean;
   favoriteAt?: string;
   promotedAt?: string;
   rejectedAt?: string;
   deletedAt?: string;
   rejectReason?: string;
+  deletedBy?: string;
 }
 
 /** 挑选 Opportunity 兼容的机会池字段（避免 score/category 冲突） */
-export function pickPoolFields(meta: RadarMeta): Pick<Opportunity, "scanId" | "opportunityStatus" | "favoriteAt" | "promotedAt" | "rejectedAt" | "deletedAt" | "rejectReason"> {
+export function pickPoolFields(meta: RadarMeta): Pick<Opportunity, "scanId" | "opportunityStatus" | "isFavorite" | "favoriteAt" | "promotedAt" | "rejectedAt" | "deletedAt" | "rejectReason" | "deletedBy"> {
   return {
     scanId: meta.scanId,
     opportunityStatus: meta.opportunityStatus,
+    isFavorite: meta.isFavorite,
     favoriteAt: meta.favoriteAt,
     promotedAt: meta.promotedAt,
     rejectedAt: meta.rejectedAt,
     deletedAt: meta.deletedAt,
     rejectReason: meta.rejectReason,
+    deletedBy: meta.deletedBy,
   };
 }
 
@@ -51,6 +55,8 @@ export function parseRadarNotes(notes: string | undefined): RadarMeta {
   if (m) meta.scanId = m[1];
   const st = notes.match(/oppStatus=([a-z]+)/);
   if (st) meta.opportunityStatus = st[1] as OpportunityPoolStatus;
+  const fav = notes.match(/isFav=(true|false)/);
+  if (fav) meta.isFavorite = fav[1] === "true";
   const at = (k: string, key: keyof RadarMeta) => {
     const r = notes.match(new RegExp(k + "=([^ ·]+)"));
     if (r) (meta[key] as string) = decodeURIComponent(r[1]);
@@ -60,7 +66,14 @@ export function parseRadarNotes(notes: string | undefined): RadarMeta {
   at("rejectedAt", "rejectedAt");
   at("deletedAt", "deletedAt");
   at("rejectReason", "rejectReason");
+  at("deletedBy", "deletedBy");
   return meta;
+}
+
+/** 去掉元数据尾巴，只保留可展示文本（详情/备注显示用） */
+export function stripRadarMeta(notes: string | undefined): string {
+  if (!notes) return "";
+  return notes.split(/ · (?:scanId|oppStatus|isFav|favoriteAt|promotedAt|rejectedAt|deletedAt|rejectReason|deletedBy)=/)[0];
 }
 
 /** 把雷达发现编码为 notes（显示头 + 元数据，零迁移持久化） */
@@ -75,18 +88,20 @@ export function buildRadarNotes(f: RadarFinding, scanId: string): string {
 /** 在 notes 上更新机会池元数据（保留显示头） */
 export function setRadarMeta(notes: string | undefined, meta: RadarMeta): string {
   const parsed = parseRadarNotes(notes);
-  const display = notes?.startsWith("[AI雷达]")
-    ? notes.split(" · scanId=")[0]
+  const display = notes
+    ? stripRadarMeta(notes) || `[AI雷达] ${meta.category ?? "未分类"} · 评分 ${meta.score ?? 0} · ${meta.suggestion ?? "继续观察"}`
     : `[AI雷达] ${meta.category ?? "未分类"} · 评分 ${meta.score ?? 0} · ${meta.suggestion ?? "继续观察"}`;
   const next: RadarMeta = { ...parsed, ...meta };
   const parts = [display];
   if (next.scanId) parts.push(`scanId=${next.scanId}`);
   if (next.opportunityStatus) parts.push(`oppStatus=${next.opportunityStatus}`);
+  if (next.isFavorite !== undefined) parts.push(`isFav=${next.isFavorite ? "true" : "false"}`);
   if (next.favoriteAt) parts.push(`favoriteAt=${encodeURIComponent(next.favoriteAt)}`);
   if (next.promotedAt) parts.push(`promotedAt=${encodeURIComponent(next.promotedAt)}`);
   if (next.rejectedAt) parts.push(`rejectedAt=${encodeURIComponent(next.rejectedAt)}`);
   if (next.deletedAt) parts.push(`deletedAt=${encodeURIComponent(next.deletedAt)}`);
   if (next.rejectReason) parts.push(`rejectReason=${encodeURIComponent(next.rejectReason)}`);
+  if (next.deletedBy) parts.push(`deletedBy=${encodeURIComponent(next.deletedBy)}`);
   return parts.join(" · ");
 }
 

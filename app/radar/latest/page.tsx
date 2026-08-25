@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { BackButton } from "@/components/common/BackButton";
 import { Card } from "@/components/ui/Card";
 import { OpportunityCard } from "@/components/radar/OpportunityCard";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
@@ -42,6 +43,7 @@ export default function RadarLatestPage() {
 
   return (
     <div className="px-5 pb-4">
+      <BackButton href="/radar" label="返回AI商业雷达" />
       <AppHeader title="本次扫描结果" subtitle={latest ? `${latest.scannedAt.slice(0, 10)} · 发现 ${latest.found} 个机会` : "暂无扫描"} />
       <div className="mt-3 space-y-3">
         {items.map((o) => <OpportunityCard key={o.id} opportunity={o} onAction={handleAction} />)}
