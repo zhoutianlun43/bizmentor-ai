@@ -436,3 +436,20 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **测试**：334/334（新增 3：manual 收藏开关/软删保留/notes 清洗）、lint 0、tsc/build 通过。
 - **部署**：bizmentor.top（BUILD_ID G9141EfsdJnysmpUJSQkt）。
 - **截图**：outputs/screenshots/v1x/（01 列表统一操作/02 我的收藏/03 删除后/04 详情返回+面包屑/05 返回机会池）。
+
+---
+
+## 33. V1.4 AI Agent 异步任务系统完成记录（Task Engine）
+
+- **目标**：所有 AI 长任务（深度研究/AI商业判断/操盘报告/雷达扫描）脱离前端生命周期，后台独立运行；切页/关浏览器/锁屏/刷新均不中断。
+- **Task Engine**：lib/tasks/ —— 统一任务模型（id/userId/projectId/taskType/status/progress/currentStage/stages/result/error/时间戳/checkpoint）+ TaskStore（服务器 .data/tasks.json 文件持久化，零数据库迁移，跨重启存活）+ Engine（createAndStartTask 立即返回 taskId，后台异步执行，逐阶段更新进度 + AgentExecutionLog 记录 input/output/model/成本）。
+- **Executors**：research（服务端跑完整研究管线 + onStage 逐阶段更新进度/来源/证据，完成自动存 Supabase research_runs）、decision（判断→Evidence Score→操盘报告串行）、radar_scan（LLM 扫描 + 自动入库）。
+- **API**：POST /api/tasks（创建+后台执行返回 taskId）、GET /api/tasks（列表）、GET /api/tasks/:id（轮询 + 日志）。
+- **UI**：全局 AITaskBanner（轮询进行中任务，顶部显示「任务标题 · 阶段 · 进度% · 查看」）、TaskTimeline（进度条/当前阶段/阶段列表/搜索来源证据计数）、AI 任务中心 /tasks（进行中/已完成/失败分组，失败原因 + checkpoint「已完成 N 阶段失败于 X」）。
+- **迁移**：ResearchPanel/雷达页/ExecutiveDecisionPanel 全部改为任务驱动（点击→POST 创建→返回 taskId→2s 轮询→完成刷新；进入页面自动恢复该商机进行中的任务）。
+- **持久化**：文件存储（.data/tasks.json + agent-logs.jsonl），服务器重启后任务状态保留；任务中心可查看历史（含失败原因）。
+- **修复**：引擎创建任务时未存 payload → 任务执行器收不到入参（已修复 + 回归测试）。
+- **验证**（真实浏览器）：开始研究 → 切到首页 → 全局横幅显示「深度研究 · 20%」→ 后台继续（external-research→evidence-verify→scoring→validation-plan→完成）→ 任务中心「已完成」+ 查看结果 → 报告自动加载（执行器已存 Supabase）→ 刷新任务不丢；失败任务保留原因与 checkpoint。
+- **测试**：338/338（新增 4：任务完成/失败checkpoint/未知类型/持久化跨实例）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID K8IoWbPhn9fciWyjLuZVl）。
+- **截图**：outputs/screenshots/v14/（01 研究任务时间线/02 任务中心/03 进行中横幅/04 任务中心进行中/05 报告加载）。

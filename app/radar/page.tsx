@@ -8,18 +8,20 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { OpportunityCard } from "@/components/radar/OpportunityCard";
+import { TaskTimeline } from "@/components/tasks/TaskTimeline";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { getOpportunityRepository } from "@/lib/repository/provider";
 import { buildScanHistory } from "@/lib/radar/service";
 import { applyPoolAction } from "@/lib/radar/pool-service";
-import { uid } from "@/lib/store/storage";
 import type { PoolAction } from "@/lib/radar/pool-service";
+import type { Task } from "@/lib/tasks/types";
 
 /** AI 商业雷达（V1.3）：机会资产库首页——统计卡可点击 + 扫描 + 机会池管理入口 */
 export default function RadarPage() {
   const router = useRouter();
   const { opportunities, list } = useOpportunities();
   const [busyScan, setBusyScan] = useState(false);
+  const [scanTask, setScanTask] = useState<Task | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState("");
@@ -40,20 +42,38 @@ export default function RadarPage() {
     if (busyScan) return;
     setBusyScan(true);
     setError(null);
+    setScanTask(null);
     try {
-      const res = await fetch("/api/radar/scan", {
+      const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scanId: uid() }),
+        body: JSON.stringify({ type: "radar_scan", title: "AI 商业雷达全球扫描" }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? data.error ?? "扫描失败");
-      setSummary(data.summary ?? "");
-      await list();
+      if (!res.ok) throw new Error(data.message ?? data.error ?? "创建任务失败");
+      const taskId = data.taskId as string;
+      const timer = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
+          const d = await r.json();
+          setScanTask(d.task);
+          if (d.task.status === "completed" || d.task.status === "failed") {
+            clearInterval(timer);
+            setBusyScan(false);
+            if (d.task.status === "completed") {
+              setSummary(`扫描完成：发现 ${d.task.result?.savedCount ?? 0} 个商业机会（已保存）`);
+              await list();
+            } else {
+              setError(d.task.error ?? "扫描失败");
+            }
+          }
+        } catch {
+          // 忽略
+        }
+      }, 2000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "扫描失败");
-    } finally {
       setBusyScan(false);
+      setError(e instanceof Error ? e.message : "创建任务失败");
     }
   }
 
@@ -94,8 +114,11 @@ export default function RadarPage() {
 
       <Button onClick={scan} disabled={busyScan} className="mt-2 w-full">
         <RefreshCw className="size-4" />
-        {busyScan ? "扫描中…" : "重新扫描全球商业机会"}
+        {busyScan ? "后台扫描中…" : "重新扫描全球商业机会"}
       </Button>
+      {busyScan && scanTask ? (
+        <div className="mt-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><TaskTimeline task={scanTask} /></div>
+      ) : null}
 
       {/* 统计卡（可点击） */}
       <div className="mt-2 grid grid-cols-2 gap-2">

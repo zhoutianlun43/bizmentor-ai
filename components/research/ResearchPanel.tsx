@@ -1,65 +1,126 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TextArea } from "@/components/ui/FormField";
-import { ResearchProgress } from "./ResearchProgress";
 import { ResearchReportView } from "./ResearchReportView";
-import { ResearchService, createApiRunAi, createExternalResearchApi } from "@/lib/research";
-import { getResearchRepository } from "@/lib/repository/provider";
-import type { ResearchRun, StageRun } from "@/lib/research";
+import { TaskTimeline } from "@/components/tasks/TaskTimeline";
+import type { ResearchRun } from "@/lib/research";
 import type { Opportunity } from "@/lib/types";
+import type { Task } from "@/lib/tasks/types";
 
 interface ResearchPanelProps {
   opportunity: Opportunity;
-  /** 已存在的研究运行（由页面通过 repository 读取） */
   run?: ResearchRun | undefined;
-  /** 研究版本（V1.0：Research v{n}） */
   version?: number;
 }
 
-/** 商机研究面板：开始研究 / 阶段进度 / 结构化报告 */
+/** 商机研究面板（V1.4）：后台 AI 任务驱动——开始→taskId→轮询→恢复 */
 export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps) {
   const [running, setRunning] = useState(false);
-  const [stages, setStages] = useState<StageRun[]>([]);
+  const [task, setTask] = useState<Task | null>(null);
   const [materials, setMaterials] = useState("");
   const [error, setError] = useState("");
+
+  // 自动恢复：进入页面时若有该商机进行中的研究任务 → 继续跟踪
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    async function resume() {
+      try {
+        const res = await fetch("/api/tasks", { cache: "no-store" });
+        const data = await res.json();
+        const t = (data.tasks ?? []).find(
+          (x: Task) => x.taskType === "research" && x.projectId === opportunity.id && (x.status === "running" || x.status === "pending"),
+        );
+        if (!cancelled && t) {
+          setTask(t);
+          setRunning(true);
+          poll(t.id);
+        }
+      } catch {
+        // 忽略
+      }
+    }
+    async function poll(id: string) {
+      if (timer) clearInterval(timer);
+      timer = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/tasks/${id}`, { cache: "no-store" });
+          const d = await r.json();
+          if (cancelled) return;
+          setTask(d.task);
+          if (d.task.status === "completed" || d.task.status === "failed") {
+            clearInterval(timer);
+            setRunning(false);
+            if (d.task.status === "completed") {
+              if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
+            } else {
+              setError(d.task.error ?? "研究失败");
+            }
+          }
+        } catch {
+          // 忽略
+        }
+      }, 2000);
+    }
+    resume();
+    return () => { cancelled = true; if (timer) clearInterval(timer); };
+  }, [opportunity.id]);
 
   async function handleStart() {
     if (running) return;
     setRunning(true);
     setError("");
-    setStages([]);
-    const service = new ResearchService({
-      repository: getResearchRepository(),
-      runAi: createApiRunAi(),
-      externalResearch: createExternalResearchApi(),
-    });
+    setTask(null);
     try {
-      await service.startResearch(
-        {
-          opportunity: {
-            id: opportunity.id,
-            name: opportunity.name,
-            description: opportunity.description,
-            notes: opportunity.notes,
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "research",
+          projectId: opportunity.id,
+          title: `${opportunity.name} 深度研究`,
+          payload: {
+            opportunity: { id: opportunity.id, name: opportunity.name, description: opportunity.description, notes: opportunity.notes },
+            materials: materials.trim() ? [{ id: "user-material-1", title: "用户补充资料", content: materials.trim() }] : [],
           },
-          materials: materials.trim()
-            ? [{ id: "user-material-1", title: "用户补充资料", content: materials.trim() }]
-            : [],
-        },
-        (stage) => setStages((prev) => [...prev, stage]),
-      );
-      // 触发页面 hook 刷新（Supabase 写入无 storage 事件，需要显式通知）
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? data.error ?? "创建任务失败");
+      const taskId = data.taskId as string;
+      const timer = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
+          const d = await r.json();
+          setTask(d.task);
+          if (d.task.status === "completed" || d.task.status === "failed") {
+            clearInterval(timer);
+            setRunning(false);
+            if (d.task.status === "completed") {
+              if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
+            } else {
+              setError(d.task.error ?? "研究失败");
+            }
+          }
+        } catch {
+          // 忽略
+        }
+      }, 2000);
     } catch (err) {
-      setError((err as Error).message?.slice(0, 200) ?? "研究失败");
-    } finally {
       setRunning(false);
+      setError((err as Error).message?.slice(0, 200) ?? "创建任务失败");
     }
   }
+
+  const timeline = running && task ? (
+    <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+      <TaskTimeline task={task} />
+    </div>
+  ) : null;
 
   if (run) {
     return (
@@ -69,27 +130,14 @@ export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps)
             <p className="text-xs font-medium text-slate-400">商业机会研究中心</p>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Research v{version ?? 1}</p>
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleStart}
-            disabled={running}
-          >
+          <Button variant="secondary" size="sm" onClick={handleStart} disabled={running}>
             <RefreshCw className="size-3.5" />
             重新研究
           </Button>
         </div>
-        {error ? (
-          <p className="mt-2 text-xs text-rose-500" role="alert">{error}</p>
-        ) : null}
-        {/* V1.1.1：重新研究时也显示 Research Progress Timeline */}
-        {running ? (
-          <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <ResearchProgress stages={stages} />
-          </div>
-        ) : (
-          <ResearchReportView run={run} />
-        )}
+        {error ? <p className="mt-2 text-xs text-rose-500" role="alert">{error}</p> : null}
+        {timeline}
+        {!running && <ResearchReportView run={run} />}
       </div>
     );
   }
@@ -101,20 +149,16 @@ export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps)
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">商机研究</h3>
       </div>
       <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-        点击开始后，BizMentor 将执行：商机分析 → 研究规划 → 研究执行 → 综合 → 评分 → 验证方案 → 最终报告。
-        当前无外部搜索能力，缺少外部证据的结论会明确标注「需验证」，不会被写成事实。
+        点击开始后，AI 将在后台执行研究（关闭页面也不会中断）。研究进度实时同步，完成后自动生成报告。
       </p>
-
       {running ? (
-        <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-          <ResearchProgress stages={stages} />
-        </div>
+        timeline
       ) : (
         <>
           <TextArea
             label="补充资料（可选）"
             id="research-materials"
-            placeholder="粘贴你已有的资料：行业报告、竞品信息、用户访谈记录等。这些是唯一可被标记为「事实」的来源。"
+            placeholder="粘贴你已有的资料：行业报告、竞品信息、用户访谈记录等。"
             value={materials}
             onChange={(e) => setMaterials(e.target.value)}
             className="mt-3 min-h-20"
@@ -125,12 +169,7 @@ export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps)
           </Button>
         </>
       )}
-
-      {error ? (
-        <p className="mt-3 text-xs text-rose-500" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="mt-3 text-xs text-rose-500" role="alert">{error}</p> : null}
     </Card>
   );
 }

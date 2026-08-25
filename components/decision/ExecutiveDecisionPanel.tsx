@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { OperationPlanView } from "./OperationPlanView";
 import { BusinessJudgmentView } from "./BusinessJudgmentView";
+import { TaskTimeline } from "@/components/tasks/TaskTimeline";
+import type { Task } from "@/lib/tasks/types";
 import { DecisionPanel } from "./DecisionPanel";
 import type { Opportunity } from "@/lib/types";
 import type { ResearchRun } from "@/lib/research";
@@ -14,49 +16,57 @@ import type { ResearchRun } from "@/lib/research";
 export function ExecutiveDecisionPanel({ opportunity, run }: { opportunity: Opportunity; run?: ResearchRun }) {
   const [busy, setBusy] = useState(false);
   const [opBusy, setOpBusy] = useState(false);
+  const [judgmentTask, setJudgmentTask] = useState<Task | null>(null);
+  const [opTask, setOpTask] = useState<Task | null>(null);
   const [error, setError] = useState("");
   const [opError, setOpError] = useState("");
   const judgment = run?.report?.judgment;
   const operationPlan = run?.report?.operationPlan;
 
-  async function generate() {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      const res = await fetch("/api/judgment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opportunityId: opportunity.id }),
+  function startTask(type: string, title: string, setTask: (t: Task | null) => void, setRun: (v: boolean) => void, setErr: (e: string) => void) {
+    setRun(true);
+    setErr("");
+    setTask(null);
+    fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, projectId: opportunity.id, title, payload: { opportunityId: opportunity.id } }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.taskId) throw new Error(data.error ?? "创建任务失败");
+        const taskId = data.taskId as string;
+        const timer = setInterval(async () => {
+          try {
+            const r = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
+            const d = await r.json();
+            setTask(d.task);
+            if (d.task.status === "completed" || d.task.status === "failed") {
+              clearInterval(timer);
+              setRun(false);
+              if (d.task.status === "completed") {
+                if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
+              } else {
+                setErr(d.task.error ?? "生成失败");
+              }
+            }
+          } catch {
+            // 忽略
+          }
+        }, 2000);
+      })
+      .catch((err) => {
+        setRun(false);
+        setErr((err as Error).message?.slice(0, 200) ?? "创建任务失败");
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? data.error ?? "生成失败");
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
-    } catch (err) {
-      setError((err as Error).message?.slice(0, 200) ?? "生成失败");
-    } finally {
-      setBusy(false);
-    }
   }
 
-  async function generateOperation() {
-    if (opBusy) return;
-    setOpBusy(true);
-    setOpError("");
-    try {
-      const res = await fetch("/api/operation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opportunityId: opportunity.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? data.error ?? "生成失败");
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
-    } catch (err) {
-      setOpError((err as Error).message?.slice(0, 200) ?? "生成失败");
-    } finally {
-      setOpBusy(false);
-    }
+  function generate() {
+    startTask("judgment", `${opportunity.name} AI 商业判断`, setJudgmentTask, setBusy, setError);
+  }
+
+  function generateOperation() {
+    startTask("operation_plan", `${opportunity.name} 商业操盘手报告`, setOpTask, setOpBusy, setOpError);
   }
 
   if (!run?.report) {
@@ -91,6 +101,8 @@ export function ExecutiveDecisionPanel({ opportunity, run }: { opportunity: Oppo
       {opError ? (
         <p className="text-xs text-rose-500" role="alert">{opError}</p>
       ) : null}
+      {busy && judgmentTask ? <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><TaskTimeline task={judgmentTask} /></div> : null}
+      {opBusy && opTask ? <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><TaskTimeline task={opTask} /></div> : null}
       {operationPlan ? (
         <OperationPlanView plan={operationPlan} />
       ) : judgment ? (

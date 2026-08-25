@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { UserStatusBar } from "@/components/layout/UserStatusBar";
+import { AITaskBanner } from "@/components/tasks/AITaskBanner";
 import { OnboardingGuard } from "@/components/home/OnboardingGuard";
 import { RegisterSW } from "@/components/RegisterSW";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="mx-auto min-h-dvh w-full max-w-md">
             <OnboardingGuard />
             <UserStatusBar />
+            <AITaskBanner />
             <main className="pb-28">{children}</main>
             <BottomNav />
           </div>
