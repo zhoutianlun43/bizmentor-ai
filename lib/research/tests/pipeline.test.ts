@@ -4,17 +4,17 @@ import { runResearchPipeline } from "../pipeline";
 import { createHappyRunAi, makeOptions, sampleInput } from "./helpers";
 
 /** 端到端：正常流程（含外部研究）→ 完整 ResearchReport */
-test("完整流水线正常流程：9 阶段完成，产出含真实来源的结构化报告", async () => {
+test("完整流水线正常流程：10 阶段完成，产出含真实来源的结构化报告", async () => {
   const runAi = createHappyRunAi();
   const run = await runResearchPipeline(sampleInput, makeOptions(runAi));
 
   assert.equal(run.status, "completed");
-  assert.equal(run.stages.length, 9);
+  assert.equal(run.stages.length, 10);
   assert.ok(run.stages.every((s) => s.status === "completed"), "所有阶段应 completed");
 
   assert.deepEqual(
     run.stages.map((s) => s.stage),
-    ["analyzer", "planner", "external-research", "evidence-extraction", "evidence-validation", "synthesis", "scoring", "validation-plan", "summary"],
+    ["analyzer", "planner", "external-research", "evidence-extraction", "evidence-validation", "evidence-verify", "synthesis", "scoring", "validation-plan", "summary"],
   );
 
   assert.ok(run.report, "应产出报告");

@@ -190,7 +190,7 @@ test("成本记录：AI 阶段 cost>0，external 阶段 cost=0，总成本可汇
   const run = await runResearchPipeline(sampleInput, makeOptions(createHappyRunAi()));
   const external = run.stages.find((s) => s.stage === "external-research");
   assert.equal(external?.estimatedCost, 0);
-  const aiStages = run.stages.filter((s) => s.stage !== "external-research" && s.stage !== "evidence-validation");
+  const aiStages = run.stages.filter((s) => s.stage !== "external-research" && s.stage !== "evidence-validation" && s.stage !== "evidence-verify");
   assert.ok(aiStages.every((s) => s.estimatedCost > 0), "AI 阶段应记录成本");
 });
 

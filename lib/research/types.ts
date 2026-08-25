@@ -22,6 +22,7 @@ export type ResearchStageName =
   | "external-research"
   | "evidence-extraction"
   | "evidence-validation"
+  | "evidence-verify"
   | "synthesis"
   | "scoring"
   | "validation-plan"
@@ -32,6 +33,26 @@ export type ResearchRunStatus = "running" | "completed" | "degraded" | "failed";
 
 /** 阶段运行状态 */
 export type StageRunStatus = "completed" | "failed" | "skipped";
+
+/** 单领域证据自动验证结果（V1.1） */
+export interface AreaVerification {
+  area: ResearchArea;
+  /** 自动验证状态：recovered=已补充外部来源 / failed=仍失败 */
+  status: "recovered" | "failed";
+  searchedQueries: string[];
+  sourcesFound: number;
+  /** 失败原因诊断 */
+  diagnosis?: string;
+}
+
+/** 证据自动验证结果（V1.1：证据不足 → 扩展搜索 → 增加数据源 → 诊断） */
+export interface EvidenceVerificationResult {
+  id: string;
+  runId: string;
+  areas: AreaVerification[];
+  overall: "recovered" | "partial" | "failed";
+  createdAt: string;
+}
 
 /** 研究领域（对应 15 项研究内容） */
 export type ResearchArea =
@@ -318,14 +339,23 @@ export interface UnitEconomicsModel {
 /** 是否建议进入（AI 商业判断，V0.9） */
 export type BusinessRecommendation = "recommend_enter" | "conditional_enter" | "continue_observe" | "not_recommend";
 
-/** 90 天验证计划步骤（V0.9：时间线） */
+/** AI 商业验证路线图阶段（V1.1：90 天计划 → 市场/产品/商业三阶段验证） */
 export interface Day90Step {
-  /** 阶段，如「第1-2周」 */
+  /** 阶段，如「阶段1 市场验证」 */
   phase: string;
   title: string;
-  actions: string[];
+  /** 阶段目标（V1.1） */
+  goal?: string;
+  /** AI 自动执行的动作（V1.1：如自动抓取趋势、收集数据） */
+  aiActions?: string[];
+  /** 用户需执行的动作（V1.1） */
+  userActions?: string[];
+  /** 兼容旧数据：动作列表 */
+  actions?: string[];
   /** 该阶段的成功度量 */
   successMetric: string;
+  /** 阶段风险（V1.1） */
+  risk?: string;
 }
 
 /** 第一批客户获取方案（V0.9） */
@@ -472,6 +502,8 @@ export interface ResearchReport {
   judgment?: BusinessJudgment;
   /** Evidence Score（V0.9.1：证据关联评分） */
   evidenceScore?: EvidenceScore;
+  /** 证据自动验证（V1.1） */
+  verification?: EvidenceVerificationResult;
   meta: ReportMeta;
 }
 
@@ -488,6 +520,10 @@ export interface StageRun {
   durationMs: number;
   /** 安全摘要（不包含 Key / 响应原文） */
   error?: string;
+  /** 数据来源数量（V1.1：外部研究/自动验证阶段产出） */
+  sourcesFound?: number;
+  /** 已发现证据数量（V1.1：证据提取/验证阶段产出） */
+  evidenceFound?: number;
 }
 
 /** 一次商机研究的完整运行（可持久化） */
@@ -506,6 +542,8 @@ export interface ResearchRun {
   sourceDocuments: SourceDocument[];
   /** 多来源交叉验证结果 */
   evidenceValidation?: CrossValidationResult;
+  /** 证据自动验证结果（V1.1：扩展搜索/增加数据源/失败诊断） */
+  evidenceVerification?: EvidenceVerificationResult;
   report?: ResearchReport;
   error?: { stage: string; type: string; message: string };
 }

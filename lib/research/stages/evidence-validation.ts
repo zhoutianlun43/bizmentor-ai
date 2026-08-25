@@ -26,6 +26,7 @@ export interface EvidenceValidationStageResult {
   estimatedCost: number;
   durationMs: number;
   attempts: number;
+  evidenceFound?: number;
 }
 
 export async function runEvidenceValidationStage(
@@ -55,5 +56,6 @@ export async function runEvidenceValidationStage(
     estimatedCost: 0,
     durationMs: Date.now() - startedAt,
     attempts: 0,
+    evidenceFound: enrichedFindings.reduce((n, f) => n + f.evidence.length, 0),
   };
 }

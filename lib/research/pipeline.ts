@@ -34,6 +34,7 @@ import { runPlannerStage } from "./stages/planner";
 import { runExternalResearchStage } from "./stages/external-research";
 import { runEvidenceExtractionStage } from "./stages/evidence-extraction";
 import { runEvidenceValidationStage } from "./stages/evidence-validation";
+import { runEvidenceVerifyStage } from "./stages/evidence-verify";
 import { runSynthesisStage } from "./stages/synthesis";
 import { runScoringStage } from "./stages/scoring";
 import { runValidationPlanStage } from "./stages/validation-plan";
@@ -57,7 +58,7 @@ import type {
   UserMaterial,
 } from "./types";
 
-export const TOTAL_STAGES = 9;
+export const TOTAL_STAGES = 10;
 
 export interface PipelineOptions {
   /** AI 调用函数（必填：测试注入 fake；客户端传 /api/ai 适配器；服务端传 runAI） */
@@ -168,6 +169,8 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
   let findings: ResearchFinding[] = [];
   let externalOutput: ExternalResearchOutput = { searches: [], documents: [] };
   let crossValidation: ResearchRun["evidenceValidation"];
+  let verification: ResearchRun["evidenceVerification"];
+  let docsForBinding: SourceDocument[] = [];
   let status: ResearchRun["status"] = "running";
   let report: ResearchReport | undefined;
   let runError: ResearchRun["error"];
@@ -179,6 +182,8 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     outputTokens: number;
     estimatedCost: number;
     durationMs: number;
+    sourcesFound?: number;
+    evidenceFound?: number;
   }
 
   async function runStage<T>(stage: ResearchStageName, fn: () => Promise<{ data: T } & StageResultLike>): Promise<T> {
@@ -194,6 +199,8 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
         outputTokens: result.outputTokens,
         estimatedCost: result.estimatedCost,
         durationMs: result.durationMs,
+        sourcesFound: result.sourcesFound,
+        evidenceFound: result.evidenceFound,
       };
       stages.push(stageRun);
       onStage?.(stageRun, stages.length - 1);
@@ -252,24 +259,43 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     findings = validation.findings;
     crossValidation = validation.crossValidation;
 
+    // 5.5) 证据自动验证（V1.1：证据不足 → 扩展搜索 → 增加数据源 → 诊断）
+    const verifyDocs: SourceDocument[] = [];
+    try {
+      const verifyStage = await runStage("evidence-verify", () => runEvidenceVerifyStage(ctx, validation.findings));
+      verifyDocs.push(...verifyStage.newDocs);
+      if (verifyStage.areas.length > 0) {
+        verification = {
+          id: uid(),
+          runId,
+          areas: verifyStage.areas,
+          overall: verifyStage.overall,
+          createdAt: new Date().toISOString(),
+        };
+      }
+    } catch {
+      // 证据自动验证失败不阻塞主流程
+    }
+    docsForBinding = [...sourceDocuments, ...externalOutput.documents, ...verifyDocs];
+
     // 6) Synthesis
     const synthesisCall = await runStage("synthesis", () => runSynthesisStage(ctx, analyzer, findings));
     const synthesis: NormalizedSynthesis = {
       sections: synthesisCall.sections.map((s) => ({
         ...s,
         confidence: clamp01(s.confidence),
-        evidence: bindAndEnforce(toEvidenceItems(s.evidence), [...sourceDocuments, ...externalOutput.documents]),
+        evidence: bindAndEnforce(toEvidenceItems(s.evidence), docsForBinding),
       })),
       competitors: (synthesisCall.competitors ?? []).map((c) => ({
         ...c,
-        evidence: bindAndEnforce(toEvidenceItems(c.evidence), [...sourceDocuments, ...externalOutput.documents]),
+        evidence: bindAndEnforce(toEvidenceItems(c.evidence), docsForBinding),
       })),
-      competitorMatrix: bindCellSources(synthesisCall.competitorMatrix, [...sourceDocuments, ...externalOutput.documents]),
+      competitorMatrix: bindCellSources(synthesisCall.competitorMatrix, docsForBinding),
     };
 
     // 7) Scoring（确定性聚合）
     const scoring = await runStage("scoring", () => runScoringStage(ctx, synthesis.sections));
-    const allDocs = [...sourceDocuments, ...externalOutput.documents];
+    const allDocs = docsForBinding;
     const score: ScoreResult = withEnforcedEvidence(
       scoring,
       scoring.score_breakdown.map((d) => ({
@@ -295,6 +321,8 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
       sourceDocuments,
       externalOutput,
       crossValidation,
+      verification,
+      verifyDocs,
     });
     status = stages.some((s) => s.provider_degraded) ? "degraded" : "completed";
     report.meta = {
@@ -329,8 +357,9 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     stages,
     findings,
     scoreHistory: report ? [report.score] : [],
-    sourceDocuments: [...sourceDocuments, ...externalOutput.documents],
+    sourceDocuments: docsForBinding,
     evidenceValidation: crossValidation,
+    evidenceVerification: verification,
     report,
     error: runError,
   };
@@ -346,8 +375,10 @@ function buildReport(params: {
   sourceDocuments: SourceDocument[];
   externalOutput: ExternalResearchOutput;
   crossValidation: ResearchRun["evidenceValidation"];
+  verification?: ResearchRun["evidenceVerification"];
+  verifyDocs?: SourceDocument[];
 }): ResearchReport {
-  const { input, analyzer, synthesis, score, validationPlan, summary, sourceDocuments, externalOutput, crossValidation } = params;
+  const { input, analyzer, synthesis, score, validationPlan, summary, sourceDocuments, externalOutput, crossValidation, verification, verifyDocs } = params;
   const sections: ResearchSection[] = [];
 
   sections.push({
@@ -410,8 +441,8 @@ function buildReport(params: {
     confidence: 0.9,
   });
 
-  const allDocs = [...sourceDocuments, ...externalOutput.documents];
-  const hasExternalEvidence = externalOutput.documents.length > 0;
+  const allDocs = [...sourceDocuments, ...externalOutput.documents, ...(verifyDocs ?? [])];
+  const hasExternalEvidence = externalOutput.documents.length > 0 || (verifyDocs ?? []).length > 0;
 
   return {
     opportunityId: input.opportunity.id,
@@ -427,6 +458,7 @@ function buildReport(params: {
     insufficientEvidence: crossValidation?.insufficientEvidence ?? [],
     competitors: synthesis.competitors ?? [],
     competitorMatrix: synthesis.competitorMatrix,
+    verification,
     meta: {
       degraded: false,
       externalEvidenceAvailable: hasExternalEvidence,

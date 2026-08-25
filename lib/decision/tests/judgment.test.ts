@@ -26,9 +26,9 @@ const JUDGMENT_JSON = () =>
     salesPlan: "设计合伙人模式：首批 10 个 MCN 免费 2 周",
     riskControl: "平台政策红线提前调研，保留人工介入兜底",
     day90Plan: [
-      { phase: "第1-2周", title: "用户访谈", actions: ["招募 10 名中腰部创作者", "深度访谈痛点"], successMetric: "≥70% 表示有明确痛点" },
-      { phase: "第3-6周", title: "MVP 测试", actions: ["做私信自动回复原型", "邀请 10 人试用"], successMetric: "≥10 个付费试用" },
-      { phase: "第7-12周", title: "首单验证", actions: ["小批量售卖"], successMetric: "转化率 ≥5%" },
+      { phase: "阶段1 市场验证", title: "市场验证", goal: "验证市场规模与需求强度", aiActions: ["自动抓取 Google Trends 趋势", "收集行业报告数据"], userActions: ["确认关键假设", "参与访谈"], successMetric: "≥70% 受访者确认痛点", risk: "市场数据不足" },
+      { phase: "阶段2 产品验证", title: "产品验证", goal: "验证 MVP 核心功能", aiActions: ["生成原型说明", "分析用户反馈"], userActions: ["试用原型", "反馈意见"], successMetric: "≥10 人试用", risk: "功能偏差" },
+      { phase: "阶段3 商业验证", title: "商业验证", goal: "验证付费意愿", aiActions: ["设计 A/B 测试", "数据分析"], userActions: ["确认定价", "首批付费"], successMetric: "≥20 个付费用户", risk: "付费转化低" },
     ],
     firstCustomers: {
       targetSegment: "粉丝 1-50 万的中腰部创作者",
@@ -77,7 +77,11 @@ test("AI 商业判断：合法输出 → 生成完整判断（含推荐/方向/9
   assert.ok((judgment.riskControl ?? "").length > 0, "风险控制");
   assert.equal(judgment.version, 1, "首次生成版本为 1");
   assert.equal(judgment.day90Plan.length, 3);
-  assert.equal(judgment.day90Plan[0].phase, "第1-2周");
+  assert.equal(judgment.day90Plan[0].phase, "阶段1 市场验证");
+  assert.ok((judgment.day90Plan[0].goal ?? "").length > 0, "路线图阶段目标");
+  assert.ok((judgment.day90Plan[0].aiActions ?? []).length >= 1, "AI 自动动作");
+  assert.ok((judgment.day90Plan[0].userActions ?? []).length >= 1, "用户动作");
+  assert.ok((judgment.day90Plan[0].risk ?? "").length > 0, "阶段风险");
   assert.ok(judgment.firstCustomers.channels.length >= 1);
   assert.equal(judgment.confidence, 0.55);
 });

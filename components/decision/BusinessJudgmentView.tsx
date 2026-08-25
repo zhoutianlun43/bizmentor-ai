@@ -94,11 +94,14 @@ export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment 
         </Card>
       ) : null}
 
-      {/* 90 天执行计划（时间线） */}
+      {/* AI 商业验证路线图（V1.1：90 天 → 市场/产品/商业三阶段验证） */}
       <Card>
-        <div className="flex items-center gap-1.5">
-          <CalendarRange className="size-4 text-indigo-500" />
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">90 天执行计划</h4>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <CalendarRange className="size-4 text-indigo-500" />
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">AI 商业验证路线图</h4>
+          </div>
+          <span className="text-[10px] text-slate-400">90 天 · 研究类任务由 AI 自动执行</span>
         </div>
         <div className="mt-3 space-y-0">
           {judgment.day90Plan.map((step, i) => (
@@ -116,12 +119,39 @@ export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment 
                   </span>
                   <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{step.title}</span>
                 </div>
-                <ul className="mt-1 space-y-0.5">
-                  {step.actions.map((a, j) => (
-                    <li key={j} className="text-xs text-slate-600 dark:text-slate-300">· {a}</li>
-                  ))}
-                </ul>
-                <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">✓ 成功度量：{step.successMetric}</p>
+                {step.goal ? (
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300"><span className="text-slate-400">目标：</span>{step.goal}</p>
+                ) : null}
+                {(step.aiActions ?? []).length > 0 ? (
+                  <div className="mt-1.5">
+                    <p className="text-[10px] font-medium text-indigo-500">AI 自动动作</p>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {(step.aiActions ?? []).map((a, j) => (
+                        <li key={j} className="flex gap-1 text-xs text-slate-600 dark:text-slate-300"><span className="text-indigo-500">▸</span>{a}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {(step.userActions ?? []).length > 0 ? (
+                  <div className="mt-1.5">
+                    <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">用户动作</p>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {(step.userActions ?? []).map((a, j) => (
+                        <li key={j} className="flex gap-1 text-xs text-slate-600 dark:text-slate-300"><span className="text-amber-500">▸</span>{a}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {/* 兼容旧数据：只有 actions */}
+                {(step.actions ?? []).length > 0 && !(step.aiActions ?? []).length ? (
+                  <ul className="mt-1 space-y-0.5">
+                    {(step.actions ?? []).map((a, j) => (
+                      <li key={j} className="text-xs text-slate-600 dark:text-slate-300">· {a}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">✓ 成功标准：{step.successMetric}</p>
+                {step.risk ? <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400">风险：{step.risk}</p> : null}
               </div>
             </div>
           ))}

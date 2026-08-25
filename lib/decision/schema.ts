@@ -154,8 +154,11 @@ export const businessJudgmentSchema = z.object({
       z.object({
         phase: z.string().min(1),
         title: z.string().min(1),
-        actions: z.array(z.string()).min(1),
+        goal: z.string().min(1),
+        aiActions: z.array(z.string()).min(1),
+        userActions: z.array(z.string()).min(1),
         successMetric: z.string().min(1),
+        risk: z.string().min(1),
       }),
     )
     .min(1),

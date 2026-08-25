@@ -335,3 +335,15 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **重新生成**：Research Tab「重新研究」；Decision Tab「生成/重新生成 AI 商业判断」。
 - **验证**：316/316 测试通过（新增 1：版本递增 v1→v2）、lint 0、tsc/build 通过；线上 /api/judgment 实测输出 10 项执行方案（version:1），页面 200。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID 5Du4y9f3sTjgKoCyCVo-N）。
+
+
+---
+
+## 27. V1.1 机会研究中心优化完成记录（过程可视化 + 证据自动验证 + AI 商业验证路线图）
+
+- **研究过程可视化**：ResearchProgress 升级为 Research Progress Timeline——进度条（完成/总阶段 + %）、当前研究阶段 + AI 执行动作、数据来源数量、已发现证据数量；新增 evidence-verify 阶段（10 阶段）。
+- **证据不足自动验证**：新增证据自动验证阶段（evidence-verify，V1.1）：当 market/competition/willingnessToPay 等维度缺少外部来源证据时，不再直接输出「需验证」，自动执行 扩展搜索 → 增加数据源 → 重新分析（新来源进入综合/评分证据池）→ 生成验证结果；仍失败则输出失败原因诊断（无公开数据/搜索词过窄/需付费数据源）。报告新增「证据自动验证」卡片（4 步流程 + 每领域状态 + 诊断）。
+- **AI 商业验证路线图**：90 天计划改为 3 阶段验证路线图（阶段1 市场验证 / 阶段2 产品验证 / 阶段3 商业验证），每阶段含 目标(goal) / AI动作(aiActions，研究类任务由 AI 自动执行) / 用户动作(userActions) / 成功标准(successMetric) / 风险(risk)；Day90Step 类型 + schema + prompt + 生成器 + 视图同步更新（兼容旧数据）。
+- **Tab 边界保持**：机会研究中心回答「值不值得做」（证据/评分/自动验证），创业执行决策回答「如何做成功」（10 项执行方案/路线图/验证任务），内容不重复。
+- **验证**：316/316 测试通过（管线 10 阶段断言更新）、lint 0、tsc/build 通过；线上 /api/judgment 实测输出新路线图格式（3 阶段 × 目标/AI动作/用户动作/成功标准/风险）。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID AbA1qzDH2XmMd5e1fQcmQ）。

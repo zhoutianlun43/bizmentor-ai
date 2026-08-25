@@ -5,6 +5,7 @@ import { ExecutiveDecisionCard } from "@/components/decision/ExecutiveDecisionCa
 import { BusinessJudgmentView } from "@/components/decision/BusinessJudgmentView";
 import { EvidenceCenter } from "./EvidenceCenter";
 import { EvidenceScoreCard } from "./EvidenceScoreCard";
+import { EvidenceVerificationCard } from "./EvidenceVerificationCard";
 import { Card } from "@/components/ui/Card";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { EvidenceBadge } from "./EvidenceBadge";
@@ -324,6 +325,8 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
           ))}
         </div>
       </Card>
+
+      {report.verification ? <EvidenceVerificationCard verification={report.verification} /> : null}
 
       <EvidenceCenter sections={researchSections} />
 
