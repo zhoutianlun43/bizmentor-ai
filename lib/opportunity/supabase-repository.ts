@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "../supabase/server";
 import { SupabaseRepositoryError } from "../supabase/errors";
 export { SupabaseRepositoryError };
-import { extractScanIdFromNotes } from "../radar/service";
+import { parseRadarNotes, pickPoolFields } from "../radar/service";
 import { uid } from "../store/storage";
 import type { Opportunity, OpportunityInput, OpportunitySource, OpportunityStatus } from "../types";
 import type { OpportunityRepository } from "./repository";
@@ -68,7 +68,8 @@ function fromRow(row: Row): Opportunity {
     notes: (row.notes as Opportunity["notes"]) ?? undefined,
     createdAt: String(row.created_at),
     sourceType: row.radar ? "ai_radar" : "manual_create",
-    scanId: (row.radar as Opportunity["radar"])?.scanId ?? extractScanIdFromNotes(String(row.notes ?? "")),
+    scanId: (row.radar as Opportunity["radar"])?.scanId ?? parseRadarNotes(String(row.notes ?? "")).scanId,
+    ...pickPoolFields(parseRadarNotes(String(row.notes ?? ""))),
   };
 }
 
@@ -94,6 +95,8 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
       createdAt: now,
       notes: input.notes?.trim() || undefined,
       radar: input.radar,
+      opportunityStatus: input.opportunityStatus ?? (input.source === "ai" ? "discovered" : undefined),
+      ...pickPoolFields(parseRadarNotes(input.notes)),
     };
     const row = toRow(opportunity, this.userId);
     const { error } = await this.supabase.from(this.table).insert(row);

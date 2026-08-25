@@ -1,5 +1,6 @@
 import { mockOpportunities } from "../data/mock/opportunities";
 import { readJSON, writeJSON, uid } from "./storage";
+import { parseRadarNotes, pickPoolFields } from "../radar/service";
 import type { Opportunity, OpportunityInput } from "@/lib/types";
 
 const KEY = "opportunities";
@@ -36,6 +37,8 @@ export function addOpportunity(input: OpportunityInput): Opportunity {
     radar: input.radar,
     sourceType: input.radar ? "ai_radar" : "manual_create",
     scanId: input.radar?.scanId,
+    opportunityStatus: input.opportunityStatus ?? (input.source === "ai" ? "discovered" : undefined),
+    ...pickPoolFields(parseRadarNotes(input.notes)),
   };
   saveOpportunities([opportunity, ...loadOpportunities()]);
   return opportunity;

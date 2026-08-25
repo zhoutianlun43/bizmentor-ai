@@ -405,3 +405,18 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **测试**：323/323（新增 3：批量入库/重读仍在/扫描历史统计）、lint 0、tsc/build 通过。
 - **部署**：bizmentor.top（BUILD_ID GjaP2cME07utUYUXxKbNl 起）。
 - **截图**：outputs/screenshots/v121/（01 扫描自动保存/02 进入研究跳转/03 状态流转/04 重新登录恢复）。
+
+---
+
+## 31. V1.3 AI 商业雷达机会池管理完成记录（AI 持续发现商业机会资产库）
+
+- **定位升级**：AI 商业雷达从「扫描一次生成几个商机」→「AI 持续发现商业机会资产库」：发现 → 评估 → 收藏观察 → 推进研究 → 放弃/删除，完整机会管理流程。
+- **机会池**：新增 /radar/pool（AI 发现机会池）+ /radar/latest（本次扫描结果）；雷达首页 4 个可点击统计卡（本次扫描/累计/收藏/推进）。
+- **状态管理**：新增 opportunityStatus 生命周期（discovered/favorite/researching/promoting/rejected/deleted）+ favoriteAt/promotedAt/rejectedAt/deletedAt/rejectReason；收藏→favorite、推进→promoting、放弃→rejected(保留原因)、删除→软删除(保留 deletedAt，禁止物理删除)、重新开启→restore。
+- **操作**：每卡 收藏/开始深度研究(→researching+跳转机会研究中心)/推进/放弃(填原因)/删除(确认软删)；推进中卡支持 进入创业执行决策/归档放弃。
+- **AI 推荐排序**：AI 优先级评分（基础评分+建议权重+用户关注加成），机会池默认按 优先级→最新→关注 排序。
+- **持久化**：所有字段编码进 notes（scanId/oppStatus/时间戳/原因，零迁移，兼容缺 radar 列）；Supabase fromRow + Local 透传解析。
+- **验证**（真实浏览器+数据库）：扫描自动入库；收藏/推进/放弃(原因)/删除(软删) 全部生效——DB 状态 {promoting:1, favorite:1, rejected:1(含原因), deleted:1(含deletedAt), 其余已发现}；删除后默认列表隐藏但数据库保留。
+- **测试**：331/331（新增 8：20 个扫描入库/重读仍在/收藏5/推进3/放弃2保留原因/软删保留/研究流转/notes 往返/优先级排序）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID Ie_a-nQdJVBLCR9aQgjzH1）。
+- **截图**：outputs/screenshots/v13/（01 收藏/02 池全部/03 收藏tab/04 推进tab/05 收藏填充/06 已放弃/07 删除后/08 雷达删除后）。

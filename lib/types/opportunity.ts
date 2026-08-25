@@ -9,6 +9,15 @@ export type OpportunitySource = "ai" | "user";
 /** 商机来源类型（V1.2.1）：手动创建 / AI 雷达发现 */
 export type OpportunitySourceType = "manual_create" | "ai_radar";
 
+/** 机会池生命周期状态（V1.3）：AI 雷达发现机会的管理状态 */
+export type OpportunityPoolStatus =
+  | "discovered" // AI 刚发现，未处理
+  | "favorite" // 收藏观察
+  | "researching" // 正在深度研究
+  | "promoting" // 推进项目（进入创业执行阶段）
+  | "rejected" // 已放弃（保留原因/时间）
+  | "deleted"; // 软删除（保留 deletedAt，禁止物理删除）
+
 /** 商机状态：已发现 / 收集中 / 研究中 / 验证中 / 已验证 / 已放弃 */
 export type OpportunityStatus =
   | "discovered"
@@ -58,6 +67,14 @@ export interface Opportunity {
   sourceType?: OpportunitySourceType;
   /** 所属雷达扫描（V1.2.1：scanId） */
   scanId?: string;
+  /** 机会池状态（V1.3：discovered/favorite/researching/promoting/rejected/deleted） */
+  opportunityStatus?: OpportunityPoolStatus;
+  favoriteAt?: string;
+  promotedAt?: string;
+  rejectedAt?: string;
+  deletedAt?: string;
+  /** 放弃原因（V1.3：保留供 AI 复盘） */
+  rejectReason?: string;
 }
 
 /** 新增商机表单输入（与存储结构分离，便于未来校验/扩展） */
@@ -70,6 +87,13 @@ export interface OpportunityInput {
   radar?: RadarFinding;
   /** 状态（V1.2.1：缺省由来源决定——ai→discovered，user→researching） */
   status?: OpportunityStatus;
+  /** 机会池状态（V1.3） */
+  opportunityStatus?: OpportunityPoolStatus;
+  favoriteAt?: string;
+  promotedAt?: string;
+  rejectedAt?: string;
+  deletedAt?: string;
+  rejectReason?: string;
 }
 
 /** AI 商业雷达发现（V0.8）：AI 主动扫描全球市场生成的机会情报（行业无关） */
