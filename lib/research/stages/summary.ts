@@ -19,6 +19,7 @@ export async function runSummaryStage(
     prompt: summaryPrompt({ input: ctx.input, analyzer, sections: synthesis.sections, validationPlan }),
     schema: summarySchema,
     allowDegrade: true,
+    maxTokens: 8192,
   });
 }
 

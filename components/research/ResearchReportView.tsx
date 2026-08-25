@@ -326,6 +326,20 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
         </div>
       </Card>
 
+      <Card className="mt-3">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">下一步行动</h3>
+        <ul className="mt-2 space-y-1.5">
+          {report.nextActions.map((action, i) => (
+            <li key={i} className="flex gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <span className="text-indigo-500">{i + 1}.</span>
+              {action}
+            </li>
+          ))}
+        </ul>
+      </Card>
+        </div>
+      </details>
+
       {report.verification ? <EvidenceVerificationCard verification={report.verification} /> : null}
 
       <EvidenceCenter sections={researchSections} />
@@ -350,19 +364,7 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
         ))}
       </div>
 
-      <Card className="mt-3">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">下一步行动</h3>
-        <ul className="mt-2 space-y-1.5">
-          {report.nextActions.map((action, i) => (
-            <li key={i} className="flex gap-2 text-xs text-slate-600 dark:text-slate-300">
-              <span className="text-indigo-500">{i + 1}.</span>
-              {action}
-            </li>
-          ))}
-        </ul>
-      </Card>
-        </div>
-      </details>
+
 
       <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
         <summary className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -391,6 +393,49 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
             ))}
           </tbody>
         </table>
+      </details>
+
+      {/* V1.1.1：研究过程记录（重新研究完成后保留完整过程） */}
+      <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+        <summary className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <FileText className="size-3.5" />
+          研究过程记录（{run.stages.length} 阶段 · 完整保留）
+        </summary>
+        <table className="mt-2 w-full text-[10px] text-slate-500 dark:text-slate-400">
+          <thead>
+            <tr className="text-left">
+              <th className="pb-1">阶段</th>
+              <th className="pb-1">状态</th>
+              <th className="pb-1">API</th>
+              <th className="pb-1 text-right">搜索</th>
+              <th className="pb-1 text-right">来源</th>
+              <th className="pb-1 text-right">证据</th>
+              <th className="pb-1 text-right">Token</th>
+              <th className="pb-1 text-right">成本$</th>
+              <th className="pb-1 text-right">耗时</th>
+            </tr>
+          </thead>
+          <tbody>
+            {run.stages.map((s) => (
+              <tr key={s.stage} className="border-t border-slate-100 dark:border-slate-800">
+                <td className="py-1">{s.stage}</td>
+                <td className="py-1">{s.status === "completed" ? "完成" : s.status === "failed" ? "失败" : s.status}</td>
+                <td className="py-1">{s.provider === "external" ? "外部搜索" : s.provider}</td>
+                <td className="py-1 text-right tabular-nums">{s.searchesCount ?? "-"}</td>
+                <td className="py-1 text-right tabular-nums">{s.sourcesFound ?? "-"}</td>
+                <td className="py-1 text-right tabular-nums">{s.evidenceFound ?? "-"}</td>
+                <td className="py-1 text-right tabular-nums">{s.inputTokens + s.outputTokens}</td>
+                <td className="py-1 text-right tabular-nums">{s.estimatedCost.toFixed(6)}</td>
+                <td className="py-1 text-right tabular-nums">{(s.durationMs / 1000).toFixed(1)}s</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {report.verification ? (
+          <p className="mt-2 text-[10px] text-slate-400">
+            证据自动验证：{report.verification.overall === "recovered" ? "全部补充" : report.verification.overall === "partial" ? "部分补充" : "未补充"}（{report.verification.areas.length} 领域）
+          </p>
+        ) : null}
       </details>
     </div>
   );

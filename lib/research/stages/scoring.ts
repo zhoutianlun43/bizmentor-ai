@@ -43,6 +43,7 @@ export async function runScoringStage(ctx: ResearchContext, sections: SynthesisO
     agent: "research-engine",
     prompt: withDomainHints(scoringPrompt(ctx.input, sections), ctx.domain),
     schema: scoreProposalSchema,
+    maxTokens: 8192,
   });
   const proposal: ScoreProposal = {
     dimensions: call.data.dimensions.map((d) => ({

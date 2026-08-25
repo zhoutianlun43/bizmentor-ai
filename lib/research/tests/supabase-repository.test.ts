@@ -175,6 +175,22 @@ test("listRuns：按 created_at 倒序返回", async () => {
   assert.deepEqual(list.map((r) => r.runId), ["r2", "r3", "r1"]);
 });
 
+test("saveRun：消毒孤立代理项/控制字符（抓取网页正文兼容 JSONB）", async () => {
+  const mock = new MockSupabase();
+  const repo = createRepo(mock);
+  const bad = "bad \uD800 char\u0001";
+  const run: ResearchRun = {
+    runId: "r-san", opportunityId: "o-san", status: "completed", createdAt: "now", updatedAt: "now",
+    stages: [], findings: [], scoreHistory: [],
+    sourceDocuments: [{ id: "d1", title: "t", sourceType: "EXTERNAL_WEB", content: bad, url: "https://x", createdAt: "now" }],
+  };
+  await repo.saveRun(run);
+  const rows = mock.db.get("research_runs") ?? [];
+  const doc = rows[0].source_documents as Array<{ content: string }>;
+  assert.ok(!doc[0].content.includes("\uD800"), "孤立高代理应被替换");
+  assert.ok(!doc[0].content.includes("\u0001"), "控制字符应被清除");
+});
+
 test("getRun：不存在返回 undefined", async () => {
   const mock = new MockSupabase();
   const repo = createRepo(mock);

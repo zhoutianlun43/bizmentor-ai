@@ -1,10 +1,11 @@
 /**
- * /api/external-research —— 服务端外部研究代理。
- * 浏览器 → Next.js Server → ExternalResearchProvider（当前 DuckDuckGo + 通用网页读取）。
+ * /api/external-research —— 服务端外部研究代理（V1.1.1 修复）。
+ * 浏览器 → Next.js Server → External Intelligence Layer（env 配置：tavily,duckduckgo 等，带 fallback）。
+ * 修复：此前只接 DuckDuckGo（被反爬返回 202 → 0 结果）；现改用新情报层，Tavily 直连返回真实来源。
  * 搜索结果只是候选；网页读取返回元数据与正文；来源可追溯。
  */
 import { NextResponse } from "next/server";
-import { getExternalProvider } from "@/lib/research/external";
+import { createExternalResearchFn } from "@/lib/external";
 import type { ResearchArea } from "@/lib/research";
 
 const VALID_AREAS = new Set([
@@ -30,22 +31,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const provider = getExternalProvider();
+    // 新情报层：按 env.EXTERNAL_INTELLIGENCE_PROVIDERS 顺序（tavily → duckduckgo 兜底）
+    const external = createExternalResearchFn();
     const limit = typeof b.limit === "number" && b.limit > 0 ? Math.min(b.limit, 10) : undefined;
-    const results = await provider.search(b.query, { limit });
-    // 读取前 2 条（限制请求量）；读取失败跳过，不中断
-    const documents = [];
-    for (const r of results.slice(0, 2)) {
-      try {
-        documents.push(await provider.read(r.url));
-      } catch {
-        // 单个网页读取失败不影响其他来源
-      }
-    }
-    return NextResponse.json({
-      searches: [{ taskId: "", area: b.area as ResearchArea, query: b.query, results, documents }],
-      documents,
-    });
+    const out = await external({ query: b.query, area: b.area as ResearchArea, limit });
+    return NextResponse.json(out);
   } catch (error) {
     const message = (error as Error).message?.slice(0, 200) ?? "外部研究失败";
     return NextResponse.json({ error: "EXTERNAL_RESEARCH_FAILED", message }, { status: 502 });

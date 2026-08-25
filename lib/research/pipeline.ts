@@ -184,6 +184,7 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
     durationMs: number;
     sourcesFound?: number;
     evidenceFound?: number;
+    searchesCount?: number;
   }
 
   async function runStage<T>(stage: ResearchStageName, fn: () => Promise<{ data: T } & StageResultLike>): Promise<T> {
@@ -201,6 +202,7 @@ export async function runResearchPipeline(input: ResearchInput, options: Pipelin
         durationMs: result.durationMs,
         sourcesFound: result.sourcesFound,
         evidenceFound: result.evidenceFound,
+        searchesCount: result.searchesCount,
       };
       stages.push(stageRun);
       onStage?.(stageRun, stages.length - 1);

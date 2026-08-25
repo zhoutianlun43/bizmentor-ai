@@ -108,9 +108,9 @@ export function businessJudgmentPrompt(report: {
       ].join("\n")
     : "";
   return {
-    system: `你是 BizMentor 的「商业决策官」（Business Judgment Officer）。基于研究报告给出决策型判断，而不是研究总结。
+    system: `你是 BizMentor 的「创业合伙人」（AI Co-Founder）。你负责市场调研、数据收集、趋势分析、竞品分析、整理与判断；用户只负责提供资源、渠道、资金并做最终商业决策。
 你要回答：是否建议进入、推荐切入方向、不建议做什么、AI 商业验证路线图、第一批客户获取方案，以及执行方案：商业战略选择、MVP 方案、产品设计、获客渠道详细打法、内容素材方案、标题案例、投放策略、销售方案、风险控制方案。
-AI 商业验证路线图（day90Plan）分 3 个阶段：阶段1 市场验证 / 阶段2 产品验证 / 阶段3 商业验证；每阶段包含 目标(goal)、AI动作(aiActions，如自动抓取趋势/收集数据)、用户动作(userActions，如决策/访谈)、成功标准(successMetric)、风险(risk)。研究类任务（如 Google Trends 抓取、市场数据收集）由 AI 执行，不放入用户动作。
+AI 商业验证路线图（day90Plan）分 3 个阶段：阶段1 市场验证 / 阶段2 产品验证 / 阶段3 商业验证；每阶段包含 目标(goal)、AI动作(aiActions，如自动抓取 Google Trends / 行业数据 / 社区讨论 / 竞品数据)、用户动作(userActions，只能包含 提供资源/渠道/资金、做最终决策、审批，不得包含 市场调研、数据收集、访谈、问卷、抓取等研究类任务)、成功标准(successMetric)、风险(risk)。所有市场调研、数据收集、搜索、分析由 AI 完成；禁止让用户自己完成市场调研或数据收集。
 判断要克制、诚实：证据不足时就降低置信度并体现在「继续观察/条件进入」里；不要为了给出建议而编造事实。\n${JSON_INSTRUCTION}`,
     user: `请基于以下研究报告输出 AI 商业判断。\n\n商机：${report.opportunityName}${report.domainLabel ? `\n领域：${report.domainLabel}` : ""}\n综合评分：${report.overallScore}/10（置信度 ${report.confidence}）\n\n执行摘要：${report.executiveSummary}${thesisLines}\n\n验证方案：\n${report.validationPlan.map((v) => `- ${v.assumption}（方法：${v.method}；成功标准：${v.successCriteria}）`).join("\n")}\n\n建议的下一步：\n${report.nextActions.map((a) => `- ${a}`).join("\n")}\n\nJSON 格式：\n{"recommendation":"recommend_enter|conditional_enter|continue_observe|not_recommend","oneLineJudgment":"一句话判断","biggestOpportunity":"最大机会","biggestRisk":"最大风险","suggestedAction":"建议动作","entryDirection":"推荐切入方向","notDoList":["不建议做什么1","不建议做什么2"],"strategyChoice":"商业战略选择","mvpPlan":"MVP方案","productDesign":"产品设计","acquisitionChannels":["获客渠道1","获客渠道2"],"contentPlan":"内容素材方案","headlineExamples":["标题案例1","标题案例2"],"adStrategy":"投放策略","salesPlan":"销售方案","day90Plan":[{"phase":"阶段1 市场验证","title":"阶段标题","goal":"阶段目标","aiActions":["AI自动动作1（如自动抓取趋势/收集数据）"],"userActions":["用户动作1"],"successMetric":"成功度量","risk":"阶段风险"}],"firstCustomers":{"targetSegment":"目标客户","channels":["渠道1","渠道2"],"offer":"切入卖点/免费试用","firstBatchGoal":"首批客户目标","steps":["步骤1","步骤2"]},"riskControl":"风险控制方案","confidence":0.6}`,
   };
@@ -124,11 +124,20 @@ export function evidenceScorePrompt(report: {
   executiveSummary: string;
   sections: Array<{ title: string; content: string; confidence: number }>;
   validationPlan: Array<{ assumption: string; method: string }>;
+  sources?: Array<{ title?: string; url?: string; publisher?: string; sourceType?: string; credibilityLevel?: string }>;
 }): PromptParts {
+  const sourcesText =
+    report.sources && report.sources.length > 0
+      ? "\n\n真实来源（Evidence Score 必须基于这些真实来源，只能引用真实来源中的事实）：\n" +
+        report.sources
+          .slice(0, 20)
+          .map((s, i) => `${i + 1}. ${s.title ?? s.url}（${s.publisher ?? "—"} · ${s.sourceType ?? ""} · 可信度 ${s.credibilityLevel ?? "未知"}）${s.url ? " " + s.url : ""}`)
+          .join("\n")
+      : "";
   return {
     system: `你是 BizMentor 的「证据评分官」。对商机按 6 个维度做 Evidence Score（0-10）：市场机会 20%、用户需求 20%、商业化 20%、竞争机会 15%、技术可行性 15%、风险 10%。
 每个维度评分必须关联证据（evidence）：每条证据写 claim + evidenceClass（FACT=有真实来源；AI_INFERENCE=推断；ASSUMPTION=假设；NEEDS_VALIDATION=待验证）+ confidence + 可选 credibilityLevel/verificationMethod。
 总分由系统按权重确定性计算，你只给各维度分。证据不足时给低置信度，不要为了高分编造证据。\n${JSON_INSTRUCTION}`,
-    user: `请基于以下研究报告输出 Evidence Score。\n\n商机：${report.opportunityName}\n\n执行摘要：${report.executiveSummary}\n\n研究章节：\n${report.sections.map((s) => `【${s.title}】${s.content}`).join("\n")}\n\n验证方案：\n${report.validationPlan.map((v) => `- ${v.assumption}（方法：${v.method}）`).join("\n")}\n\nJSON 格式：\n{"dimensions":[{"dimension":"market_opportunity|user_demand|monetization|competitive_opportunity|technical_feasibility|risk","label":"市场机会","weight":0.2,"score":6.5,"confidence":0.6,"rationale":"理由","evidence":[{"claim":"证据","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.6,"credibilityLevel":"high|medium|low|unverified","verificationMethod":"验证方式"}]}],"confidence":0.55}`,
+    user: `请基于以下研究报告与真实来源输出 Evidence Score。\n\n商机：${report.opportunityName}\n\n执行摘要：${report.executiveSummary}\n\n研究章节：\n${report.sections.map((s) => `【${s.title}】${s.content}`).join("\n")}\n\n验证方案：\n${report.validationPlan.map((v) => `- ${v.assumption}（方法：${v.method}）`).join("\n")}${sourcesText}\n\nJSON 格式：\n{"dimensions":[{"dimension":"market_opportunity|user_demand|monetization|competitive_opportunity|technical_feasibility|risk","label":"市场机会","weight":0.2,"score":6.5,"confidence":0.6,"rationale":"理由","evidence":[{"claim":"证据","evidenceClass":"FACT|AI_INFERENCE|ASSUMPTION|NEEDS_VALIDATION","confidence":0.6,"credibilityLevel":"high|medium|low|unverified","verificationMethod":"验证方式"}]}],"confidence":0.55}`,
   };
 }

@@ -14,6 +14,7 @@ export async function runValidationPlanStage(ctx: ResearchContext, score: ScoreR
     agent: "research-engine",
     prompt: validationPlanPrompt(ctx.input, proposal),
     schema: validationPlanSchema,
+    maxTokens: 8192,
   });
 }
 

@@ -23,8 +23,33 @@ export interface SupabaseResearchRepositoryOptions {
 
 type Row = Record<string, unknown>;
 
+/**
+ * 消毒字符串：替换孤立代理项（lone surrogate）与非法控制字符。
+ * 抓取的网页正文可能包含这类字符，PostgREST/Postgres JSONB 会拒绝
+ * （unsupported Unicode escape sequence）→ 入库前统一替换为 U+FFFD。
+ */
+function sanitizeJson(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value
+      .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "\uFFFD")
+      .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  }
+  if (Array.isArray(value)) return value.map(sanitizeJson);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(value)) {
+      out[k] = sanitizeJson((value as Record<string, unknown>)[k]);
+    }
+    return out;
+  }
+  return value;
+}
+
 /** ResearchRun → 数据库行 */
 function toRow(run: ResearchRun, userId: string): Row {
+  const clean = sanitizeJson(run) as ResearchRun;
+  run = clean;
   return {
     run_id: run.runId,
     user_id: userId,

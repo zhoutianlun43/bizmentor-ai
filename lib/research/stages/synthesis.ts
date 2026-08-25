@@ -18,6 +18,7 @@ export async function runSynthesisStage(
     agent: "research-engine",
     prompt: synthesisPrompt(ctx.input, analyzer, findings),
     schema: synthesisSchema,
+    maxTokens: 16384,
   });
 }
 

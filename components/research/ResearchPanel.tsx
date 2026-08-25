@@ -82,7 +82,14 @@ export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps)
         {error ? (
           <p className="mt-2 text-xs text-rose-500" role="alert">{error}</p>
         ) : null}
-        <ResearchReportView run={run} />
+        {/* V1.1.1：重新研究时也显示 Research Progress Timeline */}
+        {running ? (
+          <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+            <ResearchProgress stages={stages} />
+          </div>
+        ) : (
+          <ResearchReportView run={run} />
+        )}
       </div>
     );
   }

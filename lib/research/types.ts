@@ -524,6 +524,8 @@ export interface StageRun {
   sourcesFound?: number;
   /** 已发现证据数量（V1.1：证据提取/验证阶段产出） */
   evidenceFound?: number;
+  /** 搜索次数（V1.1.1：外部研究/自动验证阶段产出） */
+  searchesCount?: number;
 }
 
 /** 一次商机研究的完整运行（可持久化） */

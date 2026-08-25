@@ -45,6 +45,8 @@ interface CallParams<T> {
   prompt: PromptParts;
   schema: z.ZodType<T>;
   allowDegrade?: boolean;
+  /** 输出上限（大 JSON 阶段需要，防截断） */
+  maxTokens?: number;
 }
 
 export async function callAiStage<T>(params: CallParams<T>): Promise<StageCallResult<T>> {
@@ -66,6 +68,7 @@ export async function callAiStage<T>(params: CallParams<T>): Promise<StageCallRe
       type: params.type,
       agent: params.agent,
       allowDegrade: params.allowDegrade,
+      maxTokens: params.maxTokens,
     });
     totalInputTokens += result.usage.inputTokens;
     totalOutputTokens += result.usage.outputTokens;

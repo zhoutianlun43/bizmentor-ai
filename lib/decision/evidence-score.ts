@@ -50,6 +50,13 @@ export async function generateEvidenceScore(deps: GenerateEvidenceScoreDeps): Pr
     executiveSummary: report.executiveSummary,
     sections: report.sections.map((s) => ({ title: s.title, content: s.content, confidence: s.confidence })),
     validationPlan: report.validationPlan.map((v) => ({ assumption: v.assumption, method: v.method })),
+    sources: report.sources.map((s) => ({
+      title: s.title,
+      url: s.url,
+      publisher: s.publisher,
+      sourceType: s.sourceType,
+      credibilityLevel: s.credibility?.level,
+    })),
   });
 
   let lastErrors: string[] = [];

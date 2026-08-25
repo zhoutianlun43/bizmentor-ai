@@ -17,6 +17,7 @@ export interface ExternalResearchStageResult {
   durationMs: number;
   attempts: number;
   sourcesFound?: number;
+  searchesCount?: number;
 }
 
 export async function runExternalResearchStage(
@@ -60,5 +61,6 @@ export async function runExternalResearchStage(
     durationMs: Date.now() - startedAt,
     attempts: 0,
     sourcesFound: documents.length,
+    searchesCount: searches.length,
   };
 }

@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Database, FileSearch, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Database, FileSearch, Loader2, Search, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { ResearchStageName, StageRun } from "@/lib/research";
 
@@ -51,9 +51,10 @@ export function ResearchProgress({ stages }: { stages: StageRun[] }) {
   const current = STAGE_ORDER.find((name, i) => !stages[i]) ?? STAGE_ORDER[STAGE_ORDER.length - 1];
   const currentStage = stages.find((s) => s.stage === current);
 
-  // 最新来源/证据计数（阶段产出）
+  // 最新来源/证据/搜索计数（阶段产出）
   const sources = stages.filter((s) => typeof s.sourcesFound === "number").pop()?.sourcesFound ?? 0;
   const evidence = stages.filter((s) => typeof s.evidenceFound === "number").pop()?.evidenceFound ?? 0;
+  const searches = stages.filter((s) => typeof s.searchesCount === "number").pop()?.searchesCount ?? 0;
 
   return (
     <div className="space-y-3">
@@ -62,6 +63,7 @@ export function ResearchProgress({ stages }: { stages: StageRun[] }) {
         <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">研究进度</span>
         <span className="text-[10px] text-slate-400">{completed}/{STAGE_ORDER.length} 阶段 · {percent}%</span>
         <div className="ml-auto flex items-center gap-2 text-[10px] text-slate-400">
+          <span className="inline-flex items-center gap-1"><Search className="size-3" />搜索 {searches}</span>
           <span className="inline-flex items-center gap-1"><Database className="size-3" />来源 {sources}</span>
           <span className="inline-flex items-center gap-1"><FileSearch className="size-3" />证据 {evidence}</span>
         </div>
@@ -78,7 +80,10 @@ export function ResearchProgress({ stages }: { stages: StageRun[] }) {
             {currentStage ? STAGE_LABELS[currentStage.stage] ?? currentStage.stage : STAGE_LABELS[current] ?? current}
             {failed > 0 ? <span className="ml-1 text-rose-500">（{failed} 阶段失败）</span> : null}
           </p>
-          <p className="text-[10px] text-indigo-500/80 dark:text-indigo-400/80">{STAGE_ACTIONS[current] ?? ""}</p>
+          <p className="text-[10px] text-indigo-500/80 dark:text-indigo-400/80">
+            {STAGE_ACTIONS[current] ?? ""}
+            {currentStage ? <span className="ml-1 text-slate-400">· API: {currentStage.provider === "external" ? "外部搜索" : currentStage.provider === "deepseek" ? "DeepSeek" : "OpenAI"}</span> : null}
+          </p>
         </div>
       </div>
       {/* 阶段列表 */}
@@ -104,6 +109,7 @@ export function ResearchProgress({ stages }: { stages: StageRun[] }) {
               </span>
               {stage ? (
                 <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500">
+                  {stage.provider === "external" ? "外部搜索 · " : stage.provider === "deepseek" ? "DeepSeek · " : "OpenAI · "}
                   {done ? "完成" : failedStage ? "失败" : "进行中"}
                 </span>
               ) : null}
