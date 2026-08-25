@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, FlaskConical, Landmark } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
-import { DecisionPanel } from "@/components/decision/DecisionPanel";
+import { ExecutiveDecisionPanel } from "@/components/decision/ExecutiveDecisionPanel";
 import { useResearchRuns } from "@/lib/research/hooks/use-research-runs";
 import { Card } from "@/components/ui/Card";
 import { ScoreBadge } from "@/components/ui/ScoreBadge";
@@ -15,10 +16,13 @@ import { OPPORTUNITY_SOURCE_LABELS } from "@/lib/constants";
 import { useOpportunities } from "@/lib/opportunity/hooks/use-opportunities";
 import { formatDate } from "@/lib/utils/format";
 
-/** 商机详情 / 完整报告占位（V0.1 展示本地数据，AI 报告由未来 Agent 生成） */
+type Tab = "research" | "decision";
+
+/** 商机详情（V1.0：机会研究中心 / 创业执行决策 双 Tab） */
 export default function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
   const idStr = String(id);
+  const [tab, setTab] = useState<Tab>("research");
 
   const { opportunities, loading } = useOpportunities();
   const opportunity = opportunities.find((o) => o.id === idStr);
@@ -26,6 +30,12 @@ export default function OpportunityDetailPage() {
   // 商机研究运行（V0.4.1）：异步 hook 读取
   const { runs } = useResearchRuns();
   const researchRun = runs.find((r) => r.opportunityId === idStr);
+  // Research Version（V1.0）：按创建时间排序的第几个研究
+  const sameRuns = runs
+    .filter((r) => r.opportunityId === idStr)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const researchVersion = researchRun ? sameRuns.findIndex((r) => r.runId === researchRun.runId) + 1 : 0;
+  const decisionVersion = researchRun?.report?.judgment?.version ?? null;
 
   if (loading) {
     return (
@@ -111,11 +121,45 @@ export default function OpportunityDetailPage() {
         )}
       </Card>
 
-      {/* 商机研究（V0.3-A）：结构化研究报告 */}
-      <ResearchPanel opportunity={opportunity} run={researchRun} />
+      {/* V1.0：双 Tab —— 机会研究中心 / 创业执行决策 */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setTab("research")}
+          className={
+            "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors " +
+            (tab === "research"
+              ? "border-indigo-500 bg-indigo-600 text-white"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300")
+          }
+        >
+          <FlaskConical className="size-4" />
+          机会研究中心
+          {researchVersion > 0 ? <span className="text-[10px] opacity-80">v{researchVersion}</span> : null}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("decision")}
+          className={
+            "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors " +
+            (tab === "decision"
+              ? "border-indigo-500 bg-indigo-600 text-white"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300")
+          }
+        >
+          <Landmark className="size-4" />
+          创业执行决策
+          {decisionVersion ? <span className="text-[10px] opacity-80">v{decisionVersion}</span> : null}
+        </button>
+      </div>
 
-      {/* 商业决策与验证闭环（V0.3-C） */}
-      <DecisionPanel opportunity={opportunity} run={researchRun} />
+      <div className="mt-3">
+        {tab === "research" ? (
+          <ResearchPanel opportunity={opportunity} run={researchRun} version={researchVersion || undefined} />
+        ) : (
+          <ExecutiveDecisionPanel opportunity={opportunity} run={researchRun} />
+        )}
+      </div>
     </div>
   );
 }

@@ -16,6 +16,15 @@ const JUDGMENT_JSON = () =>
     suggestedAction: "先做 30 个深度访谈验证付费意愿",
     entryDirection: "从粉丝私信自动回复切入，再扩展多语言",
     notDoList: ["不要一开始做直播带货", "不要面向长尾创作者推月费制"],
+    strategyChoice: "先做垂直单点（私信托管）再扩展平台",
+    mvpPlan: "两周内做出私信自动回复 + 多语言翻译最小产品",
+    productDesign: "SaaS 后台 + 移动端提示 + 数据看板",
+    acquisitionChannels: ["小红书内容营销", "Discord 创作者社群", "转介绍激励"],
+    contentPlan: "每周 3 条「创作者效率」主题短视频",
+    headlineExamples: ["把私信回复时间从 3 小时降到 10 分钟", "AI 分身帮你 24 小时回粉丝"],
+    adStrategy: "先投小红书信息流测试，CPA 目标 < ¥50",
+    salesPlan: "设计合伙人模式：首批 10 个 MCN 免费 2 周",
+    riskControl: "平台政策红线提前调研，保留人工介入兜底",
     day90Plan: [
       { phase: "第1-2周", title: "用户访谈", actions: ["招募 10 名中腰部创作者", "深度访谈痛点"], successMetric: "≥70% 表示有明确痛点" },
       { phase: "第3-6周", title: "MVP 测试", actions: ["做私信自动回复原型", "邀请 10 人试用"], successMetric: "≥10 个付费试用" },
@@ -61,6 +70,12 @@ test("AI 商业判断：合法输出 → 生成完整判断（含推荐/方向/9
   assert.equal(judgment.recommendation, "conditional_enter");
   assert.ok(judgment.oneLineJudgment.length > 0);
   assert.ok(judgment.notDoList.length >= 1);
+  assert.ok((judgment.strategyChoice ?? "").length > 0, "商业战略选择");
+  assert.ok((judgment.mvpPlan ?? "").length > 0, "MVP 方案");
+  assert.ok((judgment.acquisitionChannels ?? []).length >= 1, "获客渠道");
+  assert.ok((judgment.headlineExamples ?? []).length >= 1, "标题案例");
+  assert.ok((judgment.riskControl ?? "").length > 0, "风险控制");
+  assert.equal(judgment.version, 1, "首次生成版本为 1");
   assert.equal(judgment.day90Plan.length, 3);
   assert.equal(judgment.day90Plan[0].phase, "第1-2周");
   assert.ok(judgment.firstCustomers.channels.length >= 1);
@@ -127,4 +142,15 @@ test("DecisionService.generateJudgment：保存到研究报告（report.judgment
   const run = await researchRepo.getRun("opp-j4");
   assert.equal(run?.report?.judgment?.id, judgment.id);
   assert.equal(run?.report?.judgment?.recommendation, "conditional_enter");
+});
+
+test("DecisionService.generateJudgment：重复生成版本递增（v1 → v2）", async () => {
+  const { service, researchRepo } = createDecisionService({ runAi: fakeJudgmentRunAi(JUDGMENT_JSON) });
+  await makeResearchRun(researchRepo, "opp-j5");
+  const v1 = await service.generateJudgment("opp-j5");
+  assert.equal(v1.version, 1);
+  const v2 = await service.generateJudgment("opp-j5");
+  assert.equal(v2.version, 2);
+  const run = await researchRepo.getRun("opp-j5");
+  assert.equal(run?.report?.judgment?.version, 2);
 });

@@ -394,6 +394,7 @@ export class DecisionService {
       report: run.report,
       runId: run.runId,
       opportunity: { id: opportunityId, name: run.report.opportunityName },
+      previousVersion: run.report?.judgment?.version,
     });
     run.report.judgment = judgment;
     run.updatedAt = new Date().toISOString();

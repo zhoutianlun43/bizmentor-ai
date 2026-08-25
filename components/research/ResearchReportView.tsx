@@ -248,6 +248,10 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
   const report = run.report;
   if (!report) return null;
   const degraded = run.status === "degraded" || report.meta.degraded;
+  // V1.0：机会研究中心只展示研究类章节；执行类（mvp/validation/nextAction）归「创业执行决策」Tab
+  const researchSections = report.sections.filter(
+    (s) => !["mvp", "validation", "nextAction"].includes(s.area),
+  );
 
   return (
     <div>
@@ -298,6 +302,9 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
       <ConflictsCard conflicts={report.conflicts} />
       <CompetitorMatrixCard run={run} />
 
+      <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+        <summary className="cursor-pointer text-xs font-medium text-slate-400">执行相关内容（由「创业执行决策」Tab 生成，点击展开）</summary>
+        <div className="mt-2">
       <Card className="mt-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">商业验证实验</h3>
@@ -318,10 +325,10 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
         </div>
       </Card>
 
-      <EvidenceCenter sections={report.sections} />
+      <EvidenceCenter sections={researchSections} />
 
       <div className="mt-3 space-y-2">
-        {report.sections.map((section) => (
+        {researchSections.map((section) => (
           <Card key={section.area} className="py-3">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{section.title}</h4>
@@ -351,6 +358,8 @@ export function ResearchReportView({ run }: { run: ResearchRun }) {
           ))}
         </ul>
       </Card>
+        </div>
+      </details>
 
       <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
         <summary className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">

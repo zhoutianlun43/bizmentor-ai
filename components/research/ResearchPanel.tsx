@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, RefreshCw, Sparkles } from "lucide-react";
+import { Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TextArea } from "@/components/ui/FormField";
@@ -16,12 +16,13 @@ interface ResearchPanelProps {
   opportunity: Opportunity;
   /** 已存在的研究运行（由页面通过 repository 读取） */
   run?: ResearchRun | undefined;
+  /** 研究版本（V1.0：Research v{n}） */
+  version?: number;
 }
 
 /** 商机研究面板：开始研究 / 阶段进度 / 结构化报告 */
-export function ResearchPanel({ opportunity, run }: ResearchPanelProps) {
+export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps) {
   const [running, setRunning] = useState(false);
-  const [judging, setJudging] = useState(false);
   const [stages, setStages] = useState<StageRun[]>([]);
   const [materials, setMaterials] = useState("");
   const [error, setError] = useState("");
@@ -60,52 +61,23 @@ export function ResearchPanel({ opportunity, run }: ResearchPanelProps) {
     }
   }
 
-  async function handleGenerateJudgment() {
-    if (judging) return;
-    setJudging(true);
-    setError("");
-    try {
-      const res = await fetch("/api/judgment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opportunityId: opportunity.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? data.error ?? "生成失败");
-      // 触发页面 hook 刷新（Supabase 写入无 storage 事件，需要显式通知）
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
-    } catch (err) {
-      setError((err as Error).message?.slice(0, 200) ?? "生成失败");
-    } finally {
-      setJudging(false);
-    }
-  }
-
   if (run) {
     return (
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-medium text-slate-400">AI 研究报告</p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleGenerateJudgment}
-              disabled={judging}
-            >
-              <Sparkles className="size-3.5" />
-              {judging ? "生成中…" : "生成 AI 商业判断"}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleStart}
-              disabled={running}
-            >
-              <RefreshCw className="size-3.5" />
-              重新研究
-            </Button>
+          <div>
+            <p className="text-xs font-medium text-slate-400">商业机会研究中心</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Research v{version ?? 1}</p>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleStart}
+            disabled={running}
+          >
+            <RefreshCw className="size-3.5" />
+            重新研究
+          </Button>
         </div>
         {error ? (
           <p className="mt-2 text-xs text-rose-500" role="alert">{error}</p>

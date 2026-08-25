@@ -1,8 +1,8 @@
 /**
- * BusinessJudgmentView（V0.9）：完整 AI 商业判断 —— 决策型报告主体。
- * 是否建议进入 / 推荐切入方向 / 不建议做什么 / 90 天验证计划（时间线）/ 第一批客户获取方案。
+ * BusinessJudgmentView（V0.9；V1.0 扩展为创业执行决策系统）。
+ * 是否建议进入 / 推荐切入方向 / 不建议做什么 / 商业战略 / MVP / 产品设计 / 获客打法 / 内容素材 / 标题案例 / 投放 / 销售 / 90 天执行计划 / 首批客户 / 风险控制。
  */
-import { Ban, CalendarRange, Compass, Rocket, Users } from "lucide-react";
+import { Ban, CalendarRange, Compass, FileText, Lightbulb, Megaphone, Package, PenLine, Rocket, ShieldCheck, ShoppingBag, Target, Users } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { BusinessJudgment } from "@/lib/research";
 
@@ -20,6 +20,30 @@ const RECOMMENDATION_LABEL: Record<string, string> = {
   not_recommend: "不建议进入",
 };
 
+function TextBlock({ icon, title, value, tone }: { icon: React.ReactNode; title: string; value?: string; tone?: string }) {
+  if (!value) return null;
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${tone ?? "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"}`}>
+      <p className="flex items-center gap-1 text-[10px] font-medium text-slate-400">{icon}{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-200">{value}</p>
+    </div>
+  );
+}
+
+function ListBlock({ icon, title, items, tone }: { icon: React.ReactNode; title: string; items?: string[]; tone?: string }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${tone ?? "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"}`}>
+      <p className="flex items-center gap-1 text-[10px] font-medium text-slate-400">{icon}{title}</p>
+      <ul className="mt-1 space-y-1">
+        {items.map((it, i) => (
+          <li key={i} className="flex gap-1.5 text-xs text-slate-700 dark:text-slate-200"><span className="text-indigo-500">·</span>{it}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment }) {
   return (
     <div className="mt-3 space-y-3">
@@ -29,7 +53,7 @@ export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment 
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${RECOMMENDATION_STYLE[judgment.recommendation]}`}>
             {RECOMMENDATION_LABEL[judgment.recommendation]}
           </span>
-          <span className="text-xs text-slate-400">AI 商业判断 · 置信度 {Math.round(judgment.confidence * 100)}%</span>
+          <span className="text-xs text-slate-400">Decision v{judgment.version ?? 1} · 置信度 {Math.round((judgment.confidence ?? 0) * 100)}%</span>
         </div>
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
           <Compass className="mt-0.5 size-4 shrink-0 text-indigo-500" />
@@ -39,6 +63,18 @@ export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment 
           </div>
         </div>
       </Card>
+
+      {/* 执行方案（V1.0 创业执行决策系统） */}
+      <div className="grid grid-cols-1 gap-2">
+        <TextBlock icon={<FileText className="size-3" />} title="商业战略选择" value={judgment.strategyChoice} tone="border-indigo-200 bg-indigo-50/50 dark:border-indigo-900 dark:bg-indigo-950/20" />
+        <TextBlock icon={<Package className="size-3" />} title="MVP 方案" value={judgment.mvpPlan} tone="border-violet-200 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/20" />
+        <TextBlock icon={<PenLine className="size-3" />} title="产品设计" value={judgment.productDesign} tone="border-violet-200 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/20" />
+        <ListBlock icon={<Users className="size-3" />} title="获客渠道详细打法" items={judgment.acquisitionChannels} tone="border-cyan-200 bg-cyan-50/50 dark:border-cyan-900 dark:bg-cyan-950/20" />
+        <TextBlock icon={<Lightbulb className="size-3" />} title="内容素材方案" value={judgment.contentPlan} tone="border-cyan-200 bg-cyan-50/50 dark:border-cyan-900 dark:bg-cyan-950/20" />
+        <ListBlock icon={<Megaphone className="size-3" />} title="标题案例" items={judgment.headlineExamples} tone="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20" />
+        <TextBlock icon={<Target className="size-3" />} title="投放策略" value={judgment.adStrategy} tone="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20" />
+        <TextBlock icon={<ShoppingBag className="size-3" />} title="销售方案" value={judgment.salesPlan} tone="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20" />
+      </div>
 
       {/* 不建议做什么 */}
       {judgment.notDoList.length > 0 ? (
@@ -58,11 +94,11 @@ export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment 
         </Card>
       ) : null}
 
-      {/* 90 天验证计划（时间线） */}
+      {/* 90 天执行计划（时间线） */}
       <Card>
         <div className="flex items-center gap-1.5">
           <CalendarRange className="size-4 text-indigo-500" />
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">90 天验证计划</h4>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">90 天执行计划</h4>
         </div>
         <div className="mt-3 space-y-0">
           {judgment.day90Plan.map((step, i) => (
@@ -133,11 +169,15 @@ export function BusinessJudgmentView({ judgment }: { judgment: BusinessJudgment 
             ))}
           </ol>
         </div>
-        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
-          <Rocket className="size-3.5" />
-          由 AI 基于研究报告生成 · 需人工验证后执行
-        </div>
       </Card>
+
+      {/* 风险控制方案 */}
+      <TextBlock icon={<ShieldCheck className="size-3" />} title="风险控制方案" value={judgment.riskControl} tone="border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/20" />
+
+      <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+        <Rocket className="size-3.5" />
+        由 AI 基于研究报告生成 · 需人工验证后执行
+      </div>
     </div>
   );
 }

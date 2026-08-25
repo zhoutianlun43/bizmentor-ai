@@ -321,3 +321,17 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **真实数据研究框架**：延续外部研究（Tavily/Bing/DuckDuckGo）+ 来源可信度；竞品矩阵含 价格/目标用户/功能/优势；V0.9 证据字段（credibilityLevel/verificationMethod）进入研究提示词。
 - **验证**：315/315 测试通过（新增 4：Evidence Score 生成/覆盖/不伪造/持久化）、lint 0、tsc/build 通过；线上 /api/judgment 实测同时生成 judgment + evidenceScore（6 维度，overall 4.7，数据支持 6.7%），Supabase 持久化确认。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID kjnY9rbt1sU5agXNo14N3）。
+
+
+---
+
+## 26. V1.0 产品架构调整完成记录（研究 / 执行决策 双 Tab）
+
+- **模块拆分**：商机详情页拆分为两个独立 Tab ——「机会研究中心」与「创业执行决策」，可互相跳转。
+- **机会研究中心（Research）**：定位商业机会研究中心，重点输出 宏观市场/用户画像/行业趋势/竞品案例/成败案例/市场机会判断（证据中心 + Evidence Score + 来源/可信度）；执行类内容（mvp/validation/nextAction 章节、验证实验、下一步行动）从研究视图隐藏（折叠为「执行相关内容」），不再输出大量执行方案。
+- **创业执行决策（Decision）**：新组件 ExecutiveDecisionPanel，定位创业执行决策系统，基于研究结果生成 10 项执行方案：商业战略选择 / MVP 方案 / 产品设计 / 获客渠道详细打法 / 内容素材方案 / 标题案例 / 投放策略 / 销售方案 / 90 天执行计划 / 风险控制方案；含 AI 商业决策委员会 + 创始人判断 + 验证任务中心。
+- **BusinessJudgment 扩展**：新增 strategyChoice/mvpPlan/productDesign/acquisitionChannels/contentPlan/headlineExamples/adStrategy/salesPlan/riskControl + version 字段；schema/prompt/生成器同步；DecisionService.generateJudgment 每次重新生成 version+1。
+- **版本记录**：Research Version（研究运行按创建时间排序 v1/v2…，Tab 徽章展示）+ Decision Version（judgment.version，Tab 徽章 + 判断视图内展示）。
+- **重新生成**：Research Tab「重新研究」；Decision Tab「生成/重新生成 AI 商业判断」。
+- **验证**：316/316 测试通过（新增 1：版本递增 v1→v2）、lint 0、tsc/build 通过；线上 /api/judgment 实测输出 10 项执行方案（version:1），页面 200。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID 5Du4y9f3sTjgKoCyCVo-N）。

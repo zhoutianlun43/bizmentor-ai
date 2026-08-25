@@ -395,11 +395,13 @@ export const EVIDENCE_SCORE_LABELS: Record<EvidenceScoreDimensionKey, string> = 
   risk: "风险",
 };
 
-/** AI 商业判断（V0.9：决策型报告核心，从「研究型」升级为「决策型」） */
+/** AI 商业判断（V0.9：决策型报告核心；V1.0：创业执行决策系统） */
 export interface BusinessJudgment {
   id: string;
   opportunityId: string;
   runId: string;
+  /** 决策版本（V1.0：每次重新生成 +1） */
+  version: number;
   /** 是否建议进入 */
   recommendation: BusinessRecommendation;
   /** 一句话判断 */
@@ -414,10 +416,28 @@ export interface BusinessJudgment {
   entryDirection: string;
   /** 不建议做什么 */
   notDoList: string[];
-  /** 90 天验证计划（时间线） */
+  /** 商业战略选择（V1.0） */
+  strategyChoice?: string;
+  /** MVP 方案（V1.0） */
+  mvpPlan?: string;
+  /** 产品设计（V1.0） */
+  productDesign?: string;
+  /** 获客渠道详细打法（V1.0） */
+  acquisitionChannels?: string[];
+  /** 内容素材方案（V1.0） */
+  contentPlan?: string;
+  /** 标题案例（V1.0） */
+  headlineExamples?: string[];
+  /** 投放策略（V1.0） */
+  adStrategy?: string;
+  /** 销售方案（V1.0） */
+  salesPlan?: string;
+  /** 90 天执行计划（时间线） */
   day90Plan: Day90Step[];
   /** 第一批客户获取方案 */
   firstCustomers: CustomerAcquisitionPlan;
+  /** 风险控制方案（V1.0） */
+  riskControl?: string;
   /** 0-1 */
   confidence: number;
   createdAt: string;

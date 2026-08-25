@@ -140,6 +140,15 @@ export const businessJudgmentSchema = z.object({
   suggestedAction: z.string().min(1),
   entryDirection: z.string().min(1),
   notDoList: z.array(z.string()).min(1),
+  strategyChoice: z.string().min(1),
+  mvpPlan: z.string().min(1),
+  productDesign: z.string().min(1),
+  acquisitionChannels: z.array(z.string()).min(1),
+  contentPlan: z.string().min(1),
+  headlineExamples: z.array(z.string()).min(1),
+  adStrategy: z.string().min(1),
+  salesPlan: z.string().min(1),
+  riskControl: z.string().min(1),
   day90Plan: z
     .array(
       z.object({

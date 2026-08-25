@@ -15,10 +15,12 @@ export interface GenerateJudgmentDeps {
   report: ResearchReport;
   runId: string;
   opportunity: { id: string; name: string };
+  /** 上一次判断版本（V1.0：每次重新生成 +1） */
+  previousVersion?: number;
 }
 
 export async function generateBusinessJudgment(deps: GenerateJudgmentDeps): Promise<BusinessJudgment> {
-  const { report, runId, opportunity } = deps;
+  const { report, runId, opportunity, previousVersion } = deps;
   const prompt = businessJudgmentPrompt({
     opportunityName: report.opportunityName,
     executiveSummary: report.executiveSummary,
@@ -59,6 +61,7 @@ export async function generateBusinessJudgment(deps: GenerateJudgmentDeps): Prom
         id: `judgment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         opportunityId: opportunity.id,
         runId,
+        version: (previousVersion ?? 0) + 1,
         recommendation: validated.data.recommendation,
         oneLineJudgment: validated.data.oneLineJudgment,
         biggestOpportunity: validated.data.biggestOpportunity,
@@ -66,8 +69,17 @@ export async function generateBusinessJudgment(deps: GenerateJudgmentDeps): Prom
         suggestedAction: validated.data.suggestedAction,
         entryDirection: validated.data.entryDirection,
         notDoList: validated.data.notDoList,
+        strategyChoice: validated.data.strategyChoice,
+        mvpPlan: validated.data.mvpPlan,
+        productDesign: validated.data.productDesign,
+        acquisitionChannels: validated.data.acquisitionChannels,
+        contentPlan: validated.data.contentPlan,
+        headlineExamples: validated.data.headlineExamples,
+        adStrategy: validated.data.adStrategy,
+        salesPlan: validated.data.salesPlan,
         day90Plan: validated.data.day90Plan,
         firstCustomers: validated.data.firstCustomers,
+        riskControl: validated.data.riskControl,
         confidence: Math.min(1, Math.max(0, validated.data.confidence)),
         createdAt: now,
       };
