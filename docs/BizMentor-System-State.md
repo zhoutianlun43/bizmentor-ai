@@ -239,3 +239,27 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **线上验证**：onboarding→首页→chat 全链路通过；Dashboard 显示真实生产数据（商机/研究中/异常建议）。
 - **截图**：outputs/screenshots/v070/（01-07）。
 - **验收**：pnpm test 285/285、lint 0 警告、tsc/build 通过。
+
+---
+
+## 20. V0.8 AI 商业雷达完成记录
+
+- **定位升级**：BizMentor = AI 商业机会发现与决策操作系统（行业无关，删除女装/电商固定假设）。
+- **AI 商业雷达**：lib/radar/（RadarFinding + parse.ts）+ /api/radar/scan + /radar 页面（AI 主动扫描科技/消费/服务/制造/贸易/互联网/AI应用等领域，输出机会卡片：评分 0-100、建议 值得研究/继续观察/不建议进入）。
+- **商机页双入口**：创建商机 + AI商业雷达；筛选优化为 全部/AI雷达发现/我的想法/研究中/验证中/已验证/已放弃（AI雷达发现 = source='ai'）。
+- **Opportunity 扩展**：radar?: RadarFinding（jsonb）；schema.sql 末尾 add column if not exists radar jsonb（线上库需手动执行）。
+- **数据流**：AI发现 → Opportunity(source=ai, radar) → Research Pipeline → Decision → Validation → Memory（复用现有流程，无孤立系统）。
+- **测试**：289/289、lint/tsc/build 通过；已部署生产 bizmentor.top。
+
+---
+
+## 21. V0.8 修复记录（收藏/进入研究保存失败）
+
+- **现象**：雷达扫描正常，但「收藏/进入研究」点击无效（静默失败）。
+- **根因**：线上 Supabase 未执行 `alter table public.opportunities add column if not exists radar jsonb;`，而 SupabaseOpportunityRepository.toRow() 无条件携带 radar 字段 → INSERT 报 PGRST204（schema cache 缺列）→ hook 捕获后静默返回 undefined。
+- **修复**：
+  - SupabaseOpportunityRepository：create/update 遇缺 radar 列错误（PGRST204 或 42703）时自动去掉 radar 字段重试，功能立即可用；列存在后自动存结构化数据。
+  - /radar 页面：保存失败显示明确错误；保存中禁用按钮防重复提交。
+- **验证**：292/292 测试通过、lint/tsc/build 通过；用真实 Supabase（anon key + 真实仓库代码）端到端验证 CREATE（降级成功）→ GET → DELETE 清理。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID y0buE9z0lpQZ7bEkjRyux），/、/opportunities、/radar 均 200。
+- **仍待办**：在 Supabase SQL Editor 执行 `alter table public.opportunities add column if not exists radar jsonb;` 后，雷达数据将改为结构化 jsonb 存储。

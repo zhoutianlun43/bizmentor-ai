@@ -18,6 +18,19 @@ export interface SupabaseOpportunityRepositoryOptions {
 
 type Row = Record<string, unknown>;
 
+/** 判断是否为「缺失 radar 列」的数据库错误（线上库尚未执行 V0.8 schema 迁移） */
+function isMissingRadarColumnError(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null | undefined;
+  if (!e || typeof e.message !== "string" || !e.message.includes("radar")) return false;
+  // INSERT 缺列：PostgREST schema cache → PGRST204；SELECT 缺列：Postgres → 42703
+  return e.code === "42703" || e.code === "PGRST204";
+}
+
+/** 去掉 radar 字段（旧库缺列时的降级重试） */
+function omitRadar(row: Row): Row {
+  return Object.fromEntries(Object.entries(row).filter(([key]) => key !== "radar"));
+}
+
 /** Opportunity → 数据库行（score/notes 为 jsonb/null） */
 function toRow(o: Opportunity, userId: string): Row {
   return {
@@ -79,8 +92,17 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
       notes: input.notes?.trim() || undefined,
       radar: input.radar,
     };
-    const { error } = await this.supabase.from(this.table).insert(toRow(opportunity, this.userId));
-    if (error) throw new SupabaseRepositoryError("createOpportunity", error.message);
+    const row = toRow(opportunity, this.userId);
+    const { error } = await this.supabase.from(this.table).insert(row);
+    if (error) {
+      if (isMissingRadarColumnError(error)) {
+        // 旧库尚未执行 schema 迁移（缺 radar 列）：去掉 radar 字段重试，保证功能可用
+        const retry = await this.supabase.from(this.table).insert(omitRadar(row));
+        if (retry.error) throw new SupabaseRepositoryError("createOpportunity", retry.error.message);
+      } else {
+        throw new SupabaseRepositoryError("createOpportunity", error.message);
+      }
+    }
     return opportunity;
   }
 
@@ -118,13 +140,19 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
     if (patch.radar !== undefined) updates.radar = patch.radar ?? null;
     if (patch.notes !== undefined) updates.notes = patch.notes ?? null;
 
-    const { data, error } = await this.supabase
-      .from(this.table)
-      .update(updates)
-      .eq("id", id)
-      .eq("user_id", this.userId)
-      .select("*")
-      .single();
+    const run = (u: Row) =>
+      this.supabase
+        .from(this.table)
+        .update(u)
+        .eq("id", id)
+        .eq("user_id", this.userId)
+        .select("*")
+        .single();
+
+    let { data, error } = await run(updates);
+    if (error && isMissingRadarColumnError(error) && updates.radar !== undefined) {
+      ({ data, error } = await run(omitRadar(updates)));
+    }
     if (error) throw new SupabaseRepositoryError("updateOpportunity", error.message);
     return data ? fromRow(data as Row) : undefined;
   }

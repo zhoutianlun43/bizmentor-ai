@@ -18,12 +18,13 @@ const SUGGESTION_STYLE: Record<RadarFinding["suggestion"], string> = {
 /** AI 商业雷达（V0.8）：AI 主动探索全球市场机会 → 机会卡片 → 收藏/进入研究/忽略 */
 export default function RadarPage() {
   const router = useRouter();
-  const { create } = useOpportunities();
+  const { create, error: saveError } = useOpportunities();
   const [findings, setFindings] = useState<RadarFinding[] | null>(null);
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Set<number>>(new Set());
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
   async function scan() {
     setBusy(true);
@@ -43,16 +44,21 @@ export default function RadarPage() {
   }
 
   async function save(f: RadarFinding, index: number, goResearch: boolean) {
-    const opp = await create({
-      name: f.name,
-      description: f.description,
-      source: "ai",
-      notes: `[AI雷达] ${f.category} · 评分 ${f.score} · ${f.suggestion}`,
-      radar: f,
-    });
-    if (opp) {
-      setSaved((s) => new Set(s).add(index));
-      if (goResearch) router.push(`/opportunities/${opp.id}`);
+    setSavingIndex(index);
+    try {
+      const opp = await create({
+        name: f.name,
+        description: f.description,
+        source: "ai",
+        notes: `[AI雷达] ${f.category} · 评分 ${f.score} · ${f.suggestion}`,
+        radar: f,
+      });
+      if (opp) {
+        setSaved((s) => new Set(s).add(index));
+        if (goResearch) router.push(`/opportunities/${opp.id}`);
+      }
+    } finally {
+      setSavingIndex(null);
     }
   }
 
@@ -64,6 +70,7 @@ export default function RadarPage() {
         {busy ? "扫描中…" : "开始扫描全球商业机会"}
       </Button>
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+      {saveError && <p className="mt-2 text-xs text-red-500">保存失败：{saveError}</p>}
       {summary && <p className="mt-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400">{summary}</p>}
 
       <div className="mt-3 space-y-3">
@@ -90,9 +97,9 @@ export default function RadarPage() {
             </div>
             {!saved.has(i) && (
               <div className="mt-3 flex gap-2">
-                <Button size="sm" variant="secondary" className="flex-1" onClick={() => save(f, i, false)}>收藏</Button>
-                <Button size="sm" className="flex-1" onClick={() => save(f, i, true)}>进入研究</Button>
-                <Button size="sm" variant="ghost" className="flex-1" onClick={() => setFindings((list) => list!.filter((_, x) => x !== i))}>忽略</Button>
+                <Button size="sm" variant="secondary" className="flex-1" disabled={savingIndex !== null} onClick={() => save(f, i, false)}>{savingIndex === i ? "保存中…" : "收藏"}</Button>
+                <Button size="sm" className="flex-1" disabled={savingIndex !== null} onClick={() => save(f, i, true)}>{savingIndex === i ? "保存中…" : "进入研究"}</Button>
+                <Button size="sm" variant="ghost" className="flex-1" disabled={savingIndex !== null} onClick={() => setFindings((list) => list!.filter((_, x) => x !== i))}>忽略</Button>
               </div>
             )}
             {saved.has(i) && <p className="mt-2 text-xs text-emerald-600">已加入商机列表，可进入研究流程</p>}

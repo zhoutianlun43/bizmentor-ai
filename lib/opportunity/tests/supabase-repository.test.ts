@@ -90,6 +90,8 @@ class MockBuilder {
     const err = this.mock.takeFail();
     const tableRows = this.db.get(this.table) ?? [];
     if (this.op === "insert" && this.payload) {
+      const insertErr = this.mock.takeInsertFail() as MockError | null;
+      if (insertErr) return Promise.resolve({ data: null, error: insertErr }).then(onfulfilled);
       tableRows.push({ ...this.payload });
       this.db.set(this.table, tableRows);
       return Promise.resolve({ data: this.payload, error: err }).then(onfulfilled);
@@ -107,6 +109,7 @@ class MockBuilder {
 class MockSupabase {
   readonly db = new Map<string, Row[]>();
   failNext = false;
+  failNextInsert: unknown = null;
   from(table: string): MockBuilder {
     return new MockBuilder(this.db, table, this);
   }
@@ -114,6 +117,14 @@ class MockSupabase {
     if (this.failNext) {
       this.failNext = false;
       return { message: "mock database error" };
+    }
+    return null;
+  }
+  takeInsertFail(): unknown {
+    if (this.failNextInsert !== null) {
+      const e = this.failNextInsert;
+      this.failNextInsert = null;
+      return e;
     }
     return null;
   }
@@ -237,4 +248,61 @@ test("错误包装：上游错误不直接暴露", async () => {
     () => repo.createOpportunity({ name: "x", description: "y", source: "user" }),
     (e: unknown) => e instanceof SupabaseRepositoryError && e.operation === "createOpportunity",
   );
+});
+
+test("create 降级：缺 radar 列时自动去掉 radar 重试成功（V0.8 兼容旧库）", async () => {
+  const mock = new MockSupabase();
+  mock.failNextInsert = { code: "PGRST204", message: "Could not find the 'radar' column of 'opportunities' in the schema cache" };
+  const repo = createRepo(mock);
+  const opp = await repo.createOpportunity({
+    name: "AI 个人知识管理服务",
+    description: "面向个人的知识管理 SaaS",
+    source: "ai",
+    notes: "[AI雷达] 科技 · 评分 88 · 值得研究",
+    radar: {
+      name: "AI 个人知识管理服务",
+      description: "个人知识管理 SaaS 增长",
+      source: "AI 扫描",
+      category: "科技",
+      marketSize: "大",
+      growth: "快",
+      competition: "中",
+      entryBarrier: "低",
+      profitability: "高",
+      score: 88,
+      suggestion: "值得研究",
+      scannedAt: "2026-08-25T00:00:00.000Z",
+    },
+  });
+  assert.ok(opp.id);
+  const rows = mock.db.get("opportunities") ?? [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].name, "AI 个人知识管理服务");
+  assert.equal(rows[0].source, "ai");
+  assert.equal("radar" in rows[0], false, "降级重试写入的行不应包含 radar 字段");
+});
+
+test("create 降级兼容 Postgres 42703（select 路径）", async () => {
+  const mock = new MockSupabase();
+  mock.failNextInsert = { code: "42703", message: "column opportunities.radar does not exist" };
+  const repo = createRepo(mock);
+  const opp = await repo.createOpportunity({
+    name: "兼容 42703",
+    description: "x",
+    source: "ai",
+    radar: { name: "x", description: "x", source: "s", category: "c", marketSize: "m", growth: "g", competition: "c", entryBarrier: "e", profitability: "p", score: 80, suggestion: "继续观察", scannedAt: "2026-08-25T00:00:00.000Z" },
+  });
+  assert.ok(opp.id);
+  assert.equal((mock.db.get("opportunities") ?? []).length, 1);
+});
+
+test("create 降级只对缺 radar 列触发：其他错误照常抛出且不落库", async () => {
+  const mock = new MockSupabase();
+  mock.failNextInsert = { code: "23505", message: "duplicate key value violates unique constraint" };
+  const repo = createRepo(mock);
+  await assert.rejects(
+    () => repo.createOpportunity({ name: "x", description: "y", source: "user" }),
+    (e: unknown) => e instanceof SupabaseRepositoryError && e.operation === "createOpportunity",
+  );
+  assert.equal((mock.db.get("opportunities") ?? []).length, 0, "失败的插入不应写入任何行");
 });
