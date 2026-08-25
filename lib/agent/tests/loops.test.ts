@@ -190,7 +190,7 @@ test("AgentRuntime：调用晨报 + 监控工具（loopType 记录）", async ()
   assert.equal(run.toolsUsed.length, 2);
   assert.ok(run.duration !== undefined);
   const briefing = run.toolsUsed[0].result as { date: string; anomalies: number; suggestedActions: string[] };
-  assert.equal(briefing.date, "2026-08-24");
+  assert.match(briefing.date, /^\d{4}-\d{2}-\d{2}$/, "日期应为 YYYY-MM-DD（实时生成）");
   assert.ok(briefing.anomalies >= 1);
   const monitor = run.toolsUsed[1].result as { count: number };
   assert.ok(monitor.count >= 1);
