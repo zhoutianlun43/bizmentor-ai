@@ -377,3 +377,16 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 ### 验收
 - 317/317 测试通过（新增：saveRun 消毒器单测）、lint 0、tsc/build 通过。
 - 部署：bizmentor.top（最终 BUILD_ID xSWPj5UdGxWVmDK3xT1HM）。
+
+---
+
+## 29. V1.2 真实商业落地决策系统完成记录（商业操盘手报告）
+
+- **定位**：机会研究中心 = 商业机会调查报告（WHY）；创业执行决策 = 商业操盘方案（HOW）。两个 Tab 保持，避免重复。
+- **新模块 lib/operation/**：BusinessOperationPlan（商业操盘手报告）10 部分：市场真实需求验证（关键词×平台趋势表）/ 产品筛选矩阵（10-20 候选含供应/售价/采购/毛利/物流/利润/竞争难度/评分/推荐）/ 竞品深度拆解（5-10 真实竞品）/ 供应链（渠道/MOQ/周期/物流/成本，无真实数据 verified=false）/ 定价模型（采购-物流-佣金-广告-人工=真实成本，盈亏平衡广告成本/目标ROI）/ 页面优化（10+标题/主图方案/描述结构/SEO关键词）/ 内容增长系统（30 条计划：标题/结构/Hook/拍摄/展示/CTA/指标）/ 广告投放（分阶段预算/素材/指标/淘汰/放量规则）/ AI 操盘 90 天计划（阶段/目标/AI负责/用户负责/工具/输出/成功标准）/ 投资判断（YES/NO/验证后进入 + 市场/竞争/供应链/利润/增长/风险 + 最大未知 + 下一步关键实验）。
+- **Pipeline**：生成前先真实数据采集（外部研究 Tavily → OperationSource[]），再 3 组子生成（A 市场+产品+供应链；B 竞品+定价；C 页面+内容30+广告+90天+投资判断），每组独立 schema + maxTokens + 重试。
+- **sourceRequired**：所有数据条目带 sourceRequired/sourceRef；无真实数据必须显示「暂无真实来源，需要验证」，禁止 AI 编造（实测 pricing.totalCost 与 supplyChain 均诚实标注）。
+- **接入**：DecisionService.generateOperationPlan + /api/operation（服务端：AI Gateway + createExternalResearchFn + Supabase anon 直连）；report.operationPlan（jsonb，无 schema 迁移）；ExecutiveDecisionPanel 新增「生成/重新生成操盘报告」按钮 + OperationPlanView；Decision v{n} 版本递增。
+- **验证**：320/320 测试通过（新增 3：来源采集/生成完整/版本递增）、lint 0、tsc/build 通过；线上 /api/operation 实测生成 23KB 完整报告（6 真实来源 gminsights/myzaker/ithome/aliyun 等；10 产品候选/8 竞品/30 内容/3 广告/4 阶段；无真实数据处标注「暂无真实来源，需要验证」），入库确认。
+- **部署**：bizmentor.top（BUILD_ID Em8mYvRpqQ5E0InhJKiEa）。
+- **截图**：outputs/screenshots/v12/（8 张：市场验证 01/产品矩阵 02/竞品 03/供应链定价 04/页面优化 05/内容30 06/90天 07/投资判断 08）。

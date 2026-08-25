@@ -13,6 +13,8 @@ import { reviewUserDecision } from "./examiner";
 import { generateInvestmentThesis as buildInvestmentThesis } from "./thesis";
 import { generateUnitEconomics as buildUnitEconomics } from "./unit-economics";
 import { generateBusinessJudgment as buildBusinessJudgment } from "./judgment";
+import { generateOperationPlan as buildOperationPlan } from "../operation/pipeline";
+import { createExternalResearchFn } from "../external";
 import { generateEvidenceScore as buildEvidenceScore } from "./evidence-score";
 import { createExecutionLearningEvents, generateLearningEvents } from "./learning";
 import {
@@ -25,7 +27,7 @@ import { LocalDecisionRepository } from "./repository";
 import type { DecisionRepository } from "./repository";
 import { computeScoreV2 } from "./scoring";
 import { uid } from "../store/storage";
-import type { BusinessJudgment, EvidenceScore } from "../research/types";
+import type { BusinessJudgment, BusinessOperationPlan, EvidenceScore } from "../research/types";
 import type {
   DecisionType,
   LearningEvent,
@@ -418,6 +420,26 @@ export class DecisionService {
     run.updatedAt = new Date().toISOString();
     await this.research.saveRun(run);
     return evidenceScore;
+  }
+
+  // ---------- 6. 商业操盘手报告（V1.2：真实商业落地决策系统） ----------
+
+  /** 生成商业操盘手报告：真实数据采集 + 市场验证/产品矩阵/竞品/供应链/定价/获客/内容/广告/90天/投资判断 */
+  async generateOperationPlan(opportunityId: string): Promise<BusinessOperationPlan> {
+    const run = await this.research.getRun(opportunityId);
+    if (!run || !run.report) throw new Error("研究运行不存在或未完成");
+    const operationPlan = await buildOperationPlan({
+      runAi: this.runAi,
+      externalResearch: createExternalResearchFn(),
+      report: run.report,
+      runId: run.runId,
+      opportunity: { id: opportunityId, name: run.report.opportunityName, description: run.report.executiveSummary },
+      previousVersion: run.report?.operationPlan?.version,
+    });
+    run.report.operationPlan = operationPlan;
+    run.updatedAt = new Date().toISOString();
+    await this.research.saveRun(run);
+    return operationPlan;
   }
 
   // ---------- 查询 ----------

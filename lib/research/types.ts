@@ -11,6 +11,8 @@
  * - NEEDS_VALIDATION：缺少外部证据、必须验证的结论
  */
 import type { AiProviderName } from "../ai/types";
+import type { BusinessOperationPlan } from "../operation/types";
+export type { BusinessOperationPlan } from "../operation/types";
 
 /** 证据分类 */
 export type EvidenceClass = "FACT" | "AI_INFERENCE" | "ASSUMPTION" | "NEEDS_VALIDATION";
@@ -500,6 +502,8 @@ export interface ResearchReport {
   unitEconomics?: UnitEconomicsModel;
   /** AI 商业判断（V0.9：决策型报告核心） */
   judgment?: BusinessJudgment;
+  /** 商业操盘手报告（V1.2：真实商业落地决策系统） */
+  operationPlan?: BusinessOperationPlan;
   /** Evidence Score（V0.9.1：证据关联评分） */
   evidenceScore?: EvidenceScore;
   /** 证据自动验证（V1.1） */

@@ -8,5 +8,5 @@
     "moduleResolution": "node10",
     "types": ["node"]
   },
-  "include": ["lib/ai/**/*.ts", "lib/research/**/*.ts", "lib/decision/**/*.ts", "lib/supabase/**/*.ts", "lib/opportunity/**/*.ts", "lib/repository/**/*.ts", "supabase/integration-tests/**/*.ts", "lib/migration/**/*.ts", "lib/external/**/*.ts", "lib/domain/**/*.ts", "lib/memory/**/*.ts", "lib/identity/**/*.ts", "lib/agent/**/*.ts", "lib/skills/**/*.ts", "lib/knowledge/**/*.ts", "lib/settings/**/*.ts", "lib/sync/**/*.ts", "lib/pwa/**/*.ts", "lib/profile/**/*.ts", "lib/business/**/*.ts", "lib/context/**/*.ts", "lib/llm/**/*.ts", "lib/conversation/**/*.ts", "lib/radar/**/*.ts", "scripts/**/*.ts"]
+  "include": ["lib/ai/**/*.ts", "lib/research/**/*.ts", "lib/decision/**/*.ts", "lib/supabase/**/*.ts", "lib/opportunity/**/*.ts", "lib/repository/**/*.ts", "supabase/integration-tests/**/*.ts", "lib/migration/**/*.ts", "lib/external/**/*.ts", "lib/domain/**/*.ts", "lib/memory/**/*.ts", "lib/identity/**/*.ts", "lib/agent/**/*.ts", "lib/skills/**/*.ts", "lib/knowledge/**/*.ts", "lib/settings/**/*.ts", "lib/sync/**/*.ts", "lib/pwa/**/*.ts", "lib/profile/**/*.ts", "lib/business/**/*.ts", "lib/context/**/*.ts", "lib/llm/**/*.ts", "lib/conversation/**/*.ts", "lib/radar/**/*.ts", "lib/operation/**/*.ts", "scripts/**/*.ts"]
 }
