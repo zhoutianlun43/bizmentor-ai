@@ -27,7 +27,7 @@ export class SupabaseConversationRepository implements ConversationRepository {
 
   async save(conversation: Conversation): Promise<void> {
     const { error } = await this.supabase.from("conversations").upsert(
-      { id: conversation.id, user_id: conversation.userId, messages: conversation.messages, created_at: conversation.createdAt, updated_at: conversation.updatedAt },
+      { id: conversation.id, user_id: conversation.userId, title: conversation.title ?? null, messages: conversation.messages, created_at: conversation.createdAt, updated_at: conversation.updatedAt },
       { onConflict: "id" },
     );
     if (error) throw new SupabaseRepositoryError("saveConversation", error.message);
@@ -38,13 +38,13 @@ export class SupabaseConversationRepository implements ConversationRepository {
     if (error) throw new SupabaseRepositoryError("getConversation", error.message);
     const row = data as Row | null;
     if (!row) return undefined;
-    return { id: String(row.id), userId: String(row.user_id), messages: (row.messages as ConversationMessage[]) ?? [], createdAt: String(row.created_at), updatedAt: String(row.updated_at) };
+    return { id: String(row.id), userId: String(row.user_id), title: row.title ? String(row.title) : undefined, messages: (row.messages as ConversationMessage[]) ?? [], createdAt: String(row.created_at), updatedAt: String(row.updated_at) };
   }
 
   async list(userId: string): Promise<Conversation[]> {
     const { data, error } = await this.supabase.from("conversations").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
     if (error) throw new SupabaseRepositoryError("listConversations", error.message);
-    return ((data as Row[] | null) ?? []).map((row) => ({ id: String(row.id), userId: String(row.user_id), messages: (row.messages as ConversationMessage[]) ?? [], createdAt: String(row.created_at), updatedAt: String(row.updated_at) }));
+    return ((data as Row[] | null) ?? []).map((row) => ({ id: String(row.id), userId: String(row.user_id), title: row.title ? String(row.title) : undefined, messages: (row.messages as ConversationMessage[]) ?? [], createdAt: String(row.created_at), updatedAt: String(row.updated_at) }));
   }
 
   async remove(id: string): Promise<boolean> {

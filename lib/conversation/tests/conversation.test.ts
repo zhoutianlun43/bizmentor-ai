@@ -25,6 +25,22 @@ test("Local Conversation：save/get/list/append/remove", async () => {
   assert.equal(await repo.get("c1"), undefined);
 });
 
+test("Local Conversation：title 保存/重命名往返", async () => {
+  const repo = new LocalConversationRepository(createMemoryConversationStorage());
+  await repo.save({ ...makeConversation(), title: "万圣节选品讨论" });
+  assert.equal((await repo.get("c1"))?.title, "万圣节选品讨论");
+  await repo.save({ ...(await repo.get("c1"))!, title: "改名后的会话", updatedAt: "2026-08-24T01:00:00.000Z" });
+  assert.equal((await repo.get("c1"))?.title, "改名后的会话");
+});
+
+test("Local Conversation：list 按 updatedAt 倒序（多会话）", async () => {
+  const repo = new LocalConversationRepository(createMemoryConversationStorage());
+  await repo.save({ ...makeConversation(), id: "old", updatedAt: "2026-08-23T00:00:00.000Z" });
+  await repo.save({ ...makeConversation(), id: "new", title: "新会话", updatedAt: "2026-08-24T02:00:00.000Z" });
+  const list = await repo.list("u1");
+  assert.deepEqual(list.map((c) => c.id), ["new", "old"]);
+});
+
 test("Supabase Conversation：save/get/list/append（mock）", async () => {
   const db: Array<Record<string, unknown>> = [];
   const client = {

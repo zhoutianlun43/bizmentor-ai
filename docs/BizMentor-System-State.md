@@ -277,3 +277,16 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **UI**：/chat 标题改为「BizMentor AI / 你的个人商业智能助手」，气泡增加角色标签（你 / BizMentor AI）+ 指令快捷入口。
 - **验证**：298/298 测试通过（新增 6）、lint/tsc/build 通过；线上实测：普通对话简洁追问、/深度分析 输出结构化深度内容（DeepSeek）。
 - **部署**：已部署生产 bizmentor.top（BUILD_ID FsCcaV91ryM04hDIYT7iO）。
+
+
+---
+
+## 23. V0.8.2 AI 对话页 UI/UX 升级完成记录（ChatGPT 风格 + 多会话）
+
+- **Markdown 渲染**：新增 lib/conversation/markdown.ts（轻量解析器：标题/加粗/斜体/行内代码/代码块/列表/引用/分隔线/链接/段落）+ components/chat/Markdown.tsx（渲染组件）；AI 回复不再显示原始 ##、**、- 符号，标题/列表/加粗按视觉元素渲染，段落间距自动优化。
+- **多会话系统**：/chat 新增会话抽屉（今天/昨天/历史分组）+ 新建对话 + 选择/删除/重命名（行内编辑）；每个会话独立 messages/title/createdAt/updatedAt/userId，上下文互不影响。
+- **会话数据结构**：Conversation 增加 title? 字段（首条用户消息自动生成标题，可手动重命名）；LocalConversationRepository.list 按 updatedAt 倒序；SupabaseConversationRepository 预留 title 字段（不建表、无迁移）。
+- **快捷功能卡片**：替换文字按钮为 2×2 卡片式入口（SVG 图标）：深度分析(搜索+AI芯片/靛蓝)、商业报告(文件+数据/紫)、市场研究(地球+搜索/青)、机会评估(灯泡+趋势/琥珀)；点击插入 /指令 触发专业模式；空会话时展示。
+- **品牌设计**：主色 #6366F1，辅助 #8B5CF6 / #06B6D4 / #F59E0B，浅色为主；用户气泡品牌色、AI 气泡白色卡片 + Markdown。
+- **验证**：307/307 测试通过（新增 9：Markdown 解析 7 + 会话 title/排序 2）、lint 0 警告、tsc/build 通过；线上 /chat 200、新 UI 元素齐备、/api/chat 正常（DeepSeek）。
+- **部署**：已部署生产 bizmentor.top（BUILD_ID -xFgNyey1G7toXtM-Lgz1）。

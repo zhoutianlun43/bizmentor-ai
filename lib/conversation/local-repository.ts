@@ -47,7 +47,10 @@ export class LocalConversationRepository implements ConversationRepository {
   }
 
   async list(userId: string): Promise<Conversation[]> {
-    return this.storage.load().filter((c) => c.userId === userId);
+    return this.storage
+      .load()
+      .filter((c) => c.userId === userId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
   async remove(id: string): Promise<boolean> {
