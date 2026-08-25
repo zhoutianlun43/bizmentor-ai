@@ -19,8 +19,8 @@ type Filter = "all" | "ai" | "user" | "researching" | "validating" | "validated"
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "全部" },
-  { value: "ai", label: "AI发现" },
-  { value: "user", label: "我发现的" },
+  { value: "ai", label: "AI雷达发现" },
+  { value: "user", label: "我的想法" },
   { value: "researching", label: "研究中" },
   { value: "validating", label: "验证中" },
   { value: "validated", label: "已验证" },
@@ -43,12 +43,18 @@ export default function OpportunitiesPage() {
     <div className="px-5 pb-4">
       <AppHeader title="商机" subtitle="可能值得研究的机会" />
 
-      {/* 新增商机 */}
-      <div className="mt-2">
-        <Link href="/opportunities/new" className="block">
+      {/* V0.8：双入口 —— 创建商机 + AI商业雷达 */}
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Link href="/opportunities/new">
           <Button variant="primary" className="w-full">
             <Plus className="size-4" />
-            新增商机
+            创建商机
+          </Button>
+        </Link>
+        <Link href="/radar">
+          <Button variant="secondary" className="w-full">
+            <Sparkles className="size-4" />
+            AI商业雷达
           </Button>
         </Link>
       </div>
