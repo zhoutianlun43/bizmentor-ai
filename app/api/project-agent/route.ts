@@ -13,7 +13,10 @@ import { SupabaseDecisionRepository } from "@/lib/decision/supabase-repository";
 import { env } from "@/lib/config/env";
 import { getCurrentUserId } from "@/lib/identity";
 import { projectMemoryStore } from "@/lib/project-agent/store";
-import { buildCognition, buildAgentSystemPrompt } from "@/lib/project-agent/cognition";
+import { buildCognition } from "@/lib/project-agent/cognition";
+import { buildStructuredSystemPrompt } from "@/lib/agent-output/prompt";
+import { parseStructuredOutput, deriveKnowledgeDelta } from "@/lib/agent-output/parse";
+import { extractJson } from "@/lib/research/schema";
 import type { AgentMode, ProjectMemory } from "@/lib/project-agent/types";
 
 const MAX = 60;
@@ -74,13 +77,24 @@ export async function POST(request: Request) {
         type: "conversation",
         agent: "project-agent",
         task: b.message,
-        system: buildAgentSystemPrompt(cognition, memory, run, mode),
+        system: buildStructuredSystemPrompt(cognition, memory, run, mode),
         allowDegrade: true,
       });
-      const reply = result.content;
-      memory.knowledgeBase = pushCap(memory.knowledgeBase, `AI 回答：${b.message.slice(0, 80)} → ${reply.slice(0, 120)}`);
+      let structured;
+      try {
+        structured = parseStructuredOutput(extractJson(result.content), result.content);
+      } catch {
+        structured = parseStructuredOutput(null, result.content);
+      }
+      const knowledge = deriveKnowledgeDelta(structured);
+      const summaryText = structured.blocks
+        .map((blk) => (blk.type === "summary" ? blk.conclusion : blk.type === "text" ? blk.paragraphs.join("；") : `[${blk.type}] ${blk.title ?? ""}`))
+        .join("；")
+        .slice(0, 200);
+      memory.knowledgeBase = pushCap(memory.knowledgeBase, `AI 回答（${structured.format}）：${b.message.slice(0, 60)} → ${summaryText}`);
+      if (knowledge.newRisks) memory.changes = pushCap(memory.changes, `AI 识别新风险（${new Date().toISOString().slice(0, 10)}）`);
       projectMemoryStore.save(memory);
-      return NextResponse.json({ reply, provider: result.provider, model: result.model });
+      return NextResponse.json({ structured, knowledge, provider: result.provider, model: result.model });
     }
 
     if (b.type === "analyze-url") {

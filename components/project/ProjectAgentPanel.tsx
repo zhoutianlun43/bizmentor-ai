@@ -3,21 +3,25 @@
  */
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Bot, Brain, FileUp, Link2, RotateCcw, Send } from "lucide-react";
+import { Bot, Brain, FileUp, ImageIcon, Link2, RotateCcw, Send } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { StructuredReply } from "@/components/agent-output/StructuredReply";
 import { AGENT_MODE_LABELS } from "@/lib/project-agent/types";
+import type { StructuredOutput } from "@/lib/agent-output/types";
 import type { AgentMode, ProjectCognitionProfile, ProjectMemory } from "@/lib/project-agent/types";
 
 const MODES: AgentMode[] = ["advisor", "manager", "investor", "operations"];
 
-interface Msg { role: "user" | "assistant"; content: string; }
+interface Msg { role: "user" | "assistant"; content?: string; structured?: StructuredOutput; }
+interface KnowledgeChips { newViews: boolean; newDecisions: boolean; newData: boolean; newRisks: boolean; }
 
 export function ProjectAgentPanel({ projectId }: { projectId: string }) {
   const [cognition, setCognition] = useState<ProjectCognitionProfile | null>(null);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [mode, setMode] = useState<AgentMode>("manager");
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [lastKnowledge, setLastKnowledge] = useState<KnowledgeChips | null>(null);
   const [input, setInput] = useState("");
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
@@ -71,13 +75,18 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? data.error ?? "失败");
-      setMessages((m) => [...m, { role: "assistant", content: data.reply }]);
+      setMessages((m) => [...m, data.structured ? { role: "assistant", structured: data.structured } : { role: "assistant", content: data.reply ?? data.structured?.title ?? "" }]);
+      setLastKnowledge(data.knowledge ?? null);
       await load();
     } catch (e) {
       setError((e as Error).message ?? "失败");
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleImage() {
+    setMessages((m) => [...m, { role: "assistant", content: "图片分析需要视觉模型（当前 DeepSeek 暂不支持图片）。请把图片/截图中的关键文字（价格、卖点、评论等）粘贴到「分析资料」输入框，我会帮你分析并写入项目记忆。" }]);
   }
 
   async function analyzeUrl() {
@@ -168,11 +177,26 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
               <p className="text-xs text-slate-400">问项目 AI：例如「这个项目最大的风险是什么？」「为什么推荐这个方案？」「如果预算只有 1000 美元怎么办？」</p>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={"rounded-xl px-3 py-2 text-xs whitespace-pre-wrap " + (m.role === "user" ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-100" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100")}>
-                {m.content}
+              <div key={i} className={m.role === "user" ? "rounded-xl bg-indigo-50 px-3 py-2 text-xs whitespace-pre-wrap text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-100" : ""}>
+                {m.role === "assistant" && m.structured ? (
+                  <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
+                    <StructuredReply out={m.structured} />
+                  </div>
+                ) : (
+                  <div className={"rounded-xl px-3 py-2 text-xs whitespace-pre-wrap " + (m.role === "user" ? "" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100")}>{m.content}</div>
+                )}
               </div>
             ))}
             {busy && <p className="text-[10px] text-slate-400">AI 思考中…</p>}
+            {lastKnowledge && !busy && (
+              <div className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                ✓ 已沉淀到项目知识库：
+                {lastKnowledge.newViews ? <span className="ml-1 rounded bg-white/70 px-1 dark:bg-slate-900/50">新观点</span> : null}
+                {lastKnowledge.newDecisions ? <span className="ml-1 rounded bg-white/70 px-1 dark:bg-slate-900/50">新决策</span> : null}
+                {lastKnowledge.newData ? <span className="ml-1 rounded bg-white/70 px-1 dark:bg-slate-900/50">新数据</span> : null}
+                {lastKnowledge.newRisks ? <span className="ml-1 rounded bg-white/70 px-1 dark:bg-slate-900/50">新风险</span> : null}
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="问项目 AI…" className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900" />
@@ -191,6 +215,7 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
         <div className="flex gap-2">
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="粘贴资料/截图文字（竞品信息、用户评论…）" className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900" />
           <Button variant="secondary" size="sm" onClick={analyzeText} disabled={busy || !text.trim()}><FileUp className="size-3.5" />分析资料</Button>
+          <Button variant="secondary" size="sm" onClick={handleImage} disabled={busy} title="图片分析（需视觉模型）"><ImageIcon className="size-3.5" />图片</Button>
         </div>
       </div>
 

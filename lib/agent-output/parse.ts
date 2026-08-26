@@ -1,0 +1,111 @@
+/**
+ * 结构化输出解析器（V1.6）：把 LLM 的 JSON 归一化为 StructuredOutput；容错降级为纯文本。
+ */
+import type { OutputBlock, StructuredOutput } from "./types";
+
+function arr(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 20) : [];
+}
+function str(v: unknown, fallback = ""): string {
+  return typeof v === "string" && v.trim() ? v : fallback;
+}
+function num(v: unknown): number | undefined {
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+function parseBlock(raw: Record<string, unknown>): OutputBlock | null {
+  const type = raw.type as string;
+  switch (type) {
+    case "summary": {
+      const conclusion = str(raw.conclusion);
+      if (!conclusion) return null;
+      return { type: "summary", title: str(raw.title) || undefined, conclusion, confidence: num(raw.confidence), basis: arr(raw.basis) };
+    }
+    case "table": {
+      const headers = arr(raw.headers);
+      const rows = Array.isArray(raw.rows) ? (raw.rows as unknown[]).filter(Array.isArray).map((r) => arr(r)) : [];
+      if (headers.length === 0) return null;
+      return { type: "table", title: str(raw.title) || undefined, headers, rows };
+    }
+    case "timeline": {
+      const phases = Array.isArray(raw.phases)
+        ? (raw.phases as Record<string, unknown>[]).map((p) => ({ phase: str(p.phase, "阶段"), goal: str(p.goal), actions: arr(p.actions), owner: str(p.owner) || undefined, metric: str(p.metric) || undefined }))
+        : [];
+      if (!phases.length) return null;
+      return { type: "timeline", title: str(raw.title) || undefined, phases };
+    }
+    case "swot":
+      return { type: "swot", title: str(raw.title) || undefined, strengths: arr(raw.strengths), weaknesses: arr(raw.weaknesses), opportunities: arr(raw.opportunities), threats: arr(raw.threats) };
+    case "products": {
+      const items = Array.isArray(raw.items)
+        ? (raw.items as Record<string, unknown>[]).map((it) => ({ name: str(it.name, "产品"), supply: str(it.supply) || undefined, cost: str(it.cost) || undefined, price: str(it.price) || undefined, profit: str(it.profit) || undefined, competition: str(it.competition) || undefined, score: num(it.score) }))
+        : [];
+      if (!items.length) return null;
+      return { type: "products", title: str(raw.title) || undefined, items };
+    }
+    case "content": {
+      const items = Array.isArray(raw.items)
+        ? (raw.items as Record<string, unknown>[]).map((it) => ({ date: str(it.date, "Day1"), platform: str(it.platform, "—"), topic: str(it.topic, ""), title: str(it.title, ""), format: str(it.format, ""), goal: str(it.goal, "") }))
+        : [];
+      if (!items.length) return null;
+      return { type: "content", title: str(raw.title) || undefined, items };
+    }
+    case "financial": {
+      const rows = Array.isArray(raw.rows)
+        ? (raw.rows as Record<string, unknown>[]).map((r) => ({ item: str(r.item, "—"), value: str(r.value, ""), note: str(r.note) || undefined }))
+        : [];
+      if (!rows.length) return null;
+      return { type: "financial", title: str(raw.title) || undefined, rows };
+    }
+    case "risk": {
+      const items = Array.isArray(raw.items)
+        ? (raw.items as Record<string, unknown>[]).map((r) => ({ risk: str(r.risk, "风险"), impact: str(r.impact, "—"), probability: str(r.probability, "—"), mitigation: str(r.mitigation, "") }))
+        : [];
+      if (!items.length) return null;
+      return { type: "risk", title: str(raw.title) || undefined, items };
+    }
+    case "text": {
+      const paragraphs = arr(raw.paragraphs);
+      if (!paragraphs.length) return null;
+      return { type: "text", paragraphs };
+    }
+    default:
+      return null;
+  }
+}
+
+/** 解析 LLM JSON → StructuredOutput；失败则降级为纯文本 */
+export function parseStructuredOutput(raw: unknown, fallbackText: string): StructuredOutput {
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    const blocks: OutputBlock[] = [];
+    if (Array.isArray(obj.blocks)) {
+      for (const b of obj.blocks) {
+        if (b && typeof b === "object") {
+          const block = parseBlock(b as Record<string, unknown>);
+          if (block) blocks.push(block);
+        }
+      }
+    }
+    if (blocks.length > 0) {
+      return {
+        format: (str(obj.format) as StructuredOutput["format"]) || "report",
+        title: str(obj.title, "AI 分析"),
+        blocks,
+      };
+    }
+  }
+  return { format: "answer", title: "AI 分析", blocks: [{ type: "text", paragraphs: [fallbackText] }] };
+}
+
+/** 知识沉淀：根据输出块推断 新观点/新决策/新数据/新风险 */
+export function deriveKnowledgeDelta(out: StructuredOutput): { newViews: boolean; newDecisions: boolean; newData: boolean; newRisks: boolean } {
+  let newViews = false, newDecisions = false, newData = false, newRisks = false;
+  for (const b of out.blocks) {
+    if (b.type === "swot" || b.type === "summary") newViews = true;
+    if (b.type === "timeline" || b.type === "content") newDecisions = true;
+    if (b.type === "table" || b.type === "financial" || b.type === "products") newData = true;
+    if (b.type === "risk") newRisks = true;
+  }
+  return { newViews, newDecisions, newData, newRisks };
+}

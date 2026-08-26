@@ -472,3 +472,21 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **部署**：bizmentor.top（BUILD_ID vqjFRpkyBnv-o8n26fDz7）。
 - **截图**：outputs/screenshots/v15/（01 认知档案/02 对话回答/03 URL分析/04 记忆持久化）。
 - **当前限制**：PDF/Excel/Word/图片二进制的解析未接（可用文本粘贴/URL 分析替代）；AI 主动提醒为简化版（基于记忆与验证结果）；可后续接入视觉模型与定时检查。
+
+---
+
+## 35. V1.6 AI 输出系统升级完成记录（商业顾问级结构化输出）
+
+- **目标**：项目 AI 输出从「普通聊天文本」升级为「商业顾问级结构化内容」（麦肯锡报告 + 创业顾问 + AI 执行团队风格），不再连续大段文字。
+- **Response Format Router**：lib/agent-output/prompt.ts —— 用户意图 → 最佳格式（竞品→表格+SWOT；运营→时间线+内容表；值不值得做→判断卡+风险矩阵；选品→产品表；成本利润→财务表；问答→分段文本≤300字）；系统提示强制输出 JSON blocks，禁止连续长文。
+- **商业组件库**：components/agent-output/StructuredReply.tsx —— Summary Card（结论+置信度+依据）/ Data Table / Action Plan Timeline / SWOT Card / Product Research Card / Content Plan Board / Financial Model Table / Risk Matrix / Text；不渲染 Markdown。
+- **解析器**：lib/agent-output/parse.ts —— LLM JSON 归一化 + 容错降级文本；deriveKnowledgeDelta 推断 新观点/新决策/新数据/新风险。
+- **导出**：CSV（表格，Excel 可开）+ HTML 报告（Word/浏览器可开）按钮。
+- **知识沉淀展示**：AI 回答后显示「已沉淀到项目知识库：新观点/新数据/新风险」+ 写入长期记忆（知识库 + 项目变化）。
+- **图片**：新增「图片」按钮（诚实提示：DeepSeek 暂不支持视觉，建议粘贴截图文字用「分析资料」）。
+- **URL/文本分析**：延续 V1.5。
+- **验证**（真实浏览器）：问「分析值不值得做」→ 输出 核心判断卡（置信度65%+4条依据）+ 竞品对比表（Synthesia/HeyGen/D-ID/本项目）+ 风险矩阵（4项含影响/概率/应对）+ CSV/报告按钮 + 知识沉淀提示；刷新后记忆持久化（AI 识别新风险 2026-08-26 + 知识库保留）。
+- **测试**：345/345（新增 4：blocks 解析/降级/脏块跳过/知识沉淀推断）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID hESwxq4yAHsa0Elo7TKY0）。
+- **截图**：outputs/screenshots/v16/（01 结构化输出/02 记忆持久化）。
+- **当前限制**：图片/视频理解需视觉模型（已给占位与提示）；Word/Excel/PPT/PDF 原生导出为 CSV+HTML 方案（可后续接 docx/xlsx/pptx 库）。
