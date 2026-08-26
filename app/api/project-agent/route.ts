@@ -16,6 +16,9 @@ import { projectMemoryStore } from "@/lib/project-agent/store";
 import { buildCognition } from "@/lib/project-agent/cognition";
 import { buildStructuredSystemPrompt } from "@/lib/agent-output/prompt";
 import { parseStructuredOutput, deriveKnowledgeDelta } from "@/lib/agent-output/parse";
+import { analyzeIntent } from "@/lib/ai/output/intent-analyzer";
+import { getTemplate, templateInstruction } from "@/lib/ai/output/output-router";
+import { checkOutputQuality } from "@/lib/ai/output/output-quality-checker";
 import { extractJson } from "@/lib/research/schema";
 import type { AgentMode, ProjectMemory } from "@/lib/project-agent/types";
 
@@ -72,12 +75,14 @@ export async function POST(request: Request) {
     if (b.type === "chat") {
       if (!b.message?.trim()) return NextResponse.json({ error: "EMPTY_MESSAGE" }, { status: 400 });
       const mode = (b.mode ?? "manager") as AgentMode;
+      const intent = analyzeIntent(b.message);
+      const template = getTemplate(intent);
       const result = await runAI({
         capability: "reasoning",
         type: "conversation",
         agent: "project-agent",
         task: b.message,
-        system: buildStructuredSystemPrompt(cognition, memory, run, mode),
+        system: buildStructuredSystemPrompt(cognition, memory, run, mode) + "\n" + templateInstruction(template),
         allowDegrade: true,
       });
       let structured;
@@ -87,6 +92,7 @@ export async function POST(request: Request) {
         structured = parseStructuredOutput(null, result.content);
       }
       const knowledge = deriveKnowledgeDelta(structured);
+      const quality = checkOutputQuality(structured);
       const summaryText = structured.blocks
         .map((blk) => (blk.type === "summary" ? blk.conclusion : blk.type === "text" ? blk.paragraphs.join("；") : `[${blk.type}] ${blk.title ?? ""}`))
         .join("；")
@@ -94,7 +100,7 @@ export async function POST(request: Request) {
       memory.knowledgeBase = pushCap(memory.knowledgeBase, `AI 回答（${structured.format}）：${b.message.slice(0, 60)} → ${summaryText}`);
       if (knowledge.newRisks) memory.changes = pushCap(memory.changes, `AI 识别新风险（${new Date().toISOString().slice(0, 10)}）`);
       projectMemoryStore.save(memory);
-      return NextResponse.json({ structured, knowledge, provider: result.provider, model: result.model });
+      return NextResponse.json({ structured, knowledge, quality, intent, provider: result.provider, model: result.model });
     }
 
     if (b.type === "analyze-url") {

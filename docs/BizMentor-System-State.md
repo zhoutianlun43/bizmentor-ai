@@ -490,3 +490,23 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **部署**：bizmentor.top（BUILD_ID hESwxq4yAHsa0Elo7TKY0）。
 - **截图**：outputs/screenshots/v16/（01 结构化输出/02 记忆持久化）。
 - **当前限制**：图片/视频理解需视觉模型（已给占位与提示）；Word/Excel/PPT/PDF 原生导出为 CSV+HTML 方案（可后续接 docx/xlsx/pptx 库）。
+
+---
+
+## 36. V1.7 AI 输出系统架构升级完成记录（Output Intelligence Layer）
+
+- **Output Intelligence Layer**（lib/ai/output/）：
+  - intent-analyzer.ts：AI 回答前判断用户意图（商业判断/竞品/选品/执行方案/市场/综合），确定性分类，零额外 LLM 成本。
+  - output-router.ts：意图 → 输出模板（blocks + 必填字段 + 质量规则）；模板来自 config/ai-output-templates/*.json（business-analysis / competitor-analysis / product-selection / execution-plan）。
+  - response-schema.ts：复用 agent-output 结构化类型。
+  - output-quality-checker.ts：每次输出后自动检查 空泛建议（"做好/加强/努力"）/ 无依据判断（"市场巨大"无数据）/ 缺执行细节（产品缺供应成本售价利润、阶段缺负责人指标）。
+- **商业输出模板系统**：4 个 JSON 模板定义 结构/必填字段/质量规则，驱动路由与系统提示。
+- **多模态接口预留**（lib/ai/multimodal/）：MultimodalProvider { analyzeImage/analyzeVideo/analyzeDocument/generateVisual }，当前 MockProvider（"当前未接入视觉模型"），未来接入 GPT-4.1 Vision/Claude/Gemini/Qwen-VL/DeepSeek Vision 无需改业务。
+- **文件理解层接口**（lib/ai/files/layer.ts）：FileAnalyzer + FileUnderstandingLayer（上传→分析→抽取→知识库→AI），当前 Mock（PDF/Excel/Word 解析器未来接入）。
+- **Output Artifact System**（lib/ai/artifacts/builder.ts）：Artifact { type: text/table/report/slides/image/video, content, metadata, status }；当前 text/table/report ready，slides/image/video coming_soon。
+- **UI**：项目 AI 面板顶部 快捷动作（重新分析/生成商业报告/生成执行计划/导出报告）+ 认知卡显示「当前理解」；回答后显示「⚠ AI 质量自检」+「✓ 已沉淀到项目知识库」。
+- **验证**（真实浏览器）：生成商业报告 → 判断卡+市场证据表+竞争表+SWOT+成本利润+风险矩阵+下一步与量化指标；"帮我分析竞品" → 5 家横向对比表（价格/用户/优势/不足/可借鉴）+ SWOT + 机会点。
+- **测试**：349/349（新增 4：意图分类/模板路由/质量审核/制品状态）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID mYfSvqGQOVe_8k5pZLX79）。
+- **截图**：outputs/screenshots/v17/（01 头部动作/02 商业报告/03 竞品分析）。
+- **未来多模态接入方案**：实现真实 MultimodalProvider → registerMultimodalProvider 替换 Mock → 图片/视频输入走 FileUnderstandingLayer → 分析结果写入项目知识库 → AI 结合分析（业务无需重构）。

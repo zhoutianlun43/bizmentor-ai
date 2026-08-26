@@ -1,0 +1,9 @@
+{
+  "id": "execution-plan",
+  "label": "执行计划",
+  "intent": "execution_plan",
+  "blocks": ["timeline", "content", "financial"],
+  "sections": ["phases", "tasks", "owners", "resources", "cost", "metrics", "risk"],
+  "requiredFields": ["phase", "time", "task", "owner", "resource", "cost", "metric"],
+  "qualityRules": ["每阶段必须给 时间/任务/负责人/资源/成本/成功指标", "素材必须具体（开箱/前后对比/教程）", "指标必须可量化（CTR/完播率/转化率）"]
+}

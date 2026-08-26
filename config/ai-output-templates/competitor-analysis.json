@@ -1,0 +1,9 @@
+{
+  "id": "competitor-analysis",
+  "label": "竞品分析",
+  "intent": "competitor",
+  "blocks": ["table", "swot"],
+  "sections": ["competitorTable", "swot", "opportunity"],
+  "requiredFields": ["company", "product", "price", "users", "advantage", "gap", "lesson"],
+  "qualityRules": ["竞品必须≥3个", "每个竞品必须给价格/用户/优势/不足/借鉴", "必须给机会点"]
+}

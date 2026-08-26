@@ -1,0 +1,9 @@
+{
+  "id": "product-selection",
+  "label": "选品分析",
+  "intent": "product_selection",
+  "blocks": ["products", "table"],
+  "sections": ["productTable", "scoring", "reason"],
+  "requiredFields": ["product", "demand", "competition", "supply", "cost", "price", "profit", "score", "reason"],
+  "qualityRules": ["每个产品必须给 需求/竞争/供应来源/成本/售价/利润/评分/推荐理由", "必须说明为什么选与数据依据", "必须说明哪里可以买"]
+}

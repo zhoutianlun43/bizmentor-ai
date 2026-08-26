@@ -7,6 +7,7 @@ import { Bot, Brain, FileUp, ImageIcon, Link2, RotateCcw, Send } from "lucide-re
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { StructuredReply } from "@/components/agent-output/StructuredReply";
+import { buildArtifacts } from "@/lib/ai/artifacts/builder";
 import { AGENT_MODE_LABELS } from "@/lib/project-agent/types";
 import type { StructuredOutput } from "@/lib/agent-output/types";
 import type { AgentMode, ProjectCognitionProfile, ProjectMemory } from "@/lib/project-agent/types";
@@ -22,6 +23,8 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
   const [mode, setMode] = useState<AgentMode>("manager");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [lastKnowledge, setLastKnowledge] = useState<KnowledgeChips | null>(null);
+  const [lastOut, setLastOut] = useState<StructuredOutput | null>(null);
+  const [lastQuality, setLastQuality] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
@@ -77,12 +80,44 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
       if (!res.ok) throw new Error(data.message ?? data.error ?? "失败");
       setMessages((m) => [...m, data.structured ? { role: "assistant", structured: data.structured } : { role: "assistant", content: data.reply ?? data.structured?.title ?? "" }]);
       setLastKnowledge(data.knowledge ?? null);
+      if (data.structured) { setLastOut(data.structured); setLastQuality((data.quality ?? []).map((q: { message: string }) => q.message)); }
       await load();
     } catch (e) {
       setError((e as Error).message ?? "失败");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function quickSend(text: string) {
+    setInput(text);
+    await new Promise((r) => setTimeout(r, 50));
+    setInput("");
+    const sendBtn = document.querySelector("button");
+    void sendBtn;
+    // 直接走 send 逻辑
+    setMessages((m) => [...m, { role: "user", content: text }]);
+    setBusy(true); setError("");
+    try {
+      const res = await fetch("/api/project-agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "chat", projectId, message: text, mode }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? data.error ?? "失败");
+      setMessages((m) => [...m, data.structured ? { role: "assistant", structured: data.structured } : { role: "assistant", content: data.reply ?? "" }]);
+      setLastKnowledge(data.knowledge ?? null);
+      if (data.structured) { setLastOut(data.structured); setLastQuality((data.quality ?? []).map((q: { message: string }) => q.message)); }
+      await load();
+    } catch (e) { setError((e as Error).message ?? "失败"); } finally { setBusy(false); }
+  }
+
+  function exportLastReport() {
+    if (!lastOut) return;
+    const report = buildArtifacts(lastOut).find((a) => a.type === "report");
+    if (!report) return;
+    const blob = new Blob([report.content], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (lastOut.title || "bizmentor") + ".report.html";
+    a.click();
   }
 
   function handleImage() {
@@ -146,6 +181,7 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
             <span className="ml-auto text-[10px] text-slate-400">已读取项目全部资料</span>
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{cognition.aiIdentity}</p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">当前理解：{cognition.currentGoal}</p>
           <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <p><b>当前目标：</b>{cognition.currentGoal}</p>
             <p className="mt-0.5"><b>核心判断：</b>{cognition.coreJudgment}</p>
@@ -159,6 +195,14 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
           </details>
         </Card>
       )}
+
+      {/* 快捷动作 */}
+      <div className="flex gap-1.5 overflow-x-auto">
+        <button onClick={() => quickSend("请重新分析这个项目（含判断卡、证据、风险、建议动作）")} className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-medium text-white">重新分析</button>
+        <button onClick={() => quickSend("请生成商业报告（判断卡、市场证据、竞争、商业模式、风险矩阵、决策）")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">生成商业报告</button>
+        <button onClick={() => quickSend("请制定执行方案（阶段/时间/任务/负责人/资源/成本/成功指标/风险）")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">生成执行计划</button>
+        <button onClick={exportLastReport} disabled={!lastOut} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-300">导出报告</button>
+      </div>
 
       {/* 模式选择 */}
       <div className="flex gap-1.5 overflow-x-auto">
@@ -188,6 +232,11 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
               </div>
             ))}
             {busy && <p className="text-[10px] text-slate-400">AI 思考中…</p>}
+            {lastQuality.length > 0 && !busy && (
+              <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                ⚠ AI 质量自检：{lastQuality[0]}
+              </div>
+            )}
             {lastKnowledge && !busy && (
               <div className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                 ✓ 已沉淀到项目知识库：

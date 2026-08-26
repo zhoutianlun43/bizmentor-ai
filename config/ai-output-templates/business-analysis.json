@@ -1,0 +1,9 @@
+{
+  "id": "business-analysis",
+  "label": "商业判断分析",
+  "intent": "business_judgment",
+  "blocks": ["summary", "table", "risk", "text"],
+  "sections": ["summary", "marketEvidence", "competitiveLandscape", "businessModel", "riskMatrix", "decision"],
+  "requiredFields": ["conclusion", "confidence", "basis", "decision"],
+  "qualityRules": ["结论必须有依据", "风险必须给应对", "决策必须给下一步"]
+}
