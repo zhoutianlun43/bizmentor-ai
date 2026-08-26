@@ -26,6 +26,9 @@ const MAX = 60;
 function pushCap(arr: string[], item: string): string[] {
   return [...arr, item].slice(-MAX);
 }
+function pushCapAny<T>(arr: T[], item: T): T[] {
+  return [...arr, item].slice(-MAX);
+}
 
 export async function GET(request: Request) {
   const projectId = new URL(request.url).searchParams.get("projectId");
@@ -70,6 +73,15 @@ export async function POST(request: Request) {
     const decisions = await decisionRepo.listDecisions(b.projectId);
 
     const memory: ProjectMemory = projectMemoryStore.get(b.projectId);
+    // 兼容旧记忆记录（V1.8.1 新增字段可能缺失）
+    memory.facts ??= [];
+    memory.userDecisions ??= [];
+    memory.changes ??= [];
+    memory.aiJudgments ??= [];
+    memory.decisionLog ??= [];
+    memory.aiJudgmentChanges ??= [];
+    memory.knowledgeBase ??= [];
+    memory.reviews ??= [];
     const cognition = buildCognition(opportunity, run, decisions);
 
     if (b.type === "chat") {
@@ -93,6 +105,23 @@ export async function POST(request: Request) {
       }
       const knowledge = deriveKnowledgeDelta(structured);
       const quality = checkOutputQuality(structured);
+      const pu = structured.projectUpdate;
+      if (pu) {
+        const now = new Date().toISOString();
+        for (const x of pu.newFacts ?? []) memory.facts = pushCap(memory.facts, `${now.slice(0, 10)}：${x}`);
+        for (const x of pu.newRisks ?? []) memory.changes = pushCap(memory.changes, `AI 新风险（${now.slice(0, 10)}）：${x}`);
+        if (pu.newJudgments?.length) {
+          for (const j of pu.newJudgments) {
+            memory.aiJudgmentChanges = pushCapAny(memory.aiJudgmentChanges, { time: now, before: j.before, after: j.after, reason: j.reason });
+            memory.aiJudgments = pushCap(memory.aiJudgments, `AI 判断变化：${j.before ?? "—"} → ${j.after}（原因：${j.reason}）`);
+          }
+        }
+        for (const x of pu.planChanges ?? []) memory.changes = pushCap(memory.changes, `方案变化（${now.slice(0, 10)}）：${x}`);
+        if (pu.decision) {
+          memory.decisionLog = pushCapAny(memory.decisionLog, { time: now, decision: pu.decision.decision, reason: pu.decision.reason, basis: pu.decision.basis, status: "executing" });
+          memory.userDecisions = pushCap(memory.userDecisions, `${now.slice(0, 10)}：${pu.decision.decision}（${pu.decision.reason}）`);
+        }
+      }
       const summaryText = structured.blocks
         .map((blk) => (blk.type === "summary" ? blk.conclusion : blk.type === "text" ? blk.paragraphs.join("；") : `[${blk.type}] ${blk.title ?? ""}`))
         .join("；")
@@ -100,7 +129,7 @@ export async function POST(request: Request) {
       memory.knowledgeBase = pushCap(memory.knowledgeBase, `AI 回答（${structured.format}）：${b.message.slice(0, 60)} → ${summaryText}`);
       if (knowledge.newRisks) memory.changes = pushCap(memory.changes, `AI 识别新风险（${new Date().toISOString().slice(0, 10)}）`);
       projectMemoryStore.save(memory);
-      return NextResponse.json({ structured, knowledge, quality, intent, provider: result.provider, model: result.model });
+      return NextResponse.json({ structured, knowledge, quality, intent, projectUpdate: structured.projectUpdate ?? null, provider: result.provider, model: result.model });
     }
 
     if (b.type === "analyze-url") {
@@ -139,21 +168,31 @@ export async function POST(request: Request) {
     }
 
     if (b.type === "review") {
-      // 复盘：AI 判断历史 vs 验证结果
       const plans = await decisionRepo.listPlans();
       const plan = plans.find((p) => p.opportunityId === b.projectId);
       const results = plan ? await decisionRepo.listResults(plan.id) : [];
-      const outcomeLines = results.length
-        ? results.map((r) => `- ${r.outcome}: ${r.actualResult.slice(0, 80)}`)
-        : ["- 暂无验证结果"];
-      const reviewText = [
-        `项目：${cognition.projectName}`,
-        `AI 当时判断：${cognition.coreJudgment}`,
-        `主要风险：${cognition.mainRisks.join("；") || "—"}`,
-        `验证结果：${outcomeLines.join("\n")}`,
-        `经验沉淀：${results.length ? "基于真实验证结果，判断/假设得到部分证实或证伪，已记录供后续项目参考。" : "暂无验证结果，先执行验证路线图再复盘。"}`,
+      const outcomeLines = results.length ? results.map((r) => `- ${r.outcome}: ${r.actualResult.slice(0, 100)}`) : ["- 暂无验证结果"];
+      const memoryCtx = [
+        `项目事实：${(memory.facts ?? []).join("；") || "暂无"}`,
+        `决策记录：${(memory.decisionLog ?? []).map((d) => `${d.time.slice(0, 10)} ${d.decision}（${d.reason}）`).join("；") || "暂无"}`,
+        `AI 判断变化：${(memory.aiJudgmentChanges ?? []).map((j) => `${j.before ?? "—"}→${j.after}：${j.reason}`).join("；") || "暂无"}`,
       ].join("\n");
-      memory.reviews = pushCap(memory.reviews, `复盘（${new Date().toISOString().slice(0, 10)}）：${reviewText.slice(0, 200)}`);
+      const result = await runAI({
+        capability: "reasoning",
+        type: "review",
+        agent: "project-agent",
+        task: `请基于以下项目资料生成项目复盘报告：目标完成情况、关键决策、成功因素、失败因素、新的认知、下一阶段计划。项目：${cognition.projectName}；当前阶段：${cognition.currentPhase}；核心判断：${cognition.coreJudgment}；风险：${cognition.mainRisks.join("；")}；验证结果：\n${outcomeLines.join("\n")}\n\n${memoryCtx}`,
+        system: "你是 BizMentor 项目 AI 主理人。输出结构化复盘报告（用 summary/table/text blocks），必须包含：目标完成情况、关键决策、成功因素、失败因素、新的认知、下一阶段计划；只输出 JSON。",
+        allowDegrade: true,
+      });
+      let reviewText = result.content;
+      try {
+        const parsed = parseStructuredOutput(extractJson(result.content), result.content);
+        reviewText = parsed.blocks.map((blk) => (blk.type === "summary" ? blk.conclusion : blk.type === "text" ? blk.paragraphs.join("；") : `[${blk.type}] ${blk.title ?? ""}`)).join("；") || result.content;
+      } catch {
+        // 保留原文
+      }
+      memory.reviews = pushCap(memory.reviews, `复盘（${new Date().toISOString().slice(0, 10)}）：${reviewText.slice(0, 300)}`);
       projectMemoryStore.save(memory);
       return NextResponse.json({ review: reviewText });
     }

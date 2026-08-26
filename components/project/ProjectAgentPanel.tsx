@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { StructuredReply } from "@/components/agent-output/StructuredReply";
 import { buildArtifacts } from "@/lib/ai/artifacts/builder";
 import { AGENT_MODE_LABELS } from "@/lib/project-agent/types";
-import type { StructuredOutput } from "@/lib/agent-output/types";
+import type { ProjectUpdate, StructuredOutput } from "@/lib/agent-output/types";
 import type { AgentMode, ProjectCognitionProfile, ProjectMemory } from "@/lib/project-agent/types";
 
 const MODES: AgentMode[] = ["advisor", "manager", "investor", "operations"];
@@ -25,6 +25,7 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
   const [lastKnowledge, setLastKnowledge] = useState<KnowledgeChips | null>(null);
   const [lastOut, setLastOut] = useState<StructuredOutput | null>(null);
   const [lastQuality, setLastQuality] = useState<string[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<ProjectUpdate | null>(null);
   const [input, setInput] = useState("");
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
@@ -80,6 +81,7 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
       if (!res.ok) throw new Error(data.message ?? data.error ?? "失败");
       setMessages((m) => [...m, data.structured ? { role: "assistant", structured: data.structured } : { role: "assistant", content: data.reply ?? data.structured?.title ?? "" }]);
       setLastKnowledge(data.knowledge ?? null);
+      setLastUpdate(data.projectUpdate ?? null);
       if (data.structured) { setLastOut(data.structured); setLastQuality((data.quality ?? []).map((q: { message: string }) => q.message)); }
       await load();
     } catch (e) {
@@ -104,6 +106,7 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
       if (!res.ok) throw new Error(data.message ?? data.error ?? "失败");
       setMessages((m) => [...m, data.structured ? { role: "assistant", structured: data.structured } : { role: "assistant", content: data.reply ?? "" }]);
       setLastKnowledge(data.knowledge ?? null);
+      setLastUpdate(data.projectUpdate ?? null);
       if (data.structured) { setLastOut(data.structured); setLastQuality((data.quality ?? []).map((q: { message: string }) => q.message)); }
       await load();
     } catch (e) { setError((e as Error).message ?? "失败"); } finally { setBusy(false); }
@@ -198,12 +201,12 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
         </Card>
       )}
 
-      {/* 快捷动作（V1.8：主理人 = 管理推动执行，不重复生成报告） */}
+      {/* 快捷动作（V1.8.1：驾驶舱/今日建议/执行中心/风险雷达） */}
       <div className="flex gap-1.5 overflow-x-auto">
-        <button onClick={() => quickSend("请给我当前项目状态：现在进行到哪一步、卡在哪里")} className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-medium text-white">当前状态</button>
-        <button onClick={() => quickSend("接下来应该做什么？给出下一步动作和执行优先级")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">下一步做什么</button>
-        <button onClick={() => quickSend("帮我把执行方案推进到今天可执行的动作清单")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">推动执行</button>
-        <button onClick={() => quickSend("基于研究报告和执行方案，当前最大的风险是什么，需要怎么处理？")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">风险提醒</button>
+        <button onClick={() => { document.getElementById("agent-dashboard")?.scrollIntoView({ behavior: "smooth" }); }} className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-medium text-white">项目驾驶舱</button>
+        <button onClick={() => quickSend("给我今天的优先事项：今天最重要的一件事是什么，为什么")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">AI今日建议</button>
+        <button onClick={() => quickSend("把执行方案拆成今天可执行的任务清单（负责人/截止/状态）")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">执行中心</button>
+        <button onClick={() => quickSend("当前有哪些风险？给概率/影响/触发条件/解决方案")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">风险雷达</button>
         <button onClick={exportLastReport} disabled={!lastOut} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-300">导出</button>
       </div>
 
@@ -215,6 +218,23 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
           </button>
         ))}
       </div>
+
+      {/* 项目驾驶舱（V1.8.1：第一层永久显示） */}
+      {cognition && memory && (
+        <Card id="agent-dashboard" className="border-violet-200 dark:border-violet-800">
+          <p className="text-xs font-semibold text-slate-900 dark:text-white">项目驾驶舱</p>
+          <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
+            <div className="rounded-xl bg-slate-50 px-1 py-1.5 dark:bg-slate-800/60"><p className="text-[9px] text-slate-400">阶段</p><p className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">{cognition.currentPhase}</p></div>
+            <div className="rounded-xl bg-slate-50 px-1 py-1.5 dark:bg-slate-800/60"><p className="text-[9px] text-slate-400">完成度</p><p className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">{cognition.keyFacts.length > 3 ? 35 : 15}%</p></div>
+            <div className="rounded-xl bg-slate-50 px-1 py-1.5 dark:bg-slate-800/60"><p className="text-[9px] text-slate-400">健康度</p><p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">{cognition.mainRisks.length < 3 ? "🟢 正常" : "🟡 关注"}</p></div>
+          </div>
+          <div className="mt-2 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[11px] text-slate-700 dark:bg-violet-950/30 dark:text-slate-200">
+            <p><b>当前目标：</b>{cognition.currentGoal}</p>
+            <p className="mt-0.5"><b>最大风险：</b>{cognition.mainRisks[0] ?? "待评估"}</p>
+          </div>
+          <p className="mt-1.5 text-[10px] text-slate-400">今日优先：{cognition.nextAction}</p>
+        </Card>
+      )}
 
       {/* 对话 */}
       <Card>
@@ -235,6 +255,11 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
               </div>
             ))}
             {busy && <p className="text-[10px] text-slate-400">AI 思考中…</p>}
+            {lastUpdate && !busy && (
+              <div className="rounded-lg bg-violet-50 px-2.5 py-1.5 text-[10px] text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+                📌 本次项目更新（已同步项目大脑）：{lastUpdate.newFacts?.length ? `新增事实 ${lastUpdate.newFacts.length} 条 · ` : ""}{lastUpdate.newRisks?.length ? `新风险 ${lastUpdate.newRisks.length} · ` : ""}{lastUpdate.newJudgments?.length ? `判断变化 ${lastUpdate.newJudgments.length} · ` : ""}{lastUpdate.planChanges?.length ? `方案变化 ${lastUpdate.planChanges.length} · ` : ""}{lastUpdate.decision ? `已记录决策：${lastUpdate.decision.decision.slice(0, 30)}` : "本次无新沉淀"}
+              </div>
+            )}
             {lastQuality.length > 0 && !busy && (
               <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                 ⚠ AI 质量自检：{lastQuality[0]}
@@ -277,16 +302,31 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
         <span className="text-[10px] text-slate-400"><Brain className="mr-1 inline size-3" />AI 会持续吸收新研究/上传/决策</span>
       </div>
 
-      {/* 长期记忆 */}
+      {/* 项目大脑（V1.8.1） */}
       {memory && (
-        <details className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
-          <summary className="cursor-pointer text-xs font-medium text-slate-500 dark:text-slate-400">项目长期记忆（事实/决策/变化/判断/知识库）</summary>
-          <div className="mt-2 space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-            <p><b>项目事实：</b>{memory.facts.length ? memory.facts.join("；") : "暂无"}</p>
-            <p><b>用户决策：</b>{memory.userDecisions.length ? memory.userDecisions.join("；") : "暂无"}</p>
-            <p><b>项目变化：</b>{memory.changes.length ? memory.changes.slice(-5).join("；") : "暂无"}</p>
-            <p><b>AI 判断历史：</b>{memory.aiJudgments.length ? memory.aiJudgments.slice(-5).join("；") : "暂无"}</p>
-            <p><b>知识库：</b>{memory.knowledgeBase.length ? memory.knowledgeBase.slice(-5).join("；") : "暂无"}</p>
+        <details className="rounded-xl border border-violet-200 bg-white px-3 py-2.5 dark:border-violet-800 dark:bg-slate-900" open>
+          <summary className="cursor-pointer text-xs font-bold text-violet-700 dark:text-violet-300">🧠 项目大脑（事实/决策/变化/判断/知识）</summary>
+          <div className="mt-2 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">项目事实库</p>
+              {memory.facts.length ? memory.facts.slice(-8).map((f, i) => <p key={i}>· {f}</p>) : <p className="text-slate-400">暂无事实（回答时会自动沉淀）</p>}
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">决策记录</p>
+              {(memory.decisionLog ?? []).length ? (memory.decisionLog ?? []).slice(-6).map((d, i) => <p key={i}>· {d.time.slice(0, 10)} {d.decision}（{d.reason}）[{d.status}]</p>) : <p className="text-slate-400">暂无决策记录</p>}
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">AI 判断变化</p>
+              {(memory.aiJudgmentChanges ?? []).length ? (memory.aiJudgmentChanges ?? []).slice(-4).map((j, i) => <p key={i}>· {j.before ?? "—"} → {j.after}（{j.reason}）</p>) : <p className="text-slate-400">暂无判断变化</p>}
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">项目变化</p>
+              {memory.changes.length ? memory.changes.slice(-5).map((c, i) => <p key={i}>· {c}</p>) : <p className="text-slate-400">暂无</p>}
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">知识库</p>
+              {memory.knowledgeBase.length ? memory.knowledgeBase.slice(-4).map((k, i) => <p key={i} className="truncate">· {k}</p>) : <p className="text-slate-400">暂无</p>}
+            </div>
           </div>
         </details>
       )}

@@ -19,6 +19,17 @@ export interface StructuredOutput {
   format: OutputFormat;
   title: string;
   blocks: OutputBlock[];
+  /** 本次项目更新（V1.8.1：沉淀到项目大脑） */
+  projectUpdate?: ProjectUpdate;
+}
+
+/** 本次项目更新（V1.8.1：AI 回答后沉淀到项目大脑的变化层） */
+export interface ProjectUpdate {
+  newFacts?: string[];
+  newRisks?: string[];
+  newJudgments?: Array<{ before?: string; after: string; reason: string }>;
+  planChanges?: string[];
+  decision?: { decision: string; reason: string; basis?: string };
 }
 
 /** 知识沉淀标识（AI 回答后展示） */
@@ -27,4 +38,14 @@ export interface KnowledgeDelta {
   newDecisions: boolean;
   newData: boolean;
   newRisks: boolean;
+}
+
+/** 项目驾驶舱/今日建议/执行中心/风险雷达（V1.8.1 派生） */
+export interface ProjectDashboard {
+  phase: string;
+  completion: number;
+  healthy: boolean;
+  todayAdvice: Array<{ task: string; reason: string }>;
+  tasks: Array<{ name: string; owner?: string; due?: string; status: string; aiHelp?: string }>;
+  risks: Array<{ risk: string; probability?: string; impact?: string; trigger?: string; solution?: string }>;
 }

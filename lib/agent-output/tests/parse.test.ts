@@ -45,3 +45,27 @@ test("知识沉淀：summary+swot→新观点；table/financial→新数据；ri
   assert.equal(k2.newData, true);
   assert.equal(k2.newDecisions, true);
 });
+
+test("projectUpdate：解析 新事实/新风险/判断变化/决策", () => {
+  const raw = {
+    format: "report", title: "t",
+    projectUpdate: {
+      newFacts: ["供应商A成本 8 美元", "售价 19.99"],
+      newRisks: ["成本上涨"],
+      newJudgments: [{ before: "6.5", after: "7.5", reason: "需求验证增强" }],
+      planChanges: ["改为轻资产模式"],
+      decision: { decision: "选择轻资产", reason: "降低库存风险", basis: "用户验证不足" },
+    },
+    blocks: [{ type: "text", paragraphs: ["ok"] }],
+  };
+  const out = parseStructuredOutput(raw, "f");
+  assert.equal(out.projectUpdate?.newFacts?.length, 2);
+  assert.equal(out.projectUpdate?.newJudgments?.[0].after, "7.5");
+  assert.equal(out.projectUpdate?.decision?.decision, "选择轻资产");
+  assert.ok(out.projectUpdate?.newRisks?.includes("成本上涨"));
+});
+
+test("projectUpdate：缺失 → undefined", () => {
+  const out = parseStructuredOutput({ format: "report", title: "t", blocks: [{ type: "text", paragraphs: ["ok"] }] }, "f");
+  assert.equal(out.projectUpdate, undefined);
+});

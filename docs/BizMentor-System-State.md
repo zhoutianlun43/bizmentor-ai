@@ -527,3 +527,28 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **测试**：349/349（认知卡字段断言更新）、lint 0、tsc/build 通过。
 - **部署**：bizmentor.top（BUILD_ID HQtm-3Z9-umB0sdJzPEAY 起）。
 - **截图**：outputs/screenshots/v18/（01 认知卡/02 主理人状态回复）。
+
+---
+
+## 38. V1.8.1 AI 项目主理人 → Project Operating System 完成记录
+
+- **目标**：AI 项目主理人从「聊天机器人/报告生成器」升级为「项目 CEO 数字员工」——理解项目、记忆项目、跟踪项目、调整方案、推动执行、记录决策；不再重新生成研究报告。
+- **Project Brain（项目大脑）**：lib/project-agent/types.ts + store.ts（.data/project-memory.json 文件持久化，跨重启/刷新存活）：
+  - 项目认知卡 Project Context（项目名称/目标/当前阶段/商业模式/目标用户/核心假设/最大风险/关键任务，自动维护）。
+  - 项目事实库 Facts（真实数据：供应商/成本/售价/利润/用户反馈/广告数据；所有后续 AI 分析读取）。
+  - 项目决策记录 Decision Log（时间/决策/原因/依据/状态；不保存聊天记录，保存为什么做决定）。
+  - AI 判断变化记录 aiJudgmentChanges（before → after + reason；数据驱动观点更新）。
+- **「本次项目更新」变化层**：LLM 每次回答输出 projectUpdate（newFacts/newRisks/newJudgments/planChanges/decision）→ 路由解析写入项目大脑（lib/agent-output/parse.ts parseProjectUpdate + app/api/project-agent/route.ts）；提示 schema 强制包含 projectUpdate，保证决策/判断/事实可靠沉淀。
+- **项目驾驶舱（永久显示）**：阶段/完成度/健康度（🟢/🟡/🔴）/当前目标/最大风险/今日优先级（AI 今日建议）。
+- **执行中心 + 风险雷达**：任务卡片（任务/负责人/截止/状态/AI辅助）+ 动态风险（概率/影响/触发条件/解决方案）。
+- **顶部快捷按钮改名**：项目驾驶舱 / AI今日建议 / 执行中心 / 风险雷达（替代 当前状态/下一步做什么/推动执行/风险提醒）。
+- **会议室对话**：用户描述项目变化（如供应商成本上涨30%）→ AI 读取项目大脑 → 影响分析（毛利 60%→42%、LTV/CAC 2-4→1.5-2.5）+ 方案 A/B/C 对比表 + 推荐方案（置信度+依据）+ 风险矩阵 + 「📌 本次项目更新（已同步项目大脑）」。
+- **生产修复（本次）**：修复服务器 .env.production 中 AI_USAGE_FILE 与 TAVILY_API_KEY 粘连单行（导致 project-memory/tasks 写入 /opt/bizmentor 根目录、AI 用量停止落盘）——拆行 + 去重 + 迁移 .data/ + 重启服务。
+- **验证**（真实浏览器 + API）：
+  - 项目大脑 UI 显示 事实库/决策记录/判断变化/项目变化/知识库（刷新后仍保留）；
+  - 「供应商成本上涨30%」→ projectUpdate.decision 生成 → decisionLog 写入（采用方案C：混合策略…status=executing）；
+  - 生产 GET 返回 memory（facts=1、aiJudgmentChanges=2、decisionLog=1、changes、knowledgeBase）。
+- **测试**：351/351（新增 2：projectUpdate 解析/缺失降级）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID OR_UmYC5SBm9AccWDx_I7；V1.8.1 补丁含 prompt schema 强制 projectUpdate）。
+- **截图**：outputs/screenshots/v181/（驾驶舱/会议室对话/项目大脑）。
+- **当前限制**：决策记录依赖 LLM 输出 decision 字段（已通过 schema 强化）；多设备同步（Supabase）、执行中心 CRUD、风险定时检查（Task Engine）、图片/视频解析（多模态 Provider）为下一阶段。

@@ -1,7 +1,7 @@
 /**
  * 结构化输出解析器（V1.6）：把 LLM 的 JSON 归一化为 StructuredOutput；容错降级为纯文本。
  */
-import type { OutputBlock, StructuredOutput } from "./types";
+import type { OutputBlock, ProjectUpdate, StructuredOutput } from "./types";
 
 function arr(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 20) : [];
@@ -74,6 +74,34 @@ function parseBlock(raw: Record<string, unknown>): OutputBlock | null {
   }
 }
 
+/** 解析「本次项目更新」层（V1.8.1） */
+export function parseProjectUpdate(raw: unknown): ProjectUpdate | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  const pu = obj.projectUpdate as Record<string, unknown> | undefined;
+  if (!pu || typeof pu !== "object") return undefined;
+  const out: ProjectUpdate = {};
+  const arr = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 10) : [];
+  if (Array.isArray(pu.newFacts)) out.newFacts = arr(pu.newFacts);
+  if (Array.isArray(pu.newRisks)) out.newRisks = arr(pu.newRisks);
+  if (Array.isArray(pu.newJudgments)) {
+    out.newJudgments = (pu.newJudgments as Record<string, unknown>[])
+      .filter((j) => j && typeof j === "object")
+      .map((j) => ({ before: typeof j.before === "string" ? j.before : undefined, after: typeof j.after === "string" ? j.after : "", reason: typeof j.reason === "string" ? j.reason : "" }))
+      .filter((j) => j.after || j.reason)
+      .slice(0, 5);
+  }
+  if (Array.isArray(pu.planChanges)) out.planChanges = arr(pu.planChanges);
+  if (pu.decision && typeof pu.decision === "object") {
+    const d = pu.decision as Record<string, unknown>;
+    if (typeof d.decision === "string" && d.decision) {
+      out.decision = { decision: d.decision, reason: typeof d.reason === "string" ? d.reason : "", basis: typeof d.basis === "string" ? d.basis : undefined };
+    }
+  }
+  if (!out.newFacts?.length && !out.newRisks?.length && !out.newJudgments?.length && !out.planChanges?.length && !out.decision) return undefined;
+  return out;
+}
+
 /** 解析 LLM JSON → StructuredOutput；失败则降级为纯文本 */
 export function parseStructuredOutput(raw: unknown, fallbackText: string): StructuredOutput {
   if (raw && typeof raw === "object") {
@@ -92,6 +120,7 @@ export function parseStructuredOutput(raw: unknown, fallbackText: string): Struc
         format: (str(obj.format) as StructuredOutput["format"]) || "report",
         title: str(obj.title, "AI 分析"),
         blocks,
+        projectUpdate: parseProjectUpdate(raw),
       };
     }
   }

@@ -22,7 +22,7 @@
 <hr>
 <h2>1. 当前版本</h2>
 <ul>
-<li><strong>V0.7.0 Product Release</strong>（App Shell / 全流程闭环 / 已发布到 bizmentor.top）</li>
+<li><strong>V0.7.0 Product Release + Git 远程备份</strong>（App Shell / 全流程闭环 / 已推送 GitHub）</li>
 <li>最近 Git commit：<code>（提交时更新为最新）</code></li>
 <li>技术栈：Next.js 16.3.2（App Router, Turbopack）+ React 19 + TypeScript 5 + Supabase + zod + node:test</li>
 </ul>
@@ -365,5 +365,307 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 <li><strong>线上验证</strong>：onboarding→首页→chat 全链路通过；Dashboard 显示真实生产数据（商机/研究中/异常建议）。</li>
 <li><strong>截图</strong>：outputs/screenshots/v070/（01-07）。</li>
 <li><strong>验收</strong>：pnpm test 285/285、lint 0 警告、tsc/build 通过。</li>
+</ul>
+<hr>
+<h2>20. V0.8 AI 商业雷达完成记录</h2>
+<ul>
+<li><strong>定位升级</strong>：BizMentor = AI 商业机会发现与决策操作系统（行业无关，删除女装/电商固定假设）。</li>
+<li><strong>AI 商业雷达</strong>：lib/radar/（RadarFinding + parse.ts）+ /api/radar/scan + /radar 页面（AI 主动扫描科技/消费/服务/制造/贸易/互联网/AI应用等领域，输出机会卡片：评分 0-100、建议 值得研究/继续观察/不建议进入）。</li>
+<li><strong>商机页双入口</strong>：创建商机 + AI商业雷达；筛选优化为 全部/AI雷达发现/我的想法/研究中/验证中/已验证/已放弃（AI雷达发现 = source=&#39;ai&#39;）。</li>
+<li><strong>Opportunity 扩展</strong>：radar?: RadarFinding（jsonb）；schema.sql 末尾 add column if not exists radar jsonb（线上库需手动执行）。</li>
+<li><strong>数据流</strong>：AI发现 → Opportunity(source=ai, radar) → Research Pipeline → Decision → Validation → Memory（复用现有流程，无孤立系统）。</li>
+<li><strong>测试</strong>：289/289、lint/tsc/build 通过；已部署生产 bizmentor.top。</li>
+</ul>
+<hr>
+<h2>21. V0.8 修复记录（收藏/进入研究保存失败）</h2>
+<ul>
+<li><strong>现象</strong>：雷达扫描正常，但「收藏/进入研究」点击无效（静默失败）。</li>
+<li><strong>根因</strong>：线上 Supabase 未执行 <code>alter table public.opportunities add column if not exists radar jsonb;</code>，而 SupabaseOpportunityRepository.toRow() 无条件携带 radar 字段 → INSERT 报 PGRST204（schema cache 缺列）→ hook 捕获后静默返回 undefined。</li>
+<li><strong>修复</strong>：<ul>
+<li>SupabaseOpportunityRepository：create/update 遇缺 radar 列错误（PGRST204 或 42703）时自动去掉 radar 字段重试，功能立即可用；列存在后自动存结构化数据。</li>
+<li>/radar 页面：保存失败显示明确错误；保存中禁用按钮防重复提交。</li>
+</ul>
+</li>
+<li><strong>验证</strong>：292/292 测试通过、lint/tsc/build 通过；用真实 Supabase（anon key + 真实仓库代码）端到端验证 CREATE（降级成功）→ GET → DELETE 清理。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID y0buE9z0lpQZ7bEkjRyux），/、/opportunities、/radar 均 200。</li>
+<li><strong>仍待办</strong>：在 Supabase SQL Editor 执行 <code>alter table public.opportunities add column if not exists radar jsonb;</code> 后，雷达数据将改为结构化 jsonb 存储。</li>
+</ul>
+<hr>
+<h2>22. V0.8.1 AI 对话体验升级完成记录（个人 AI 商业伙伴）</h2>
+<ul>
+<li><strong>角色重定义</strong>：System Prompt 改为「用户的个人AI商业伙伴」——任务不是输出报告，而是陪伴用户进行商业判断（理解问题 → 简洁判断 → 关键追问 → 逐步深入）。</li>
+<li><strong>默认轻量对话</strong>：默认回复 300-800 字、口语化自然；不再默认输出长篇报告。</li>
+<li><strong>画像读取</strong>：system 注入 用户（称呼/地区/身份）、经营（行业/类型/产品/服务）、目标、偏好、已验证长期认知（优势/资源/经验/判断/案例）、历史决策模式（含验证率）、当前商机状态。</li>
+<li><strong>高级指令（深度能力保留）</strong>：lib/llm/commands.ts 新增 /深度分析、/商业报告、/市场研究、/机会评估（含英文 deep/report/market/evaluate），触发时自动切深度模式并从消息中剥离指令令牌；/chat 页顶部新增指令快捷按钮。</li>
+<li><strong>知识记忆增强</strong>：/api/knowledge-candidate 扩展提炼范围（优势/资源/目标/偏好/判断/经验/案例 + 类型映射）；仍需用户确认才进入长期 Knowledge。</li>
+<li><strong>UI</strong>：/chat 标题改为「BizMentor AI / 你的个人商业智能助手」，气泡增加角色标签（你 / BizMentor AI）+ 指令快捷入口。</li>
+<li><strong>验证</strong>：298/298 测试通过（新增 6）、lint/tsc/build 通过；线上实测：普通对话简洁追问、/深度分析 输出结构化深度内容（DeepSeek）。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID FsCcaV91ryM04hDIYT7iO）。</li>
+</ul>
+<hr>
+<h2>23. V0.8.2 AI 对话页 UI/UX 升级完成记录（ChatGPT 风格 + 多会话）</h2>
+<ul>
+<li><strong>Markdown 渲染</strong>：新增 lib/conversation/markdown.ts（轻量解析器：标题/加粗/斜体/行内代码/代码块/列表/引用/分隔线/链接/段落）+ components/chat/Markdown.tsx（渲染组件）；AI 回复不再显示原始 ##、**、- 符号，标题/列表/加粗按视觉元素渲染，段落间距自动优化。</li>
+<li><strong>多会话系统</strong>：/chat 新增会话抽屉（今天/昨天/历史分组）+ 新建对话 + 选择/删除/重命名（行内编辑）；每个会话独立 messages/title/createdAt/updatedAt/userId，上下文互不影响。</li>
+<li><strong>会话数据结构</strong>：Conversation 增加 title? 字段（首条用户消息自动生成标题，可手动重命名）；LocalConversationRepository.list 按 updatedAt 倒序；SupabaseConversationRepository 预留 title 字段（不建表、无迁移）。</li>
+<li><strong>快捷功能卡片</strong>：替换文字按钮为 2×2 卡片式入口（SVG 图标）：深度分析(搜索+AI芯片/靛蓝)、商业报告(文件+数据/紫)、市场研究(地球+搜索/青)、机会评估(灯泡+趋势/琥珀)；点击插入 /指令 触发专业模式；空会话时展示。</li>
+<li><strong>品牌设计</strong>：主色 #6366F1，辅助 #8B5CF6 / #06B6D4 / #F59E0B，浅色为主；用户气泡品牌色、AI 气泡白色卡片 + Markdown。</li>
+<li><strong>验证</strong>：307/307 测试通过（新增 9：Markdown 解析 7 + 会话 title/排序 2）、lint 0 警告、tsc/build 通过；线上 /chat 200、新 UI 元素齐备、/api/chat 正常（DeepSeek）。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID -xFgNyey1G7toXtM-Lgz1）。</li>
+</ul>
+<hr>
+<h2>24. V0.9 决策型报告完成记录（AI 商业判断 + Executive Decision Card + 证据增强）</h2>
+<ul>
+<li><strong>定位升级</strong>：商业报告从「研究型」升级为「决策型」；新增 AI 商业判断模块（lib/decision/judgment.ts + businessJudgmentSchema + businessJudgmentPrompt）。</li>
+<li><strong>AI 商业判断输出</strong>：是否建议进入（recommend_enter/conditional_enter/continue_observe/not_recommend）、一句话判断、推荐切入方向、不建议做什么、90 天验证计划（时间线）、第一批客户获取方案、置信度；绑定 opportunityId/runId 可追溯。</li>
+<li><strong>存储</strong>：BusinessJudgment 写入 research_runs.report.judgment（jsonb，零 schema 迁移）；DecisionService.generateJudgment 生成并持久化；/api/judgment 服务端路由（anon key 直连 Supabase + AI Gateway，OpenAI 不可用时自动降级 DeepSeek）。</li>
+<li><strong>Executive Decision Card</strong>：components/decision/ExecutiveDecisionCard.tsx，报告首页展示 机会评分/一句话判断/最大机会/最大风险/建议动作；无判断时用评分+投资论点降级展示。</li>
+<li><strong>BusinessJudgmentView</strong>：完整判断视图（推荐徽章/切入方向/不建议清单/90天时间线/首批客户方案）。</li>
+<li><strong>证据增强</strong>：EvidenceItem 新增 credibilityLevel(high/medium/low/unverified) + verificationMethod；evidenceItemSchema + toEvidenceItem 透传；报告证据列表显示「可信度等级 + 验证方式 + 来源」。</li>
+<li><strong>实验模块</strong>：验证方案渲染升级为「商业验证实验」编号卡片（假设/方法/成功标准/effort）。</li>
+<li><strong>阅读体验</strong>：卡片化、评分、时间线、行动列表；避免长文本。</li>
+<li><strong>ChatGPT 模式</strong>：延续 V0.8.1（默认简洁 300-800 字，/指令 触发专业模式）。</li>
+<li><strong>验证</strong>：311/311 测试通过（新增 4：judgment 生成/重试/不伪造/保存）、lint 0、tsc/build 通过；线上 /api/judgment 实测生成完整判断（conditional_enter + 4 阶段 90 天计划 + 首批客户），Supabase 持久化确认。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID llZmU-gdkQXnuxXuavdCe / eD41-Dn6fE34d5yjJz4fd）。</li>
+</ul>
+<hr>
+<h2>25. V0.9.1 AI 商业决策系统完成记录（证据中心 + Evidence Score + 决策委员会 + 验证任务中心）</h2>
+<ul>
+<li><strong>商业证据中心 EvidenceCenter</strong>：components/research/EvidenceCenter.tsx，每个研究维度展示 数据来源/来源类型/数据时间/可信度 + AI 推理比例（数据支持 = FACT 有真实来源占比）；报告章节原文折叠为「展开结论原文」，减少 AI 推断式长文。</li>
+<li><strong>Evidence Score</strong>：新增 6 维度证据关联评分（市场机会20%/用户需求20%/商业化20%/竞争机会15%/技术可行性15%/风险10%）；AI 只给各维度分+证据，总分按权重确定性计算；证据覆盖（数据支持/AI推理比例）由证据类别确定性计算；lib/decision/evidence-score.ts + schema + prompt；DecisionService.generateEvidenceScore；/api/judgment 同时生成 judgment + evidenceScore（失败不阻塞）；报告页新增 EvidenceScoreCard。</li>
+<li><strong>AI 商业决策委员会</strong>：components/decision/DecisionCommittee.tsx，报告/决策区顶部展示 AI 建议（推进/先验证/继续观察/暂停 + 理由）、决策依据（支持因素/反对因素/关键变量）、决策记录、AI 复盘（预测 vs 实际 + Score 版本变化）。</li>
+<li><strong>创始人判断</strong>：UserJudgment 新增 我的商业假设 / 我的优势 / AI 可能错误的位置（表单 + 存储 + 评审上下文）。</li>
+<li><strong>验证任务中心</strong>：决策面板「验证计划」升级为「验证任务中心」，显示任务状态统计（未开始/进行中/完成/失败取消）+ 状态徽章；任务由未验证假设自动生成（既有 Validation Execution Engine）。</li>
+<li><strong>真实数据研究框架</strong>：延续外部研究（Tavily/Bing/DuckDuckGo）+ 来源可信度；竞品矩阵含 价格/目标用户/功能/优势；V0.9 证据字段（credibilityLevel/verificationMethod）进入研究提示词。</li>
+<li><strong>验证</strong>：315/315 测试通过（新增 4：Evidence Score 生成/覆盖/不伪造/持久化）、lint 0、tsc/build 通过；线上 /api/judgment 实测同时生成 judgment + evidenceScore（6 维度，overall 4.7，数据支持 6.7%），Supabase 持久化确认。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID kjnY9rbt1sU5agXNo14N3）。</li>
+</ul>
+<hr>
+<h2>26. V1.0 产品架构调整完成记录（研究 / 执行决策 双 Tab）</h2>
+<ul>
+<li><strong>模块拆分</strong>：商机详情页拆分为两个独立 Tab ——「机会研究中心」与「创业执行决策」，可互相跳转。</li>
+<li><strong>机会研究中心（Research）</strong>：定位商业机会研究中心，重点输出 宏观市场/用户画像/行业趋势/竞品案例/成败案例/市场机会判断（证据中心 + Evidence Score + 来源/可信度）；执行类内容（mvp/validation/nextAction 章节、验证实验、下一步行动）从研究视图隐藏（折叠为「执行相关内容」），不再输出大量执行方案。</li>
+<li><strong>创业执行决策（Decision）</strong>：新组件 ExecutiveDecisionPanel，定位创业执行决策系统，基于研究结果生成 10 项执行方案：商业战略选择 / MVP 方案 / 产品设计 / 获客渠道详细打法 / 内容素材方案 / 标题案例 / 投放策略 / 销售方案 / 90 天执行计划 / 风险控制方案；含 AI 商业决策委员会 + 创始人判断 + 验证任务中心。</li>
+<li><strong>BusinessJudgment 扩展</strong>：新增 strategyChoice/mvpPlan/productDesign/acquisitionChannels/contentPlan/headlineExamples/adStrategy/salesPlan/riskControl + version 字段；schema/prompt/生成器同步；DecisionService.generateJudgment 每次重新生成 version+1。</li>
+<li><strong>版本记录</strong>：Research Version（研究运行按创建时间排序 v1/v2…，Tab 徽章展示）+ Decision Version（judgment.version，Tab 徽章 + 判断视图内展示）。</li>
+<li><strong>重新生成</strong>：Research Tab「重新研究」；Decision Tab「生成/重新生成 AI 商业判断」。</li>
+<li><strong>验证</strong>：316/316 测试通过（新增 1：版本递增 v1→v2）、lint 0、tsc/build 通过；线上 /api/judgment 实测输出 10 项执行方案（version:1），页面 200。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID 5Du4y9f3sTjgKoCyCVo-N）。</li>
+</ul>
+<hr>
+<h2>27. V1.1 机会研究中心优化完成记录（过程可视化 + 证据自动验证 + AI 商业验证路线图）</h2>
+<ul>
+<li><strong>研究过程可视化</strong>：ResearchProgress 升级为 Research Progress Timeline——进度条（完成/总阶段 + %）、当前研究阶段 + AI 执行动作、数据来源数量、已发现证据数量；新增 evidence-verify 阶段（10 阶段）。</li>
+<li><strong>证据不足自动验证</strong>：新增证据自动验证阶段（evidence-verify，V1.1）：当 market/competition/willingnessToPay 等维度缺少外部来源证据时，不再直接输出「需验证」，自动执行 扩展搜索 → 增加数据源 → 重新分析（新来源进入综合/评分证据池）→ 生成验证结果；仍失败则输出失败原因诊断（无公开数据/搜索词过窄/需付费数据源）。报告新增「证据自动验证」卡片（4 步流程 + 每领域状态 + 诊断）。</li>
+<li><strong>AI 商业验证路线图</strong>：90 天计划改为 3 阶段验证路线图（阶段1 市场验证 / 阶段2 产品验证 / 阶段3 商业验证），每阶段含 目标(goal) / AI动作(aiActions，研究类任务由 AI 自动执行) / 用户动作(userActions) / 成功标准(successMetric) / 风险(risk)；Day90Step 类型 + schema + prompt + 生成器 + 视图同步更新（兼容旧数据）。</li>
+<li><strong>Tab 边界保持</strong>：机会研究中心回答「值不值得做」（证据/评分/自动验证），创业执行决策回答「如何做成功」（10 项执行方案/路线图/验证任务），内容不重复。</li>
+<li><strong>验证</strong>：316/316 测试通过（管线 10 阶段断言更新）、lint 0、tsc/build 通过；线上 /api/judgment 实测输出新路线图格式（3 阶段 × 目标/AI动作/用户动作/成功标准/风险）。</li>
+<li><strong>部署</strong>：已部署生产 bizmentor.top（BUILD_ID AbA1qzDH2XmMd5e1fQcmQ）。</li>
+</ul>
+<hr>
+<h2>28. V1.1.1 调试任务完成记录（真实链路检查 + 生产修复）</h2>
+<h3>检查结论（按用户 5 点）</h3>
+<ol>
+<li><strong>Research Progress Timeline</strong>：组件存在，但重新研究时 if(run) 分支不渲染时间线 → 已修复（running 时显示时间线）。</li>
+<li><strong>Pipeline 10 阶段</strong>：确认执行（analyzer→…→evidence-verify→…→summary）。</li>
+<li><strong>evidence-verify 触发</strong>：确认触发（真实运行 4 领域 recovered）。</li>
+<li><strong>外部结果入库</strong>：❌ 根因——/api/external-research 只接旧 DuckDuckGo provider（被反爬 202 → 0 结果），Tavily（已配 key）未接入路由 → 已修复（改用新情报层 createExternalResearchFn，Tavily+DDG 兜底）。</li>
+<li><strong>Evidence Score 读真实来源</strong>：❌ 原 prompt 只读章节文本 → 已修复（prompt 注入 report.sources 前 20 条真实来源，强制基于真实来源评分）。</li>
+</ol>
+<h3>额外发现并修复的生产 bug</h3>
+<ul>
+<li><strong>synthesis 输出截断</strong>：DeepSeek 默认 max_tokens≈4096，大 JSON 被截断 → 非法 JSON → 研究失败。callAiStage 支持 maxTokens；synthesis=16384、scoring/validation-plan/summary=8192。实测 synthesis 输出 5304 tokens 成功。</li>
+<li><strong>saveRun 失败</strong>（unsupported Unicode escape sequence）：抓取网页正文含孤立代理项/控制字符，Postgres JSONB 拒绝 → SupabaseResearchRepository.toRow 增加 JSON 消毒器（替换孤立代理为 U+FFFD、清除非法控制符）+ 单测。</li>
+<li><strong>证据中心/验证卡/章节被折叠隐藏</strong>：V1.0 折叠执行内容的 details 未闭合（缺 </div></details>），导致验证卡/证据中心/全部章节被包进折叠区 → 结构修复（下一步行动移入折叠区，证据内容回到可见区）。</li>
+</ul>
+<h3>Prompt 修改（创业合伙人）</h3>
+<ul>
+<li>AI 角色 = 创业合伙人（AI Co-Founder）：AI 负责 市场调研/数据收集/趋势分析/竞品分析/整理；用户只负责 提供资源、渠道、资金、做最终商业决策/审批。</li>
+<li>禁止让用户完成市场调研、数据收集、访谈、问卷、抓取等研究类任务；day90Plan 的 aiActions 承担研究类任务，userActions 只能含 资源/决策/审批。</li>
+</ul>
+<h3>真实验证（浏览器 + 数据库）</h3>
+<ul>
+<li>真实重新研究：10 阶段全完成、外部研究 搜索7/来源12-19、evidence-verify 补 7 来源、synthesis 输出 5304 tokens 成功、无错误入库。</li>
+<li>数据库：source_documents=19（真实来源：researchnester/theinsightpartners/woshipm/huxiu/tmtpost 等）；report.verification=recovered(4 领域 targetUser/demandStrength/moat/willingnessToPay)；insufficientEvidence 已清空（市场/竞争/付费意愿均获来源）。</li>
+<li>判断（新 prompt）：AI 动作=自动抓取社区/收集竞品/分析访谈/调研渠道；用户动作=提供联系方式/审批/提供资金/提供客户名单——研究类任务全部由 AI 承担。</li>
+<li>截图：outputs/screenshots/v111/（13 张：研究时间线 01/02/04、报告 03/05/07/13、证据验证卡 08、证据中心 09、过程记录 10、决策路线图 11、来源卡 12）。</li>
+</ul>
+<h3>验收</h3>
+<ul>
+<li>317/317 测试通过（新增：saveRun 消毒器单测）、lint 0、tsc/build 通过。</li>
+<li>部署：bizmentor.top（最终 BUILD_ID xSWPj5UdGxWVmDK3xT1HM）。</li>
+</ul>
+<hr>
+<h2>29. V1.2 真实商业落地决策系统完成记录（商业操盘手报告）</h2>
+<ul>
+<li><strong>定位</strong>：机会研究中心 = 商业机会调查报告（WHY）；创业执行决策 = 商业操盘方案（HOW）。两个 Tab 保持，避免重复。</li>
+<li><strong>新模块 lib/operation/</strong>：BusinessOperationPlan（商业操盘手报告）10 部分：市场真实需求验证（关键词×平台趋势表）/ 产品筛选矩阵（10-20 候选含供应/售价/采购/毛利/物流/利润/竞争难度/评分/推荐）/ 竞品深度拆解（5-10 真实竞品）/ 供应链（渠道/MOQ/周期/物流/成本，无真实数据 verified=false）/ 定价模型（采购-物流-佣金-广告-人工=真实成本，盈亏平衡广告成本/目标ROI）/ 页面优化（10+标题/主图方案/描述结构/SEO关键词）/ 内容增长系统（30 条计划：标题/结构/Hook/拍摄/展示/CTA/指标）/ 广告投放（分阶段预算/素材/指标/淘汰/放量规则）/ AI 操盘 90 天计划（阶段/目标/AI负责/用户负责/工具/输出/成功标准）/ 投资判断（YES/NO/验证后进入 + 市场/竞争/供应链/利润/增长/风险 + 最大未知 + 下一步关键实验）。</li>
+<li><strong>Pipeline</strong>：生成前先真实数据采集（外部研究 Tavily → OperationSource[]），再 3 组子生成（A 市场+产品+供应链；B 竞品+定价；C 页面+内容30+广告+90天+投资判断），每组独立 schema + maxTokens + 重试。</li>
+<li><strong>sourceRequired</strong>：所有数据条目带 sourceRequired/sourceRef；无真实数据必须显示「暂无真实来源，需要验证」，禁止 AI 编造（实测 pricing.totalCost 与 supplyChain 均诚实标注）。</li>
+<li><strong>接入</strong>：DecisionService.generateOperationPlan + /api/operation（服务端：AI Gateway + createExternalResearchFn + Supabase anon 直连）；report.operationPlan（jsonb，无 schema 迁移）；ExecutiveDecisionPanel 新增「生成/重新生成操盘报告」按钮 + OperationPlanView；Decision v{n} 版本递增。</li>
+<li><strong>验证</strong>：320/320 测试通过（新增 3：来源采集/生成完整/版本递增）、lint 0、tsc/build 通过；线上 /api/operation 实测生成 23KB 完整报告（6 真实来源 gminsights/myzaker/ithome/aliyun 等；10 产品候选/8 竞品/30 内容/3 广告/4 阶段；无真实数据处标注「暂无真实来源，需要验证」），入库确认。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID Em8mYvRpqQ5E0InhJKiEa）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v12/（8 张：市场验证 01/产品矩阵 02/竞品 03/供应链定价 04/页面优化 05/内容30 06/90天 07/投资判断 08）。</li>
+</ul>
+<hr>
+<h2>30. V1.2.1 AI 商业雷达数据持久化完成记录（长期机会资产库）</h2>
+<ul>
+<li><strong>问题</strong>：雷达扫描结果只存前端 state，离开页面即丢失；只有点击后才保存。</li>
+<li><strong>新流程</strong>：AI 扫描 → 生成机会 → /api/radar/scan 服务端自动写入数据库（status=discovered，携带 scanId）→ 进入「发现机会池」→ 用户选择 收藏/进入研究。</li>
+<li><strong>数据模型</strong>：OpportunityStatus 新增 discovered/reviewing（已发现/收集中）；Opportunity 新增 sourceType（manual_create/ai_radar）、scanId；RadarFinding 新增 scanId；OpportunityInput 新增 status。</li>
+<li><strong>扫描历史</strong>：lib/radar/service.ts buildScanHistory —— 从机会列表按 scanId 分组推导（扫描时间/发现数量/进入研究数量），无需新表；再次进入页面自动恢复最近扫描（含真实评分/分类，从 notes 解析降级）。</li>
+<li><strong>持久化兼容</strong>：线上 opportunities.radar 列仍未执行迁移 → 采用「scanId 编码进 notes」零迁移方案（scanId=xxx），fromRow 从 radar 或 notes 解析；V0.8 缺列降级继续生效。</li>
+<li><strong>页面</strong>：雷达页新增 本次扫描发现/累计 AI 发现机会/扫描历史/重新扫描（不删历史）；收藏→reviewing、进入研究→researching+跳转；商机列表新增「已发现」筛选；详情页 discovered→researching 自动流转。</li>
+<li><strong>验收</strong>（真实浏览器+数据库）：扫描 5 个自动入库；刷新后自动恢复最近扫描；重新登录（新浏览器）12 个 AI 机会仍在并恢复；点击进入研究后状态 researching（DB 分布 researching:3 / discovered:9，仅点过的进入研究）。</li>
+<li><strong>测试</strong>：323/323（新增 3：批量入库/重读仍在/扫描历史统计）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID GjaP2cME07utUYUXxKbNl 起）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v121/（01 扫描自动保存/02 进入研究跳转/03 状态流转/04 重新登录恢复）。</li>
+</ul>
+<hr>
+<h2>31. V1.3 AI 商业雷达机会池管理完成记录（AI 持续发现商业机会资产库）</h2>
+<ul>
+<li><strong>定位升级</strong>：AI 商业雷达从「扫描一次生成几个商机」→「AI 持续发现商业机会资产库」：发现 → 评估 → 收藏观察 → 推进研究 → 放弃/删除，完整机会管理流程。</li>
+<li><strong>机会池</strong>：新增 /radar/pool（AI 发现机会池）+ /radar/latest（本次扫描结果）；雷达首页 4 个可点击统计卡（本次扫描/累计/收藏/推进）。</li>
+<li><strong>状态管理</strong>：新增 opportunityStatus 生命周期（discovered/favorite/researching/promoting/rejected/deleted）+ favoriteAt/promotedAt/rejectedAt/deletedAt/rejectReason；收藏→favorite、推进→promoting、放弃→rejected(保留原因)、删除→软删除(保留 deletedAt，禁止物理删除)、重新开启→restore。</li>
+<li><strong>操作</strong>：每卡 收藏/开始深度研究(→researching+跳转机会研究中心)/推进/放弃(填原因)/删除(确认软删)；推进中卡支持 进入创业执行决策/归档放弃。</li>
+<li><strong>AI 推荐排序</strong>：AI 优先级评分（基础评分+建议权重+用户关注加成），机会池默认按 优先级→最新→关注 排序。</li>
+<li><strong>持久化</strong>：所有字段编码进 notes（scanId/oppStatus/时间戳/原因，零迁移，兼容缺 radar 列）；Supabase fromRow + Local 透传解析。</li>
+<li><strong>验证</strong>（真实浏览器+数据库）：扫描自动入库；收藏/推进/放弃(原因)/删除(软删) 全部生效——DB 状态 {promoting:1, favorite:1, rejected:1(含原因), deleted:1(含deletedAt), 其余已发现}；删除后默认列表隐藏但数据库保留。</li>
+<li><strong>测试</strong>：331/331（新增 8：20 个扫描入库/重读仍在/收藏5/推进3/放弃2保留原因/软删保留/研究流转/notes 往返/优先级排序）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID Ie_a-nQdJVBLCR9aQgjzH1）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v13/（01 收藏/02 池全部/03 收藏tab/04 推进tab/05 收藏填充/06 已放弃/07 删除后/08 雷达删除后）。</li>
+</ul>
+<hr>
+<h2>32. V1.x 全局商机管理与导航体验优化完成记录</h2>
+<ul>
+<li><strong>统一商机操作系统</strong>：收藏/删除不再专属 AI 雷达，所有来源商机（manual_create / ai_radar）统一支持 收藏 / 删除 / 推进 / 开始研究。</li>
+<li><strong>统一字段</strong>：isFavorite（boolean）+ favoriteAt（所有来源共享收藏）；软删除 deletedAt + deletedBy（禁止物理删除）；默认列表隐藏但数据库保留。</li>
+<li><strong>统一组件</strong>：components/common/OpportunityActions（收藏/取消收藏/删除+确认弹窗「确定删除该商业机会？删除后不会出现在默认列表，历史数据保留」/开始深度研究/推进/进入执行决策/归档放弃）+ components/common/BackButton（← 返回）。</li>
+<li><strong>页面接入</strong>：我的商机列表卡加统一操作 + 「我的收藏」入口 + 详情链接带 from；AI 机会卡/机会池/收藏列表/推进列表全部使用 OpportunityActions；新增 /opportunities/favorites（我的收藏，isFavorite=true 全来源，支持取消收藏/开始研究/进入执行决策）。</li>
+<li><strong>智能返回</strong>：详情页按来源返回（from=pool→机会池、from=radar→AI雷达、from=favorites→我的收藏、默认→我的商机）；机会池/本次扫描/我的收藏均加 BackButton；详情页加面包屑（首页 › 商机 › 机会名）。</li>
+<li><strong>备注清洗</strong>：详情页备注用 stripRadarMeta 隐藏元数据尾巴（修复历史污染数据展示）。</li>
+<li><strong>修复</strong>：setRadarMeta 的 display 提取改用 stripRadarMeta（修复 manual 商机取消收藏后 isFav=true 残留导致 isFavorite 无法取消的 bug）。</li>
+<li><strong>验证</strong>（真实浏览器+数据库）：我的商机列表统一按钮；收藏→我的收藏页显示；删除→confirm→默认列表隐藏；详情页 from=pool 显示「返回机会池」+ 面包屑 + 备注清洗；点击返回正确跳转 /radar/pool。</li>
+<li><strong>测试</strong>：334/334（新增 3：manual 收藏开关/软删保留/notes 清洗）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID G9141EfsdJnysmpUJSQkt）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v1x/（01 列表统一操作/02 我的收藏/03 删除后/04 详情返回+面包屑/05 返回机会池）。</li>
+</ul>
+<hr>
+<h2>33. V1.4 AI Agent 异步任务系统完成记录（Task Engine）</h2>
+<ul>
+<li><strong>目标</strong>：所有 AI 长任务（深度研究/AI商业判断/操盘报告/雷达扫描）脱离前端生命周期，后台独立运行；切页/关浏览器/锁屏/刷新均不中断。</li>
+<li><strong>Task Engine</strong>：lib/tasks/ —— 统一任务模型（id/userId/projectId/taskType/status/progress/currentStage/stages/result/error/时间戳/checkpoint）+ TaskStore（服务器 .data/tasks.json 文件持久化，零数据库迁移，跨重启存活）+ Engine（createAndStartTask 立即返回 taskId，后台异步执行，逐阶段更新进度 + AgentExecutionLog 记录 input/output/model/成本）。</li>
+<li><strong>Executors</strong>：research（服务端跑完整研究管线 + onStage 逐阶段更新进度/来源/证据，完成自动存 Supabase research_runs）、decision（判断→Evidence Score→操盘报告串行）、radar_scan（LLM 扫描 + 自动入库）。</li>
+<li><strong>API</strong>：POST /api/tasks（创建+后台执行返回 taskId）、GET /api/tasks（列表）、GET /api/tasks/:id（轮询 + 日志）。</li>
+<li><strong>UI</strong>：全局 AITaskBanner（轮询进行中任务，顶部显示「任务标题 · 阶段 · 进度% · 查看」）、TaskTimeline（进度条/当前阶段/阶段列表/搜索来源证据计数）、AI 任务中心 /tasks（进行中/已完成/失败分组，失败原因 + checkpoint「已完成 N 阶段失败于 X」）。</li>
+<li><strong>迁移</strong>：ResearchPanel/雷达页/ExecutiveDecisionPanel 全部改为任务驱动（点击→POST 创建→返回 taskId→2s 轮询→完成刷新；进入页面自动恢复该商机进行中的任务）。</li>
+<li><strong>持久化</strong>：文件存储（.data/tasks.json + agent-logs.jsonl），服务器重启后任务状态保留；任务中心可查看历史（含失败原因）。</li>
+<li><strong>修复</strong>：引擎创建任务时未存 payload → 任务执行器收不到入参（已修复 + 回归测试）。</li>
+<li><strong>验证</strong>（真实浏览器）：开始研究 → 切到首页 → 全局横幅显示「深度研究 · 20%」→ 后台继续（external-research→evidence-verify→scoring→validation-plan→完成）→ 任务中心「已完成」+ 查看结果 → 报告自动加载（执行器已存 Supabase）→ 刷新任务不丢；失败任务保留原因与 checkpoint。</li>
+<li><strong>测试</strong>：338/338（新增 4：任务完成/失败checkpoint/未知类型/持久化跨实例）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID K8IoWbPhn9fciWyjLuZVl）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v14/（01 研究任务时间线/02 任务中心/03 进行中横幅/04 任务中心进行中/05 报告加载）。</li>
+</ul>
+<hr>
+<h2>34. V1.5 项目级 AI 主理人 Agent 完成记录（每个项目一个长期 AI 联合创始人）</h2>
+<ul>
+<li><strong>入口</strong>：商机详情页新增第三 Tab「AI项目主理人」（长期存在），顶部三 Tab：机会研究中心 / 创业执行决策 / AI项目主理人。</li>
+<li><strong>项目认知档案</strong>：lib/project-agent/cognition.ts buildCognition —— 首次打开自动读取 商机描述/研究报告/Evidence/Evidence Score/判断/操盘报告/决策历史 → 生成 项目身份（AI商业主理人/长期联合创始人）、当前目标、核心判断、主要风险、关键事实（确定性提取，不重复生成）。</li>
+<li><strong>项目长期记忆</strong>：lib/project-agent/store.ts —— 文件持久化（.data/project-memory.json，跨重启），每个项目独立：项目事实/用户决策/项目变化/AI判断历史/知识库/复盘。</li>
+<li><strong>对话</strong>：/api/project-agent/chat —— 系统提示注入 认知+记忆+研究报告要点+模式；回答必须结合项目资料、引用历史判断时说明来源；回答自动写入知识库。</li>
+<li><strong>4 种模式</strong>：顾问/主理人/投资人/运营（不同系统提示）。</li>
+<li><strong>URL 分析</strong>：真实读取网页（外部研究）→ LLM 输出 竞品/价格/卖点/机会点 → 写入记忆 + 项目变化；数据不足诚实声明。</li>
+<li><strong>文本分析</strong>：粘贴资料/截图文字 → 分析 → 记忆。</li>
+<li><strong>复盘</strong>：AI 判断 vs 验证结果 → 预测/实际/偏差/经验 → 记忆。</li>
+<li><strong>主动吸收</strong>：每次对话/URL/文本分析自动更新记忆；认知档案每次打开从最新研究实时重建（新研究完成自动生效）。</li>
+<li><strong>验证</strong>（真实浏览器）：打开主理人 Tab 显示认知档案；问「最大风险」AI 结合本项目报告回答（引用置信度49%、评分反差、验证建议）；URL 抓取 The Insight Partners 报告并输出结构化分析；刷新后记忆持久化（项目变化+知识库保留对话与竞品分析）。</li>
+<li><strong>测试</strong>：341/341（新增 3：认知档案/记忆持久化/系统提示）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID vqjFRpkyBnv-o8n26fDz7）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v15/（01 认知档案/02 对话回答/03 URL分析/04 记忆持久化）。</li>
+<li><strong>当前限制</strong>：PDF/Excel/Word/图片二进制的解析未接（可用文本粘贴/URL 分析替代）；AI 主动提醒为简化版（基于记忆与验证结果）；可后续接入视觉模型与定时检查。</li>
+</ul>
+<hr>
+<h2>35. V1.6 AI 输出系统升级完成记录（商业顾问级结构化输出）</h2>
+<ul>
+<li><strong>目标</strong>：项目 AI 输出从「普通聊天文本」升级为「商业顾问级结构化内容」（麦肯锡报告 + 创业顾问 + AI 执行团队风格），不再连续大段文字。</li>
+<li><strong>Response Format Router</strong>：lib/agent-output/prompt.ts —— 用户意图 → 最佳格式（竞品→表格+SWOT；运营→时间线+内容表；值不值得做→判断卡+风险矩阵；选品→产品表；成本利润→财务表；问答→分段文本≤300字）；系统提示强制输出 JSON blocks，禁止连续长文。</li>
+<li><strong>商业组件库</strong>：components/agent-output/StructuredReply.tsx —— Summary Card（结论+置信度+依据）/ Data Table / Action Plan Timeline / SWOT Card / Product Research Card / Content Plan Board / Financial Model Table / Risk Matrix / Text；不渲染 Markdown。</li>
+<li><strong>解析器</strong>：lib/agent-output/parse.ts —— LLM JSON 归一化 + 容错降级文本；deriveKnowledgeDelta 推断 新观点/新决策/新数据/新风险。</li>
+<li><strong>导出</strong>：CSV（表格，Excel 可开）+ HTML 报告（Word/浏览器可开）按钮。</li>
+<li><strong>知识沉淀展示</strong>：AI 回答后显示「已沉淀到项目知识库：新观点/新数据/新风险」+ 写入长期记忆（知识库 + 项目变化）。</li>
+<li><strong>图片</strong>：新增「图片」按钮（诚实提示：DeepSeek 暂不支持视觉，建议粘贴截图文字用「分析资料」）。</li>
+<li><strong>URL/文本分析</strong>：延续 V1.5。</li>
+<li><strong>验证</strong>（真实浏览器）：问「分析值不值得做」→ 输出 核心判断卡（置信度65%+4条依据）+ 竞品对比表（Synthesia/HeyGen/D-ID/本项目）+ 风险矩阵（4项含影响/概率/应对）+ CSV/报告按钮 + 知识沉淀提示；刷新后记忆持久化（AI 识别新风险 2026-08-26 + 知识库保留）。</li>
+<li><strong>测试</strong>：345/345（新增 4：blocks 解析/降级/脏块跳过/知识沉淀推断）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID hESwxq4yAHsa0Elo7TKY0）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v16/（01 结构化输出/02 记忆持久化）。</li>
+<li><strong>当前限制</strong>：图片/视频理解需视觉模型（已给占位与提示）；Word/Excel/PPT/PDF 原生导出为 CSV+HTML 方案（可后续接 docx/xlsx/pptx 库）。</li>
+</ul>
+<hr>
+<h2>36. V1.7 AI 输出系统架构升级完成记录（Output Intelligence Layer）</h2>
+<ul>
+<li><strong>Output Intelligence Layer</strong>（lib/ai/output/）：<ul>
+<li>intent-analyzer.ts：AI 回答前判断用户意图（商业判断/竞品/选品/执行方案/市场/综合），确定性分类，零额外 LLM 成本。</li>
+<li>output-router.ts：意图 → 输出模板（blocks + 必填字段 + 质量规则）；模板来自 config/ai-output-templates/*.json（business-analysis / competitor-analysis / product-selection / execution-plan）。</li>
+<li>response-schema.ts：复用 agent-output 结构化类型。</li>
+<li>output-quality-checker.ts：每次输出后自动检查 空泛建议（&quot;做好/加强/努力&quot;）/ 无依据判断（&quot;市场巨大&quot;无数据）/ 缺执行细节（产品缺供应成本售价利润、阶段缺负责人指标）。</li>
+</ul>
+</li>
+<li><strong>商业输出模板系统</strong>：4 个 JSON 模板定义 结构/必填字段/质量规则，驱动路由与系统提示。</li>
+<li><strong>多模态接口预留</strong>（lib/ai/multimodal/）：MultimodalProvider { analyzeImage/analyzeVideo/analyzeDocument/generateVisual }，当前 MockProvider（&quot;当前未接入视觉模型&quot;），未来接入 GPT-4.1 Vision/Claude/Gemini/Qwen-VL/DeepSeek Vision 无需改业务。</li>
+<li><strong>文件理解层接口</strong>（lib/ai/files/layer.ts）：FileAnalyzer + FileUnderstandingLayer（上传→分析→抽取→知识库→AI），当前 Mock（PDF/Excel/Word 解析器未来接入）。</li>
+<li><strong>Output Artifact System</strong>（lib/ai/artifacts/builder.ts）：Artifact { type: text/table/report/slides/image/video, content, metadata, status }；当前 text/table/report ready，slides/image/video coming_soon。</li>
+<li><strong>UI</strong>：项目 AI 面板顶部 快捷动作（重新分析/生成商业报告/生成执行计划/导出报告）+ 认知卡显示「当前理解」；回答后显示「⚠ AI 质量自检」+「✓ 已沉淀到项目知识库」。</li>
+<li><strong>验证</strong>（真实浏览器）：生成商业报告 → 判断卡+市场证据表+竞争表+SWOT+成本利润+风险矩阵+下一步与量化指标；&quot;帮我分析竞品&quot; → 5 家横向对比表（价格/用户/优势/不足/可借鉴）+ SWOT + 机会点。</li>
+<li><strong>测试</strong>：349/349（新增 4：意图分类/模板路由/质量审核/制品状态）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID mYfSvqGQOVe_8k5pZLX79）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v17/（01 头部动作/02 商业报告/03 竞品分析）。</li>
+<li><strong>未来多模态接入方案</strong>：实现真实 MultimodalProvider → registerMultimodalProvider 替换 Mock → 图片/视频输入走 FileUnderstandingLayer → 分析结果写入项目知识库 → AI 结合分析（业务无需重构）。</li>
+</ul>
+<hr>
+<h2>37. V1.8 AI 角色架构重构完成记录（消除三模块职责重叠）</h2>
+<ul>
+<li><strong>目标</strong>：从「AI 报告生成工具」升级为「AI 创业项目管理系统」；三个模块各司其职，不再重复分析。</li>
+<li><strong>职责边界</strong>：<ul>
+<li>机会研究中心 = 判断机会（值不值得做）：市场规模/用户需求/趋势/竞品/商业模式/证据/风险/Evidence Score；页面说明「负责发现机会与判断机会，不负责项目执行」。</li>
+<li>创业执行决策 = 制定打法（如何成功）：产品策略/获客打法/投放方案/90天执行路线（AI动作 vs 用户动作）；页面说明「基于机会研究中心结果，不重复市场规模/趋势/SWOT」。</li>
+<li>AI项目主理人 = 长期管理推动执行（CEO 助手）：不生成报告、不做研究员。</li>
+</ul>
+</li>
+<li><strong>项目认知卡</strong>：ProjectCognitionProfile 升级为 当前项目/当前阶段（机会生命周期映射：已发现/收藏观察/深度研究/推进中…）/当前目标/核心假设/最大风险/下一步动作（优先执行方案第一阶段 → 关键实验 → 判断建议）；AI 身份改为「项目长期负责人，类似创业公司 CEO 助手」。</li>
+<li><strong>主理人系统提示</strong>：明确职责边界——不重新生成研究报告/市场规模/SWOT/整套执行方案；引用研究报告与执行方案作为依据，聚焦「当前该做什么、为什么、怎么做、卡在哪里」。</li>
+<li><strong>快捷动作</strong>：改为管理向（当前状态/下一步做什么/推动执行/风险提醒/导出），移除「生成商业报告/生成执行计划」（属于另两模块）。</li>
+<li><strong>验证</strong>（真实浏览器）：三 Tab 职责说明均显示；主理人「当前状态」回复聚焦管理——指出「项目已具备研究报告/竞品分析/风险识别，卡点是从观察到验证、缺负责人和时间表」，给出 2 周完成创业执行决策 + 4-6 周 MVP 验证的具体推进动作（不再重新生成报告）。</li>
+<li><strong>测试</strong>：349/349（认知卡字段断言更新）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID HQtm-3Z9-umB0sdJzPEAY 起）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v18/（01 认知卡/02 主理人状态回复）。</li>
+</ul>
+<hr>
+<h2>38. V1.8.1 AI 项目主理人 → Project Operating System 完成记录</h2>
+<ul>
+<li><strong>目标</strong>：AI 项目主理人从「聊天机器人/报告生成器」升级为「项目 CEO 数字员工」——理解项目、记忆项目、跟踪项目、调整方案、推动执行、记录决策；不再重新生成研究报告。</li>
+<li><strong>Project Brain（项目大脑）</strong>：lib/project-agent/types.ts + store.ts（.data/project-memory.json 文件持久化，跨重启/刷新存活）：<ul>
+<li>项目认知卡 Project Context（项目名称/目标/当前阶段/商业模式/目标用户/核心假设/最大风险/关键任务，自动维护）。</li>
+<li>项目事实库 Facts（真实数据：供应商/成本/售价/利润/用户反馈/广告数据；所有后续 AI 分析读取）。</li>
+<li>项目决策记录 Decision Log（时间/决策/原因/依据/状态；不保存聊天记录，保存为什么做决定）。</li>
+<li>AI 判断变化记录 aiJudgmentChanges（before → after + reason；数据驱动观点更新）。</li>
+</ul>
+</li>
+<li><strong>「本次项目更新」变化层</strong>：LLM 每次回答输出 projectUpdate（newFacts/newRisks/newJudgments/planChanges/decision）→ 路由解析写入项目大脑（lib/agent-output/parse.ts parseProjectUpdate + app/api/project-agent/route.ts）；提示 schema 强制包含 projectUpdate，保证决策/判断/事实可靠沉淀。</li>
+<li><strong>项目驾驶舱（永久显示）</strong>：阶段/完成度/健康度（🟢/🟡/🔴）/当前目标/最大风险/今日优先级（AI 今日建议）。</li>
+<li><strong>执行中心 + 风险雷达</strong>：任务卡片（任务/负责人/截止/状态/AI辅助）+ 动态风险（概率/影响/触发条件/解决方案）。</li>
+<li><strong>顶部快捷按钮改名</strong>：项目驾驶舱 / AI今日建议 / 执行中心 / 风险雷达（替代 当前状态/下一步做什么/推动执行/风险提醒）。</li>
+<li><strong>会议室对话</strong>：用户描述项目变化（如供应商成本上涨30%）→ AI 读取项目大脑 → 影响分析（毛利 60%→42%、LTV/CAC 2-4→1.5-2.5）+ 方案 A/B/C 对比表 + 推荐方案（置信度+依据）+ 风险矩阵 + 「📌 本次项目更新（已同步项目大脑）」。</li>
+<li><strong>生产修复（本次）</strong>：修复服务器 .env.production 中 AI_USAGE_FILE 与 TAVILY_API_KEY 粘连单行（导致 project-memory/tasks 写入 /opt/bizmentor 根目录、AI 用量停止落盘）——拆行 + 去重 + 迁移 .data/ + 重启服务。</li>
+<li><strong>验证</strong>（真实浏览器 + API）：<ul>
+<li>项目大脑 UI 显示 事实库/决策记录/判断变化/项目变化/知识库（刷新后仍保留）；</li>
+<li>「供应商成本上涨30%」→ projectUpdate.decision 生成 → decisionLog 写入（采用方案C：混合策略…status=executing）；</li>
+<li>生产 GET 返回 memory（facts=1、aiJudgmentChanges=2、decisionLog=1、changes、knowledgeBase）。</li>
+</ul>
+</li>
+<li><strong>测试</strong>：351/351（新增 2：projectUpdate 解析/缺失降级）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID OR_UmYC5SBm9AccWDx_I7；V1.8.1 补丁含 prompt schema 强制 projectUpdate）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v181/（驾驶舱/会议室对话/项目大脑）。</li>
+<li><strong>当前限制</strong>：决策记录依赖 LLM 输出 decision 字段（已通过 schema 强化）；多设备同步（Supabase）、执行中心 CRUD、风险定时检查（Task Engine）、图片/视频解析（多模态 Provider）为下一阶段。</li>
 </ul>
 </body></html>

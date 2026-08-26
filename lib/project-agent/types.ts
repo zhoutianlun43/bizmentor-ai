@@ -32,17 +32,39 @@ export interface ProjectCognitionProfile {
   updatedAt: string;
 }
 
-/** 项目长期记忆（每个项目独立） */
+/** 项目决策记录（项目大脑：为什么做决定） */
+export interface ProjectDecision {
+  time: string;
+  decision: string;
+  reason: string;
+  basis?: string;
+  impact?: string;
+  status: "executing" | "done" | "revised" | "abandoned";
+}
+
+/** AI 判断变化记录（项目大脑：观点变化） */
+export interface AiJudgmentChange {
+  time: string;
+  before?: string;
+  after: string;
+  reason: string;
+}
+
+/** 项目长期记忆 = 项目大脑（V1.8.1） */
 export interface ProjectMemory {
   projectId: string;
-  /** 项目事实（目标市场/预算/供应链/用户优势等） */
+  /** 项目事实库（真实数据：供应商/成本/售价/利润/反馈/广告数据） */
   facts: string[];
-  /** 用户决策（例如：先测试 TikTok Shop） */
+  /** 用户决策（旧格式，保留兼容） */
   userDecisions: string[];
   /** 项目变化（时间线：新增竞品/数据变化等） */
   changes: string[];
-  /** AI 判断历史（含时间） */
+  /** AI 判断历史（旧格式，保留兼容） */
   aiJudgments: string[];
+  /** 决策记录（结构化：时间/决策/原因/依据/影响/状态） */
+  decisionLog: ProjectDecision[];
+  /** AI 判断变化记录（结构化：before/after/reason） */
+  aiJudgmentChanges: AiJudgmentChange[];
   /** 项目知识库（研究/竞品/上传分析/AI 分析记录） */
   knowledgeBase: string[];
   /** 复盘记录（预测→实际→偏差→经验） */
@@ -51,5 +73,5 @@ export interface ProjectMemory {
 }
 
 export function emptyMemory(projectId: string): ProjectMemory {
-  return { projectId, facts: [], userDecisions: [], changes: [], aiJudgments: [], knowledgeBase: [], reviews: [], updatedAt: new Date().toISOString() };
+  return { projectId, facts: [], userDecisions: [], changes: [], aiJudgments: [], decisionLog: [], aiJudgmentChanges: [], knowledgeBase: [], reviews: [], updatedAt: new Date().toISOString() };
 }
