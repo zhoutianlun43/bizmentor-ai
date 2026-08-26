@@ -13,6 +13,7 @@ import { SupabaseDecisionRepository } from "@/lib/decision/supabase-repository";
 import { env } from "@/lib/config/env";
 import { getCurrentUserId } from "@/lib/identity";
 import { projectMemoryStore } from "@/lib/project-agent/store";
+import { buildDailyBrief } from "@/lib/project-agent/brief";
 import { buildCognition } from "@/lib/project-agent/cognition";
 import { buildStructuredSystemPrompt } from "@/lib/agent-output/prompt";
 import { parseStructuredOutput, deriveKnowledgeDelta } from "@/lib/agent-output/parse";
@@ -20,6 +21,7 @@ import { analyzeIntent } from "@/lib/ai/output/intent-analyzer";
 import { getTemplate, templateInstruction } from "@/lib/ai/output/output-router";
 import { checkOutputQuality } from "@/lib/ai/output/output-quality-checker";
 import { extractJson } from "@/lib/research/schema";
+import { toBusinessFact } from "@/lib/project-agent/types";
 import type { AgentMode, ProjectMemory } from "@/lib/project-agent/types";
 
 const MAX = 60;
@@ -44,9 +46,9 @@ export async function GET(request: Request) {
     if (!opportunity) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
     const run = await researchRepo.getRun(projectId);
     const decisions = await decisionRepo.listDecisions(projectId);
-    const cognition = buildCognition(opportunity, run, decisions);
     const memory = projectMemoryStore.get(projectId);
-    return NextResponse.json({ cognition, memory, hasRun: Boolean(run?.report) });
+    const cognition = buildCognition(opportunity, run, decisions, memory);
+    return NextResponse.json({ cognition, memory, dailyBrief: buildDailyBrief(cognition, memory), hasRun: Boolean(run?.report) });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 300) : "项目 AI 失败";
     return NextResponse.json({ error: "PROJECT_AGENT_FAILED", message }, { status: 500 });
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 }); }
-  const b = (body ?? {}) as { type?: string; projectId?: string; message?: string; mode?: AgentMode; url?: string; text?: string };
+  const b = (body ?? {}) as { type?: string; projectId?: string; message?: string; mode?: AgentMode; url?: string; text?: string; decisionId?: string; actualData?: string; prediction?: string; deviation?: string; aiLearning?: string; strategyStatus?: string; coreQuestion?: string; forbiddenActions?: string[]; northStarMetric?: string; keyMetrics?: Array<{ name: string; current: string; target: string }> };
   if (!b.projectId) return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
   if (!env.supabaseUrl || !env.supabaseAnonKey) return NextResponse.json({ error: "NO_SUPABASE" }, { status: 500 });
 
@@ -82,7 +84,8 @@ export async function POST(request: Request) {
     memory.aiJudgmentChanges ??= [];
     memory.knowledgeBase ??= [];
     memory.reviews ??= [];
-    const cognition = buildCognition(opportunity, run, decisions);
+    memory.lessonsLearned ??= [];
+    const cognition = buildCognition(opportunity, run, decisions, memory);
 
     if (b.type === "chat") {
       if (!b.message?.trim()) return NextResponse.json({ error: "EMPTY_MESSAGE" }, { status: 400 });
@@ -108,7 +111,8 @@ export async function POST(request: Request) {
       const pu = structured.projectUpdate;
       if (pu) {
         const now = new Date().toISOString();
-        for (const x of pu.newFacts ?? []) memory.facts = pushCap(memory.facts, `${now.slice(0, 10)}：${x}`);
+        // V1.9：商业数据库（结构化事实：FACT/INFERENCE/ASSUMPTION + 来源/可信度/影响）
+        for (const x of pu.newFacts ?? []) memory.facts = pushCapAny(memory.facts, toBusinessFact(x as string | Parameters<typeof toBusinessFact>[0]));
         for (const x of pu.newRisks ?? []) memory.changes = pushCap(memory.changes, `AI 新风险（${now.slice(0, 10)}）：${x}`);
         if (pu.newJudgments?.length) {
           for (const j of pu.newJudgments) {
@@ -118,8 +122,21 @@ export async function POST(request: Request) {
         }
         for (const x of pu.planChanges ?? []) memory.changes = pushCap(memory.changes, `方案变化（${now.slice(0, 10)}）：${x}`);
         if (pu.decision) {
-          memory.decisionLog = pushCapAny(memory.decisionLog, { time: now, decision: pu.decision.decision, reason: pu.decision.reason, basis: pu.decision.basis, status: "executing" });
+          memory.decisionLog = pushCapAny(memory.decisionLog, { id: `d-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, time: now, decision: pu.decision.decision, reason: pu.decision.reason, basis: pu.decision.basis, status: "executing" });
           memory.userDecisions = pushCap(memory.userDecisions, `${now.slice(0, 10)}：${pu.decision.decision}（${pu.decision.reason}）`);
+        }
+        // V1.9：战略状态 / 指标更新（AI 维护，认知卡优先读取）
+        if (pu.strategyUpdate) {
+          memory.strategy ??= { currentStatus: "", coreQuestion: "", forbiddenActions: [] };
+          if (pu.strategyUpdate.currentStatus) memory.strategy.currentStatus = pu.strategyUpdate.currentStatus;
+          if (pu.strategyUpdate.coreQuestion) memory.strategy.coreQuestion = pu.strategyUpdate.coreQuestion;
+          if (pu.strategyUpdate.forbiddenActions?.length) memory.strategy.forbiddenActions = pu.strategyUpdate.forbiddenActions;
+          memory.changes = pushCap(memory.changes, `战略状态更新（${now.slice(0, 10)}）：${pu.strategyUpdate.currentStatus ?? "已更新"}`);
+        }
+        if (pu.metricsUpdate) {
+          memory.metrics ??= { northStarMetric: "", keyMetrics: [] };
+          if (pu.metricsUpdate.northStarMetric) memory.metrics.northStarMetric = pu.metricsUpdate.northStarMetric;
+          if (pu.metricsUpdate.keyMetrics?.length) memory.metrics.keyMetrics = pu.metricsUpdate.keyMetrics;
         }
       }
       const summaryText = structured.blocks
@@ -173,7 +190,7 @@ export async function POST(request: Request) {
       const results = plan ? await decisionRepo.listResults(plan.id) : [];
       const outcomeLines = results.length ? results.map((r) => `- ${r.outcome}: ${r.actualResult.slice(0, 100)}`) : ["- 暂无验证结果"];
       const memoryCtx = [
-        `项目事实：${(memory.facts ?? []).join("；") || "暂无"}`,
+        `项目事实：${(memory.facts ?? []).map((f) => (typeof f === "string" ? f : `[${f.type}] ${f.content}`)).join("；") || "暂无"}`,
         `决策记录：${(memory.decisionLog ?? []).map((d) => `${d.time.slice(0, 10)} ${d.decision}（${d.reason}）`).join("；") || "暂无"}`,
         `AI 判断变化：${(memory.aiJudgmentChanges ?? []).map((j) => `${j.before ?? "—"}→${j.after}：${j.reason}`).join("；") || "暂无"}`,
       ].join("\n");
@@ -195,6 +212,53 @@ export async function POST(request: Request) {
       memory.reviews = pushCap(memory.reviews, `复盘（${new Date().toISOString().slice(0, 10)}）：${reviewText.slice(0, 300)}`);
       projectMemoryStore.save(memory);
       return NextResponse.json({ review: reviewText });
+    }
+
+    // V1.9：决策结果回填（决策闭环：实际数据 → 预测 → 偏差 → AI 学习）
+    if (b.type === "decision-result") {
+      if (!b.decisionId || !b.actualData?.trim()) return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
+      const target = memory.decisionLog.find((d) => d.id === b.decisionId);
+      if (!target) return NextResponse.json({ error: "DECISION_NOT_FOUND" }, { status: 404 });
+      const now = new Date().toISOString();
+      target.result = {
+        actualData: b.actualData.trim(),
+        prediction: b.prediction?.trim() || undefined,
+        deviation: b.deviation?.trim() || undefined,
+        aiLearning: b.aiLearning?.trim() || undefined,
+        updatedAt: now,
+      };
+      target.status = "done";
+      if (b.aiLearning?.trim()) {
+        memory.lessonsLearned = pushCap(memory.lessonsLearned, `${now.slice(0, 10)}：${b.aiLearning.trim()}`);
+        memory.knowledgeBase = pushCap(memory.knowledgeBase, `决策学习（${target.decision.slice(0, 30)}）：${b.aiLearning.trim()}`);
+      }
+      if (b.deviation?.trim()) {
+        memory.aiJudgmentChanges = pushCapAny(memory.aiJudgmentChanges, { time: now, before: b.prediction?.trim() || "预测", after: b.actualData.trim(), reason: `实际结果偏差：${b.deviation.trim()}` });
+      }
+      memory.changes = pushCap(memory.changes, `决策结果回填（${now.slice(0, 10)}）：${target.decision.slice(0, 40)} → ${b.actualData.trim().slice(0, 60)}`);
+      projectMemoryStore.save(memory);
+      return NextResponse.json({ ok: true, memory });
+    }
+
+    // V1.9：更新项目战略状态 / 成功指标（认知卡优先读取）
+    if (b.type === "update-state") {
+      if (b.strategyStatus?.trim() || b.coreQuestion?.trim() || b.forbiddenActions?.length || b.northStarMetric?.trim() || b.keyMetrics?.length) {
+        if (b.strategyStatus?.trim() || b.coreQuestion?.trim() || b.forbiddenActions?.length) {
+          memory.strategy ??= { currentStatus: "", coreQuestion: "", forbiddenActions: [] };
+          if (b.strategyStatus?.trim()) memory.strategy.currentStatus = b.strategyStatus.trim();
+          if (b.coreQuestion?.trim()) memory.strategy.coreQuestion = b.coreQuestion.trim();
+          if (b.forbiddenActions?.length) memory.strategy.forbiddenActions = b.forbiddenActions.map((x) => x.trim()).filter(Boolean).slice(0, 6);
+          memory.changes = pushCap(memory.changes, `战略状态更新（${new Date().toISOString().slice(0, 10)}）：${b.strategyStatus?.trim() ?? "已更新"}`);
+        }
+        if (b.northStarMetric?.trim() || b.keyMetrics?.length) {
+          memory.metrics ??= { northStarMetric: "", keyMetrics: [] };
+          if (b.northStarMetric?.trim()) memory.metrics.northStarMetric = b.northStarMetric.trim();
+          if (b.keyMetrics?.length) memory.metrics.keyMetrics = b.keyMetrics.map((m) => ({ name: m.name, current: m.current ?? "", target: m.target ?? "" })).filter((m) => m.name.trim()).slice(0, 8);
+        }
+        projectMemoryStore.save(memory);
+      }
+      const cognition2 = buildCognition(opportunity, run, decisions, memory);
+      return NextResponse.json({ ok: true, memory, cognition: cognition2, dailyBrief: buildDailyBrief(cognition2, memory) });
     }
 
     return NextResponse.json({ error: "INVALID_TYPE" }, { status: 400 });

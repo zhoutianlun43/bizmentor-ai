@@ -552,3 +552,24 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **部署**：bizmentor.top（BUILD_ID OR_UmYC5SBm9AccWDx_I7；V1.8.1 补丁含 prompt schema 强制 projectUpdate）。
 - **截图**：outputs/screenshots/v181/（驾驶舱/会议室对话/项目大脑）。
 - **当前限制**：决策记录依赖 LLM 输出 decision 字段（已通过 schema 强化）；多设备同步（Supabase）、执行中心 CRUD、风险定时检查（Task Engine）、图片/视频解析（多模态 Provider）为下一阶段。
+
+---
+
+## 39. V1.9 AI 项目主理人 → Project Operating System（运营闭环）完成记录
+
+- **目标**：把 AI 主理人从「被动回答问题」升级为「项目 CEO 数字员工」，实现 记忆→判断→执行→反馈→学习 商业闭环。
+- **项目认知卡升级（Project Identity）**：新增 `strategyStatus`（当前阶段/当前战略状态/当前核心问题/当前禁止事项，按机会生命周期自动推导 + 记忆覆盖）与 `projectMetrics`（北极星指标 + 关键指标 名称/当前/目标），AI 所有建议必须围绕指标并遵守禁止事项。
+- **Facts 升级为商业数据库（Business Database）**：每条事实 `{content, type: FACT|INFERENCE|ASSUMPTION, source, confidence, updatedAt, impact}`；旧字符串事实加载时自动迁移；AI 禁止把推断当事实，必须标注来源与可信度。
+- **Decision Log 升级为决策闭环**：决策新增 `id` 与 `result{actualData, prediction, deviation, aiLearning, updatedAt}`；新接口 `/api/project-agent` POST `decision-result` 回填实际结果 → 状态 executing→done、自动生成 偏差判断变化 + `lessonsLearned` 经验沉淀（AI 从成败中学习）。
+- **AI 每日 CEO 简报（Project Daily Brief）**：每次进入项目首页显示 今日项目状态（阶段/战略状态/执行中决策数）+ 北极星 + 核心问题 + 禁止事项 + 风险 + AI 今日建议 + 今日优先；确定性构建（零额外 LLM 成本）。
+- **战略/指标维护**：新接口 POST `update-state` + 认知卡「战略状态」编辑表单（战略状态/核心问题/禁止事项/北极星/关键指标），AI 也可通过对话 projectUpdate.strategyUpdate / metricsUpdate 自动更新。
+- **结构化输出升级**：`projectUpdate.newFacts` 支持结构化 `{content,type,source,confidence,impact}`；新增 `strategyUpdate` / `metricsUpdate`；prompt schema 强制输出。
+- **验证**（生产 API + 浏览器）：
+  - GET 返回 cognition.strategyStatus/projectMetrics + dailyBrief + 商业数据库（facts 已迁移为对象）；
+  - update-state：战略「等待用户需求验证」+ 北极星「30天获得50个付费用户」写入并即时反映；
+  - decision-result：回填 转化率1.2%（预测5%→偏差：价格定位偏差）→ status done + lessonsLearned「未来类似项目降低价格权重并先做定价访谈」+ 判断变化；
+  - 浏览器：每日 CEO 简报/战略状态/关键指标/商业数据库(FACT 徽标)/决策记录/经验沉淀 全部显示。
+- **测试**：357/357（新增 7：战略状态+指标生成/记忆覆盖/toBusinessFact 归一化/每日简报/系统提示注入/结构化新事实+战略指标更新/仅战略更新）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID 9hxOMBEnsDCt3QlwbDATN）。
+- **截图**：outputs/screenshots/v19/（v19-daily-brief-brain.png）。
+- **当前限制**：多设备同步（Supabase）未接；执行中心/风险雷达仍为对话驱动（可接 Task Engine 定时）；图片/视频/PDF/Excel 解析未接（多模态 Provider 预留）。

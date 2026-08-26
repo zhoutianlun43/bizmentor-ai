@@ -74,7 +74,7 @@ function parseBlock(raw: Record<string, unknown>): OutputBlock | null {
   }
 }
 
-/** 解析「本次项目更新」层（V1.8.1） */
+/** 解析「本次项目更新」层（V1.8.1；V1.9：结构化事实 + 战略/指标更新） */
 export function parseProjectUpdate(raw: unknown): ProjectUpdate | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const obj = raw as Record<string, unknown>;
@@ -82,7 +82,28 @@ export function parseProjectUpdate(raw: unknown): ProjectUpdate | undefined {
   if (!pu || typeof pu !== "object") return undefined;
   const out: ProjectUpdate = {};
   const arr = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 10) : [];
-  if (Array.isArray(pu.newFacts)) out.newFacts = arr(pu.newFacts);
+  // 新事实：支持纯文本 或 结构化（content/type/source/confidence/impact）
+  if (Array.isArray(pu.newFacts)) {
+    const facts: NonNullable<ProjectUpdate["newFacts"]> = [];
+    for (const x of pu.newFacts as unknown[]) {
+      if (facts.length >= 10) break;
+      if (typeof x === "string" && x.trim()) { facts.push(x); continue; }
+      if (x && typeof x === "object") {
+        const o = x as Record<string, unknown>;
+        if (typeof o.content === "string" && o.content.trim()) {
+          const type = o.type === "INFERENCE" || o.type === "ASSUMPTION" ? o.type : "FACT";
+          facts.push({
+            content: o.content.trim(),
+            type,
+            source: typeof o.source === "string" && o.source.trim() ? o.source.trim() : undefined,
+            confidence: typeof o.confidence === "number" && o.confidence >= 0 && o.confidence <= 100 ? Math.round(o.confidence) : undefined,
+            impact: typeof o.impact === "string" && o.impact.trim() ? o.impact.trim() : undefined,
+          });
+        }
+      }
+    }
+    out.newFacts = facts;
+  }
   if (Array.isArray(pu.newRisks)) out.newRisks = arr(pu.newRisks);
   if (Array.isArray(pu.newJudgments)) {
     out.newJudgments = (pu.newJudgments as Record<string, unknown>[])
@@ -98,7 +119,30 @@ export function parseProjectUpdate(raw: unknown): ProjectUpdate | undefined {
       out.decision = { decision: d.decision, reason: typeof d.reason === "string" ? d.reason : "", basis: typeof d.basis === "string" ? d.basis : undefined };
     }
   }
-  if (!out.newFacts?.length && !out.newRisks?.length && !out.newJudgments?.length && !out.planChanges?.length && !out.decision) return undefined;
+  if (pu.strategyUpdate && typeof pu.strategyUpdate === "object") {
+    const s = pu.strategyUpdate as Record<string, unknown>;
+    out.strategyUpdate = {
+      currentStatus: typeof s.currentStatus === "string" && s.currentStatus.trim() ? s.currentStatus.trim() : undefined,
+      coreQuestion: typeof s.coreQuestion === "string" && s.coreQuestion.trim() ? s.coreQuestion.trim() : undefined,
+      forbiddenActions: Array.isArray(s.forbiddenActions) ? (s.forbiddenActions as unknown[]).filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 6) : undefined,
+    };
+    if (!out.strategyUpdate.currentStatus && !out.strategyUpdate.coreQuestion && !out.strategyUpdate.forbiddenActions?.length) delete out.strategyUpdate;
+  }
+  if (pu.metricsUpdate && typeof pu.metricsUpdate === "object") {
+    const m = pu.metricsUpdate as Record<string, unknown>;
+    const keyMetrics = Array.isArray(m.keyMetrics)
+      ? (m.keyMetrics as Record<string, unknown>[])
+          .filter((k) => k && typeof k === "object" && typeof k.name === "string" && k.name.trim())
+          .map((k) => ({ name: (k.name as string).trim(), current: typeof k.current === "string" ? k.current : String(k.current ?? ""), target: typeof k.target === "string" ? k.target : String(k.target ?? "") }))
+          .slice(0, 8)
+      : undefined;
+    out.metricsUpdate = {
+      northStarMetric: typeof m.northStarMetric === "string" && m.northStarMetric.trim() ? m.northStarMetric.trim() : undefined,
+      keyMetrics,
+    };
+    if (!out.metricsUpdate.northStarMetric && !out.metricsUpdate.keyMetrics?.length) delete out.metricsUpdate;
+  }
+  if (!out.newFacts?.length && !out.newRisks?.length && !out.newJudgments?.length && !out.planChanges?.length && !out.decision && !out.strategyUpdate && !out.metricsUpdate) return undefined;
   return out;
 }
 

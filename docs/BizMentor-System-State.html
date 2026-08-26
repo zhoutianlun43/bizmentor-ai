@@ -668,4 +668,26 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 <li><strong>截图</strong>：outputs/screenshots/v181/（驾驶舱/会议室对话/项目大脑）。</li>
 <li><strong>当前限制</strong>：决策记录依赖 LLM 输出 decision 字段（已通过 schema 强化）；多设备同步（Supabase）、执行中心 CRUD、风险定时检查（Task Engine）、图片/视频解析（多模态 Provider）为下一阶段。</li>
 </ul>
+<hr>
+<h2>39. V1.9 AI 项目主理人 → Project Operating System（运营闭环）完成记录</h2>
+<ul>
+<li><strong>目标</strong>：把 AI 主理人从「被动回答问题」升级为「项目 CEO 数字员工」，实现 记忆→判断→执行→反馈→学习 商业闭环。</li>
+<li><strong>项目认知卡升级（Project Identity）</strong>：新增 <code>strategyStatus</code>（当前阶段/当前战略状态/当前核心问题/当前禁止事项，按机会生命周期自动推导 + 记忆覆盖）与 <code>projectMetrics</code>（北极星指标 + 关键指标 名称/当前/目标），AI 所有建议必须围绕指标并遵守禁止事项。</li>
+<li><strong>Facts 升级为商业数据库（Business Database）</strong>：每条事实 <code>{content, type: FACT|INFERENCE|ASSUMPTION, source, confidence, updatedAt, impact}</code>；旧字符串事实加载时自动迁移；AI 禁止把推断当事实，必须标注来源与可信度。</li>
+<li><strong>Decision Log 升级为决策闭环</strong>：决策新增 <code>id</code> 与 <code>result{actualData, prediction, deviation, aiLearning, updatedAt}</code>；新接口 <code>/api/project-agent</code> POST <code>decision-result</code> 回填实际结果 → 状态 executing→done、自动生成 偏差判断变化 + <code>lessonsLearned</code> 经验沉淀（AI 从成败中学习）。</li>
+<li><strong>AI 每日 CEO 简报（Project Daily Brief）</strong>：每次进入项目首页显示 今日项目状态（阶段/战略状态/执行中决策数）+ 北极星 + 核心问题 + 禁止事项 + 风险 + AI 今日建议 + 今日优先；确定性构建（零额外 LLM 成本）。</li>
+<li><strong>战略/指标维护</strong>：新接口 POST <code>update-state</code> + 认知卡「战略状态」编辑表单（战略状态/核心问题/禁止事项/北极星/关键指标），AI 也可通过对话 projectUpdate.strategyUpdate / metricsUpdate 自动更新。</li>
+<li><strong>结构化输出升级</strong>：<code>projectUpdate.newFacts</code> 支持结构化 <code>{content,type,source,confidence,impact}</code>；新增 <code>strategyUpdate</code> / <code>metricsUpdate</code>；prompt schema 强制输出。</li>
+<li><strong>验证</strong>（生产 API + 浏览器）：<ul>
+<li>GET 返回 cognition.strategyStatus/projectMetrics + dailyBrief + 商业数据库（facts 已迁移为对象）；</li>
+<li>update-state：战略「等待用户需求验证」+ 北极星「30天获得50个付费用户」写入并即时反映；</li>
+<li>decision-result：回填 转化率1.2%（预测5%→偏差：价格定位偏差）→ status done + lessonsLearned「未来类似项目降低价格权重并先做定价访谈」+ 判断变化；</li>
+<li>浏览器：每日 CEO 简报/战略状态/关键指标/商业数据库(FACT 徽标)/决策记录/经验沉淀 全部显示。</li>
+</ul>
+</li>
+<li><strong>测试</strong>：357/357（新增 7：战略状态+指标生成/记忆覆盖/toBusinessFact 归一化/每日简报/系统提示注入/结构化新事实+战略指标更新/仅战略更新）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID 9hxOMBEnsDCt3QlwbDATN）。</li>
+<li><strong>截图</strong>：outputs/screenshots/v19/（v19-daily-brief-brain.png）。</li>
+<li><strong>当前限制</strong>：多设备同步（Supabase）未接；执行中心/风险雷达仍为对话驱动（可接 Task Engine 定时）；图片/视频/PDF/Excel 解析未接（多模态 Provider 预留）。</li>
+</ul>
 </body></html>

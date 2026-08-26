@@ -23,13 +23,18 @@ export interface StructuredOutput {
   projectUpdate?: ProjectUpdate;
 }
 
-/** 本次项目更新（V1.8.1：AI 回答后沉淀到项目大脑的变化层） */
+/** 本次项目更新（V1.8.1：AI 回答后沉淀到项目大脑的变化层；V1.9：结构化事实 + 战略/指标更新） */
 export interface ProjectUpdate {
-  newFacts?: string[];
+  /** 新事实：纯文本 或 结构化（FACT/INFERENCE/ASSUMPTION + 来源/可信度/影响） */
+  newFacts?: Array<string | { content: string; type?: "FACT" | "INFERENCE" | "ASSUMPTION"; source?: string; confidence?: number; impact?: string }>;
   newRisks?: string[];
   newJudgments?: Array<{ before?: string; after: string; reason: string }>;
   planChanges?: string[];
   decision?: { decision: string; reason: string; basis?: string };
+  /** 战略状态更新（V1.9）：AI 维护当前战略状态/核心问题/禁止事项 */
+  strategyUpdate?: { currentStatus?: string; coreQuestion?: string; forbiddenActions?: string[] };
+  /** 指标更新（V1.9） */
+  metricsUpdate?: { northStarMetric?: string; keyMetrics?: Array<{ name: string; current: string; target: string }> };
 }
 
 /** 知识沉淀标识（AI 回答后展示） */

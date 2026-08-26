@@ -1,14 +1,30 @@
 /**
  * Project Memory Store（V1.5）：文件持久化（.data/project-memory.json），跨重启存活。
+ * V1.9：加载时自动迁移旧数据（字符串事实 → BusinessFact；决策补 id；新字段补默认）。
  */
 import fs from "node:fs";
 import path from "node:path";
-import { emptyMemory } from "./types";
-import type { ProjectMemory } from "./types";
+import { emptyMemory, toBusinessFact } from "./types";
+import type { BusinessFact, ProjectDecision, ProjectMemory } from "./types";
 
 function filePath(): string {
   const base = process.env.AI_USAGE_FILE ? path.dirname(process.env.AI_USAGE_FILE) : ".data";
   return path.join(base, "project-memory.json");
+}
+
+function migrate(memory: ProjectMemory): ProjectMemory {
+  // 兼容旧记忆记录：字符串事实 → BusinessFact；决策补 id；新字段补默认
+  memory.facts = (memory.facts ?? []).map((f) => toBusinessFact(f as string | Partial<BusinessFact> & { content?: string }));
+  memory.userDecisions ??= [];
+  memory.changes ??= [];
+  memory.aiJudgments ??= [];
+  memory.decisionLog ??= [];
+  memory.aiJudgmentChanges ??= [];
+  memory.knowledgeBase ??= [];
+  memory.reviews ??= [];
+  memory.lessonsLearned ??= [];
+  memory.decisionLog = (memory.decisionLog as ProjectDecision[]).map((d) => ({ ...d, id: d.id || `d-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }));
+  return memory;
 }
 
 export class ProjectMemoryStore {
@@ -21,7 +37,7 @@ export class ProjectMemoryStore {
     try {
       if (fs.existsSync(filePath())) {
         const raw = JSON.parse(fs.readFileSync(filePath(), "utf8")) as ProjectMemory[];
-        for (const m of raw) this.data.set(m.projectId, m);
+        for (const m of raw) this.data.set(m.projectId, migrate(m));
       }
     } catch {
       // 忽略
@@ -46,7 +62,7 @@ export class ProjectMemoryStore {
   save(memory: ProjectMemory): void {
     this.load();
     memory.updatedAt = new Date().toISOString();
-    this.data.set(memory.projectId, memory);
+    this.data.set(memory.projectId, migrate(memory));
     this.persist();
   }
 }

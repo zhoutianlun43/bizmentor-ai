@@ -69,3 +69,37 @@ test("projectUpdate：缺失 → undefined", () => {
   const out = parseStructuredOutput({ format: "report", title: "t", blocks: [{ type: "text", paragraphs: ["ok"] }] }, "f");
   assert.equal(out.projectUpdate, undefined);
 });
+
+test("V1.9 projectUpdate：结构化事实 + 战略/指标更新", () => {
+  const raw = {
+    format: "report", title: "t",
+    projectUpdate: {
+      newFacts: [
+        { content: "供应商报价 8 美元", type: "FACT", source: "供应商", confidence: 95, impact: "成本" },
+        { content: "转化率可能提升", type: "INFERENCE", source: "AI", confidence: 60 },
+        "用户反馈价格偏高",
+      ],
+      strategyUpdate: { currentStatus: "等待用户需求验证", coreQuestion: "是否有人愿意付费", forbiddenActions: ["暂不扩大库存", "暂不扩大团队"] },
+      metricsUpdate: { northStarMetric: "30天100个客户", keyMetrics: [{ name: "转化率", current: "2%", target: "5%" }] },
+    },
+    blocks: [{ type: "text", paragraphs: ["ok"] }],
+  };
+  const out = parseStructuredOutput(raw, "f");
+  const pu = out.projectUpdate!;
+  assert.equal(pu.newFacts?.length, 3);
+  const f0 = pu.newFacts![0] as { content: string; type: string; source?: string; confidence?: number; impact?: string };
+  assert.equal(f0.content, "供应商报价 8 美元");
+  assert.equal(f0.type, "FACT");
+  assert.equal(f0.source, "供应商");
+  assert.equal(f0.confidence, 95);
+  assert.equal(pu.strategyUpdate?.currentStatus, "等待用户需求验证");
+  assert.deepEqual(pu.strategyUpdate?.forbiddenActions, ["暂不扩大库存", "暂不扩大团队"]);
+  assert.equal(pu.metricsUpdate?.northStarMetric, "30天100个客户");
+  assert.equal(pu.metricsUpdate?.keyMetrics?.[0].target, "5%");
+});
+
+test("V1.9 projectUpdate：仅战略更新时非 undefined", () => {
+  const out = parseStructuredOutput({ format: "report", title: "t", projectUpdate: { strategyUpdate: { currentStatus: "已验证" } }, blocks: [{ type: "text", paragraphs: ["ok"] }] }, "f");
+  assert.ok(out.projectUpdate);
+  assert.equal(out.projectUpdate!.strategyUpdate?.currentStatus, "已验证");
+});
