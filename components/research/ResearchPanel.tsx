@@ -136,6 +136,9 @@ export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps)
           </Button>
         </div>
         {error ? <p className="mt-2 text-xs text-rose-500" role="alert">{error}</p> : null}
+        <p className="mt-2 rounded-lg bg-sky-50 px-2.5 py-1.5 text-[11px] text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+          机会研究中心负责发现机会与判断机会（值不值得做），不负责项目执行（打法/获客/广告/90天计划由「创业执行决策」负责）。
+        </p>
         {timeline}
         {!running && <ResearchReportView run={run} />}
       </div>
@@ -150,6 +153,9 @@ export function ResearchPanel({ opportunity, run, version }: ResearchPanelProps)
       </div>
       <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
         点击开始后，AI 将在后台执行研究（关闭页面也不会中断）。研究进度实时同步，完成后自动生成报告。
+      </p>
+      <p className="mt-1.5 rounded-lg bg-sky-50 px-2.5 py-1.5 text-[11px] text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+        机会研究中心负责发现机会与判断机会（值不值得做），不负责项目执行（打法/获客/广告/90天计划由「创业执行决策」负责）。
       </p>
       {running ? (
         timeline

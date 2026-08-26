@@ -25,6 +25,30 @@ export function buildCognition(
   if (thesis?.invalidators) risks.push(...thesis.invalidators.slice(0, 3));
   if (op?.investmentJudgment?.reasons?.risk) risks.push(op.investmentJudgment.reasons.risk);
 
+  // V1.8：当前阶段（机会生命周期 → 阶段标签）
+  const PHASE_MAP: Record<string, string> = {
+    discovered: "已发现（待处理）",
+    favorite: "收藏观察",
+    researching: "深度研究中",
+    promoting: "推进中（创业执行）",
+    rejected: "已放弃",
+    validating: "验证中",
+    validated: "已验证",
+    abandoned: "已放弃",
+    researching_old: "研究中",
+  };
+  const phaseKey = opportunity.opportunityStatus ?? opportunity.status;
+  const currentPhase = PHASE_MAP[phaseKey] ?? "已发现";
+  // 核心假设：来自 thesis 或判断
+  const coreAssumption = thesis?.coreHypothesis ?? judgment?.oneLineJudgment?.slice(0, 80) ?? "核心假设待研究报告确认";
+  // 下一步动作：优先执行方案第一阶段 → 投资判断关键实验 → 判断建议 → 决策门
+  const nextAction =
+    op?.ninetyDayPlan?.[0]?.goal
+    ?? op?.investmentJudgment?.nextExperiment?.experiment
+    ?? judgment?.suggestedAction
+    ?? thesis?.decisionGate
+    ?? "进入创业执行决策，制定落地作战方案";
+
   const facts: string[] = [];
   if (opportunity.source === "ai") facts.push(`来源：AI 商业雷达${meta.scanId ? `（批次 ${meta.scanId.slice(0, 8)}）` : ""}`);
   else facts.push("来源：用户手动创建");
@@ -39,10 +63,13 @@ export function buildCognition(
   return {
     projectId: opportunity.id,
     projectName: opportunity.name,
-    aiIdentity: "你是该项目的 AI 商业主理人（长期联合创始人），不是聊天机器人：你负责理解项目、持续跟进、推动决策。",
+    aiIdentity: "你是该项目的 AI 主理人（项目长期负责人，类似创业公司 CEO 助手）：你负责长期管理项目、推动执行，而不是做研究员。",
     currentGoal: op?.investmentJudgment?.nextExperiment?.experiment ?? judgment?.suggestedAction ?? thesis?.decisionGate ?? "验证商机核心假设",
+    currentPhase,
     coreJudgment: judgment?.oneLineJudgment ?? thesis?.coreHypothesis ?? op?.investmentJudgment?.reasons?.market ?? "基于研究报告判断",
+    coreAssumption,
     mainRisks: risks.slice(0, 4),
+    nextAction,
     keyFacts: facts,
     updatedAt: new Date().toISOString(),
   };
@@ -67,9 +94,12 @@ export function buildAgentSystemPrompt(
     modeLine[mode],
     "",
     `项目：${cognition.projectName}`,
+    `当前阶段：${cognition.currentPhase}`,
     `当前目标：${cognition.currentGoal}`,
+    `核心假设：${cognition.coreAssumption}`,
     `核心判断：${cognition.coreJudgment}`,
     `主要风险：${cognition.mainRisks.join("；") || "待评估"}`,
+    `下一步动作：${cognition.nextAction}`,
     "",
     "项目关键事实：",
     ...cognition.keyFacts.map((f) => `- ${f}`),
@@ -92,6 +122,6 @@ export function buildAgentSystemPrompt(
     }
     if (report.insufficientEvidence?.length) lines.push(`- 待验证：${report.insufficientEvidence.slice(0, 3).join("；")}`);
   }
-  lines.push("", "要求：必须结合上述项目资料回答，不要编造项目没有的数据；引用历史判断时要说明来源（研究报告/你的历史判断）；信息不足时说明并建议如何验证。");
+  lines.push("", "职责边界（重要）：", "- 你负责长期管理项目、推动执行、做判断与提醒，不是研究员。", "- 不要重新生成完整研究报告/市场规模分析/SWOT（机会研究中心已做）；不要重复制定整套执行方案（创业执行决策已做）。", "- 引用研究报告/执行方案/历史判断作为依据，说明来源；聚焦「当前该做什么、为什么、怎么做、卡在哪里」。", "- 要求：必须结合上述项目资料回答，不要编造项目没有的数据；信息不足时说明并建议如何验证。");
   return lines.join("\n");
 }

@@ -85,6 +85,9 @@ export function ExecutiveDecisionPanel({ opportunity, run }: { opportunity: Oppo
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
             Decision {judgment ? `v${judgment.version ?? 1}` : "—"}
           </p>
+          <p className="mt-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            基于机会研究中心结果制定落地作战方案（产品策略/获客/投放/90天路线）；市场规模/趋势/SWOT 由机会研究中心负责，不重复生成。
+          </p>
         </div>
         <Button variant="secondary" size="sm" onClick={generateOperation} disabled={opBusy}>
           <ClipboardList className="size-3.5" />

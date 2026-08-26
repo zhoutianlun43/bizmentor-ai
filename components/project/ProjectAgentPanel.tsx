@@ -177,15 +177,17 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
         <Card className="border-violet-200 dark:border-violet-800">
           <div className="flex items-center gap-1.5">
             <Bot className="size-4 text-violet-500" />
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">AI 项目主理人</h4>
-            <span className="ml-auto text-[10px] text-slate-400">已读取项目全部资料</span>
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">项目认知卡</h4>
+            <span className="ml-auto text-[10px] text-slate-400">AI 主理人 · 已读取项目全部资料</span>
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{cognition.aiIdentity}</p>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">当前理解：{cognition.currentGoal}</p>
-          <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-            <p><b>当前目标：</b>{cognition.currentGoal}</p>
-            <p className="mt-0.5"><b>核心判断：</b>{cognition.coreJudgment}</p>
-            <p className="mt-0.5"><b>主要风险：</b>{cognition.mainRisks.join("；") || "待评估"}</p>
+          <div className="mt-2 rounded-xl bg-violet-50 px-3 py-2 text-[11px] text-slate-700 dark:bg-violet-950/30 dark:text-slate-200">
+            <p><b>当前项目：</b>{cognition.projectName}</p>
+            <p className="mt-0.5"><b>当前阶段：</b>{cognition.currentPhase}</p>
+            <p className="mt-0.5"><b>当前目标：</b>{cognition.currentGoal}</p>
+            <p className="mt-0.5"><b>核心假设：</b>{cognition.coreAssumption}</p>
+            <p className="mt-0.5"><b>最大风险：</b>{cognition.mainRisks[0] ?? "待评估"}</p>
+            <p className="mt-0.5"><b>下一步动作：</b>{cognition.nextAction}</p>
           </div>
           <details className="mt-2">
             <summary className="cursor-pointer text-[11px] text-slate-400">项目关键事实（{cognition.keyFacts.length}）</summary>
@@ -196,12 +198,13 @@ export function ProjectAgentPanel({ projectId }: { projectId: string }) {
         </Card>
       )}
 
-      {/* 快捷动作 */}
+      {/* 快捷动作（V1.8：主理人 = 管理推动执行，不重复生成报告） */}
       <div className="flex gap-1.5 overflow-x-auto">
-        <button onClick={() => quickSend("请重新分析这个项目（含判断卡、证据、风险、建议动作）")} className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-medium text-white">重新分析</button>
-        <button onClick={() => quickSend("请生成商业报告（判断卡、市场证据、竞争、商业模式、风险矩阵、决策）")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">生成商业报告</button>
-        <button onClick={() => quickSend("请制定执行方案（阶段/时间/任务/负责人/资源/成本/成功指标/风险）")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">生成执行计划</button>
-        <button onClick={exportLastReport} disabled={!lastOut} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-300">导出报告</button>
+        <button onClick={() => quickSend("请给我当前项目状态：现在进行到哪一步、卡在哪里")} className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-medium text-white">当前状态</button>
+        <button onClick={() => quickSend("接下来应该做什么？给出下一步动作和执行优先级")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">下一步做什么</button>
+        <button onClick={() => quickSend("帮我把执行方案推进到今天可执行的动作清单")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">推动执行</button>
+        <button onClick={() => quickSend("基于研究报告和执行方案，当前最大的风险是什么，需要怎么处理？")} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">风险提醒</button>
+        <button onClick={exportLastReport} disabled={!lastOut} className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-300">导出</button>
       </div>
 
       {/* 模式选择 */}

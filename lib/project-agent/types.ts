@@ -11,14 +11,23 @@ export const AGENT_MODE_LABELS: Record<AgentMode, string> = {
   operations: "运营模式",
 };
 
-/** 项目认知档案（首次打开自动生成，读全部项目资料） */
+/** 项目认知卡（V1.8：AI 主理人启动时形成，用于长期管理） */
 export interface ProjectCognitionProfile {
   projectId: string;
   projectName: string;
   aiIdentity: string;
+  /** 当前目标 */
   currentGoal: string;
+  /** 当前阶段（已发现/收集中/研究中/推进中…） */
+  currentPhase: string;
+  /** 核心判断 */
   coreJudgment: string;
+  /** 核心假设（可验证） */
+  coreAssumption: string;
+  /** 主要风险 */
   mainRisks: string[];
+  /** 下一步动作 */
+  nextAction: string;
   keyFacts: string[];
   updatedAt: string;
 }

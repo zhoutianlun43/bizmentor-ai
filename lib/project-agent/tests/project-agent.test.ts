@@ -37,8 +37,11 @@ const run: ResearchRun = {
 
 test("buildCognition：读取商机+研究+判断 → 认知档案（身份/目标/判断/风险/事实）", () => {
   const c = buildCognition(opp, run, []);
-  assert.ok(c.aiIdentity.includes("商业主理人"));
+  assert.ok(c.aiIdentity.includes("主理人"));
   assert.ok(c.currentGoal.includes("测款"));
+  assert.ok(c.currentPhase.length > 0, "认知卡含当前阶段");
+  assert.ok(c.nextAction.length > 0, "认知卡含下一步动作");
+  assert.ok(c.coreAssumption.length > 0, "认知卡含核心假设");
   assert.ok(c.coreJudgment.includes("验证需求与竞争"));
   assert.ok(c.mainRisks.some((r) => r.includes("季节")));
   assert.ok(c.keyFacts.some((f) => f.includes("AI 商业雷达")));
