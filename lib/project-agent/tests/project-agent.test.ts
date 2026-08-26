@@ -130,3 +130,31 @@ test("ProjectMemoryStore：写入/读取持久化（跨实例）+ 旧数据迁�
   assert.equal(got.decisionLog[0].id, "d1");
   assert.ok(Array.isArray(got.lessonsLearned), "新字段默认数组");
 });
+
+
+test("V2.0 buildCognition：OPPORTUNITY 默认 → 机会探索项目 / 当前研究基础", () => {
+  const c = buildCognition(opp, run, []);
+  assert.equal(c.projectType, "OPPORTUNITY");
+  assert.equal(c.projectTypeLabel, "商业机会探索");
+  assert.equal(c.researchRole, "当前研究基础");
+});
+
+test("V2.0 buildCognition：ACTIVE_PROJECT → 已有运营项目 / 历史机会分析（研究不作为当前状态）", () => {
+  const activeOpp: Opp = { ...opp, id: "opp-b", projectType: "ACTIVE_PROJECT" };
+  const c = buildCognition(activeOpp, run, []);
+  assert.equal(c.projectType, "ACTIVE_PROJECT");
+  assert.equal(c.projectTypeLabel, "已有运营项目");
+  assert.equal(c.researchRole, "历史机会分析");
+  // 已有运营项目：默认下一步/目标不再指向机会研究验证
+  assert.ok(c.keyFacts.some((f) => f.includes("历史机会分析")));
+});
+
+test("V2.0 buildAgentSystemPrompt：注入项目类型与研究报告角色", () => {
+  const activeOpp: Opp = { ...opp, id: "opp-c", projectType: "ACTIVE_PROJECT" };
+  const c = buildCognition(activeOpp, run, []);
+  const mem = emptyMemory("opp-c");
+  const p = buildAgentSystemPrompt(c, mem, run, "manager");
+  assert.ok(p.includes("项目类型：已有运营项目"));
+  assert.ok(p.includes("研究报告角色：历史机会分析"));
+  assert.ok(p.includes("OPPORTUNITY=机会探索项目"));
+});

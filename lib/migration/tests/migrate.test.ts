@@ -90,3 +90,12 @@ test("buildRows：空导出不抛错", () => {
   assert.equal(rows.opportunities.length, 0);
   assert.equal(rows.events.length, 0);
 });
+
+
+test("V2.0 buildRows：opportunities 行含 project_type（缺省 OPPORTUNITY）", () => {
+  const rows = buildRows({ opportunities: [sampleOpportunity()], researchRuns: [sampleRun()], decisionData: sampleDecisionData() });
+  assert.equal(rows.opportunities.length, 1);
+  assert.equal(rows.opportunities[0].project_type, "OPPORTUNITY");
+  const active = buildRows({ opportunities: [{ ...sampleOpportunity(), id: "opp-mig-2", projectType: "ACTIVE_PROJECT" }], researchRuns: [sampleRun()], decisionData: sampleDecisionData() });
+  assert.equal(active.opportunities[0].project_type, "ACTIVE_PROJECT");
+});

@@ -9,6 +9,7 @@ import { SupabaseRepositoryError } from "../supabase/errors";
 export { SupabaseRepositoryError };
 import { parseRadarNotes, pickPoolFields } from "../radar/service";
 import { uid } from "../store/storage";
+import { normalizeProjectType } from "../types";
 import type { Opportunity, OpportunityInput, OpportunitySource, OpportunityStatus } from "../types";
 import type { OpportunityRepository } from "./repository";
 
@@ -32,6 +33,18 @@ function omitRadar(row: Row): Row {
   return Object.fromEntries(Object.entries(row).filter(([key]) => key !== "radar"));
 }
 
+/** 判断是否为「缺失 project_type 列」的数据库错误（线上库尚未执行 V2.0 schema 迁移） */
+function isMissingProjectTypeColumnError(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null | undefined;
+  if (!e || typeof e.message !== "string" || !e.message.includes("project_type")) return false;
+  return e.code === "42703" || e.code === "PGRST204";
+}
+
+/** 去掉 project_type 字段（旧库缺列时的降级重试） */
+function omitProjectType(row: Row): Row {
+  return Object.fromEntries(Object.entries(row).filter(([key]) => key !== "project_type"));
+}
+
 /** Opportunity → 数据库行（score/notes 为 jsonb/null） */
 function toRow(o: Opportunity, userId: string): Row {
   return {
@@ -44,6 +57,7 @@ function toRow(o: Opportunity, userId: string): Row {
     score: o.score ?? null,
     radar: o.radar ?? null,
     notes: o.notes ?? null,
+    project_type: o.projectType ?? "OPPORTUNITY",
     created_at: o.createdAt,
     updated_at: new Date().toISOString(),
   };
@@ -67,6 +81,7 @@ function fromRow(row: Row): Opportunity {
     radar: (row.radar as Opportunity["radar"]) ?? undefined,
     notes: (row.notes as Opportunity["notes"]) ?? undefined,
     createdAt: String(row.created_at),
+    projectType: normalizeProjectType(row.project_type),
     sourceType: row.radar ? "ai_radar" : "manual_create",
     scanId: (row.radar as Opportunity["radar"])?.scanId ?? parseRadarNotes(String(row.notes ?? "")).scanId,
     ...pickPoolFields(parseRadarNotes(String(row.notes ?? ""))),
@@ -96,6 +111,7 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
       notes: input.notes?.trim() || undefined,
       radar: input.radar,
       opportunityStatus: input.opportunityStatus ?? (input.source === "ai" ? "discovered" : undefined),
+      projectType: normalizeProjectType(input.projectType),
       ...pickPoolFields(parseRadarNotes(input.notes)),
     };
     const row = toRow(opportunity, this.userId);
@@ -104,6 +120,10 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
       if (isMissingRadarColumnError(error)) {
         // 旧库尚未执行 schema 迁移（缺 radar 列）：去掉 radar 字段重试，保证功能可用
         const retry = await this.supabase.from(this.table).insert(omitRadar(row));
+        if (retry.error) throw new SupabaseRepositoryError("createOpportunity", retry.error.message);
+      } else if (isMissingProjectTypeColumnError(error)) {
+        // 旧库尚未执行 V2.0 迁移（缺 project_type 列）：去掉该字段重试
+        const retry = await this.supabase.from(this.table).insert(omitProjectType(row));
         if (retry.error) throw new SupabaseRepositoryError("createOpportunity", retry.error.message);
       } else {
         throw new SupabaseRepositoryError("createOpportunity", error.message);
@@ -144,6 +164,7 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
     if (patch.status !== undefined) updates.status = patch.status;
     if (patch.score !== undefined) updates.score = patch.score ?? null;
     if (patch.radar !== undefined) updates.radar = patch.radar ?? null;
+    if (patch.projectType !== undefined) updates.project_type = normalizeProjectType(patch.projectType);
     if (patch.notes !== undefined) updates.notes = patch.notes ?? null;
 
     const run = (u: Row) =>
@@ -158,6 +179,8 @@ export class SupabaseOpportunityRepository implements OpportunityRepository {
     let { data, error } = await run(updates);
     if (error && isMissingRadarColumnError(error) && updates.radar !== undefined) {
       ({ data, error } = await run(omitRadar(updates)));
+    } else if (error && isMissingProjectTypeColumnError(error) && updates.project_type !== undefined) {
+      ({ data, error } = await run(omitProjectType(updates)));
     }
     if (error) throw new SupabaseRepositoryError("updateOpportunity", error.message);
     return data ? fromRow(data as Row) : undefined;

@@ -573,3 +573,23 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 - **部署**：bizmentor.top（BUILD_ID 9hxOMBEnsDCt3QlwbDATN）。
 - **截图**：outputs/screenshots/v19/（v19-daily-brief-brain.png）。
 - **当前限制**：多设备同步（Supabase）未接；执行中心/风险雷达仍为对话驱动（可接 Task Engine 定时）；图片/视频/PDF/Excel 解析未接（多模态 Provider 预留）。
+
+---
+
+## 40. V2.0 Phase 1 完成记录（商机 / 已有项目类型区分）
+
+- **目标**：解决「商机」与「已有运营项目」混淆——AI 主理人现在能区分 探索阶段（机会研究）与 经营阶段（已运营）。
+- **新增 projectType 字段**：`OPPORTUNITY`（商业机会探索）/ `ACTIVE_PROJECT`（已有运营项目）；`normalizeProjectType` 归一化（脏数据/旧数据 → OPPORTUNITY）；`PROJECT_TYPE_LABELS` 标签。
+- **兼容旧数据（不丢数据）**：
+  - 本地存储：`loadOpportunities()` 加载时自动为无 projectType 的旧记录补默认 OPPORTUNITY（仅在确有变化时回写）。
+  - Supabase：`fromRow` 读取 `project_type` 缺失时默认 OPPORTUNITY；`toRow`/create/update 写入 `project_type`；旧库缺列时自动「去列重试」降级（沿用 radar 列降级模式）。
+  - 迁移脚本 `buildRows` 输出 `project_type`（缺省 OPPORTUNITY）；`schema.sql` 增加列 + V2.0 迁移块。
+- **创建逻辑**：`addOpportunity` / `SupabaseOpportunityRepository.createOpportunity` / `saveRadarFindings` 支持并持久化 projectType（AI 雷达发现恒为 OPPORTUNITY；缺省 OPPORTUNITY）。
+- **历史机会记录**：`researchRole`（历史机会分析 / 当前研究基础）——已有运营项目的研究报告标记为「历史机会分析」，不作为当前项目状态；认知卡 facts 增加类型说明。
+- **Project Brain 项目类型识别**：`ProjectCognitionProfile` 新增 `projectType/projectTypeLabel/researchRole`；认知卡推导类型化默认（已有运营项目 → 战略状态「已立项经营」、下一步不再默认指向机会研究/创业执行决策）；系统提示注入「项目类型 + 研究报告角色 + 类型职责边界」（机会探索=以研究推进验证；已运营=不重复市场/竞品分析，聚焦经营增长）。
+- **未改动**：页面（类型选择 UI 留待 Phase 2）、AI 输出逻辑、已有功能。
+- **测试**：368/368（新增 11：projectType 归一化/本地存储默认与兼容/本地仓库持久化/Supabase create-get 持久化/旧行缺列兼容/缺列降级重试/迁移行含 project_type/认知卡两类型识别/系统提示注入）、lint 0、tsc/build 通过。
+- **部署**：bizmentor.top（BUILD_ID wksbeZ6f7jRoEjPrmMvHZ）。
+- **Supabase 迁移（待执行，代码已降级兼容）**：在 Supabase SQL Editor 执行
+  `alter table public.opportunities add column if not exists project_type text not null default 'OPPORTUNITY';`
+- **下一阶段建议**：创建/编辑页加入类型选择器；AI 主理人按类型差异化运营（已运营项目接真实经营数据）；历史机会分析归档视图。

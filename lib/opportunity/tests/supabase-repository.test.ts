@@ -306,3 +306,41 @@ test("create 降级只对缺 radar 列触发：其他错误照常抛出且不落
   );
   assert.equal((mock.db.get("opportunities") ?? []).length, 0, "失败的插入不应写入任何行");
 });
+
+
+test("V2.0 create/get：projectType 持久化（默认 OPPORTUNITY，显式 ACTIVE_PROJECT）", async () => {
+  const mock = new MockSupabase();
+  const repo = createRepo(mock);
+  const o1 = await repo.createOpportunity({ name: "默认商机", description: "d", source: "user" });
+  const o2 = await repo.createOpportunity({ name: "已有项目", description: "d", source: "user", projectType: "ACTIVE_PROJECT" });
+  assert.equal(o1.projectType, "OPPORTUNITY");
+  assert.equal(o2.projectType, "ACTIVE_PROJECT");
+  const rows = mock.db.get("opportunities") ?? [];
+  assert.equal(rows.find((r) => r.id === o1.id)?.project_type, "OPPORTUNITY");
+  assert.equal(rows.find((r) => r.id === o2.id)?.project_type, "ACTIVE_PROJECT");
+  const g1 = await repo.getOpportunity(o1.id);
+  const g2 = await repo.getOpportunity(o2.id);
+  assert.equal(g1?.projectType, "OPPORTUNITY");
+  assert.equal(g2?.projectType, "ACTIVE_PROJECT");
+});
+
+test("V2.0 兼容：旧行无 project_type → projectType=OPPORTUNITY", async () => {
+  const mock = new MockSupabase();
+  const legacy = sampleRow({ id: "legacy-1", name: "旧商机", description: "d" });
+  delete legacy.project_type;
+  mock.db.set("opportunities", [legacy]);
+  const repo = createRepo(mock);
+  const got = await repo.getOpportunity("legacy-1");
+  assert.equal(got?.projectType, "OPPORTUNITY");
+});
+
+test("V2.0 降级：旧库缺 project_type 列 → 去列重试成功", async () => {
+  const mock = new MockSupabase();
+  mock.failNextInsert = { message: "column project_type does not exist", code: "42703" };
+  const repo = createRepo(mock);
+  const opp = await repo.createOpportunity({ name: "降级商机", description: "d", source: "user", projectType: "ACTIVE_PROJECT" });
+  assert.equal(opp.projectType, "ACTIVE_PROJECT");
+  const rows = mock.db.get("opportunities") ?? [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].project_type, undefined);
+});

@@ -19,6 +19,7 @@ create table if not exists public.opportunities (
   status text not null default 'researching',   -- researching | validating | validated | abandoned
   score jsonb,                                  -- OpportunityScore（jsonb）
   notes text,
+  project_type text not null default 'OPPORTUNITY', -- V2.0：OPPORTUNITY=商业机会探索 / ACTIVE_PROJECT=已有运营项目
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -292,3 +293,6 @@ create policy "single user business_profiles" on public.business_profiles
 
 -- V0.8：AI 商业雷达发现（industry-agnostic）
 alter table public.opportunities add column if not exists radar jsonb;
+
+-- V2.0：项目类型（OPPORTUNITY=商业机会探索 / ACTIVE_PROJECT=已有运营项目；旧数据默认 OPPORTUNITY）
+alter table public.opportunities add column if not exists project_type text not null default 'OPPORTUNITY';

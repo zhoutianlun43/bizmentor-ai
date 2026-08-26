@@ -2,6 +2,7 @@
  * 项目认知档案 + 系统提示（V1.5；V1.9 增加战略状态/成功指标/商业数据库/经验沉淀）。
  * 自动读取：商机描述/研究报告/Evidence/判断/操盘报告/决策历史 → 项目认知；不重复生成（复用研究报告）。
  */
+import { PROJECT_TYPE_LABELS, normalizeProjectType } from "../types/opportunity";
 import type { Opportunity } from "../types/opportunity";
 import type { ResearchRun } from "../research/types";
 import type { UserDecision } from "../decision/types";
@@ -40,6 +41,13 @@ export function buildCognition(
   };
   const phaseKey = opportunity.opportunityStatus ?? opportunity.status;
   const currentPhase = PHASE_MAP[phaseKey] ?? "已发现";
+
+  // V2.0：项目类型（OPPORTUNITY=商业机会探索 / ACTIVE_PROJECT=已有运营项目；旧数据默认 OPPORTUNITY）
+  const projectType = normalizeProjectType(opportunity.projectType);
+  const projectTypeLabel = PROJECT_TYPE_LABELS[projectType];
+  const isActive = projectType === "ACTIVE_PROJECT";
+  /** 研究报告角色：已有运营项目 → 历史机会分析（不作为当前项目状态）；机会探索 → 当前研究基础 */
+  const researchRole: "历史机会分析" | "当前研究基础" = isActive ? "历史机会分析" : "当前研究基础";
   // 核心假设：来自 thesis 或判断
   const coreAssumption = thesis?.coreHypothesis ?? judgment?.oneLineJudgment?.slice(0, 80) ?? "核心假设待研究报告确认";
   // 下一步动作：优先执行方案第一阶段 → 投资判断关键实验 → 判断建议 → 决策门
@@ -48,7 +56,7 @@ export function buildCognition(
     ?? op?.investmentJudgment?.nextExperiment?.experiment
     ?? judgment?.suggestedAction
     ?? thesis?.decisionGate
-    ?? "进入创业执行决策，制定落地作战方案";
+    ?? (isActive ? "盘点当前经营数据与瓶颈，确定本周最优先改进项" : "进入创业执行决策，制定落地作战方案");
 
   const facts: string[] = [];
   if (opportunity.source === "ai") facts.push(`来源：AI 商业雷达${meta.scanId ? `（批次 ${meta.scanId.slice(0, 8)}）` : ""}`);
@@ -60,6 +68,8 @@ export function buildCognition(
   if (report?.sources?.length) facts.push(`研究报告引用真实来源：${report.sources.length} 个`);
   if (decisions.length) facts.push(`历史决策：${decisions.length} 次（最近：${decisions[decisions.length - 1].decision}）`);
   if (report?.sources?.some((s) => s.title?.includes("市场"))) facts.push("已获取市场数据来源");
+  if (isActive) facts.push(`项目类型：${projectTypeLabel}（机会研究报告作为历史机会分析，不作为当前项目状态）`);
+  else facts.push(`项目类型：${projectTypeLabel}`);
 
   // V1.9：项目战略状态（按阶段推导 + 记忆覆盖）
   const STRATEGY_BY_PHASE: Record<string, { status: string; question: string; forbidden: string[] }> = {
@@ -71,7 +81,9 @@ export function buildCognition(
     "已验证": { status: "已验证：进入放量与规模化", question: "如何规模化并获得稳定增长", forbidden: ["避免过度扩张"] },
     "已放弃": { status: "已放弃：沉淀经验，等待新机会", question: "复盘失败原因", forbidden: [] },
   };
-  const phaseStrategy = STRATEGY_BY_PHASE[currentPhase] ?? { status: "等待验证", question: coreAssumption, forbidden: [] };
+  const phaseStrategy = isActive
+    ? { status: "已立项经营：聚焦运营与增长（研究报告仅作历史参考）", question: "如何提升现有经营的核心指标（转化/留存/毛利）", forbidden: ["避免在验证前大规模扩张"] }
+    : STRATEGY_BY_PHASE[currentPhase] ?? { status: "等待验证", question: coreAssumption, forbidden: [] };
   const strategyStatus = {
     currentPhase,
     currentStatus: memory?.strategy?.currentStatus || phaseStrategy.status,
@@ -99,15 +111,18 @@ export function buildCognition(
     projectId: opportunity.id,
     projectName: opportunity.name,
     aiIdentity: "你是该项目的 AI 主理人（项目 CEO 数字员工）：你负责长期管理项目、推动执行、维护项目大脑，而不是做研究员。",
-    currentGoal: op?.investmentJudgment?.nextExperiment?.experiment ?? judgment?.suggestedAction ?? thesis?.decisionGate ?? "验证商机核心假设",
+    currentGoal: op?.investmentJudgment?.nextExperiment?.experiment ?? judgment?.suggestedAction ?? thesis?.decisionGate ?? (isActive ? "推动现有经营项目稳定运营与增长" : "验证商机核心假设"),
     currentPhase,
-    coreJudgment: judgment?.oneLineJudgment ?? thesis?.coreHypothesis ?? op?.investmentJudgment?.reasons?.market ?? "基于研究报告判断",
+    coreJudgment: judgment?.oneLineJudgment ?? thesis?.coreHypothesis ?? op?.investmentJudgment?.reasons?.market ?? (isActive ? "基于现有经营状况判断" : "基于研究报告判断"),
     coreAssumption,
     mainRisks: risks.slice(0, 4),
     nextAction,
     keyFacts: facts,
     strategyStatus,
     projectMetrics,
+    projectType,
+    projectTypeLabel,
+    researchRole,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -132,6 +147,7 @@ export function buildAgentSystemPrompt(
     "",
     `项目：${cognition.projectName}`,
     `当前阶段：${cognition.currentPhase}`,
+    `项目类型：${cognition.projectTypeLabel}（研究报告角色：${cognition.researchRole}）`,
     `当前战略状态：${cognition.strategyStatus.currentStatus}`,
     `当前核心问题：${cognition.strategyStatus.coreQuestion}`,
     `当前禁止事项：${cognition.strategyStatus.forbiddenActions.join("；") || "无"}`,
@@ -166,6 +182,7 @@ export function buildAgentSystemPrompt(
     }
     if (report.insufficientEvidence?.length) lines.push(`- 待验证：${report.insufficientEvidence.slice(0, 3).join("；")}`);
   }
-  lines.push("", "职责边界（重要）：", "- 你负责长期管理项目、推动执行、做判断与提醒，不是研究员。", "- 不要重新生成完整研究报告/市场规模分析/SWOT（机会研究中心已做）；不要重复制定整套执行方案（创业执行决策已做）。", "- 引用研究报告/执行方案/历史判断作为依据，说明来源；聚焦「当前该做什么、为什么、怎么做、卡在哪里」。", "- 所有建议必须围绕项目指标（北极星 + 关键指标当前 vs 目标）展开，并遵守当前禁止事项；禁止把 INFERENCE/ASSUMPTION 当 FACT 陈述。", "- 项目会议室模式：用户描述项目变化/问题（如成本上涨、数据异常）时，按「影响分析 → 方案A/B/C → 推荐 → 项目更新已记录」输出。", "- 每次回答后在本项目更新中沉淀：新事实（标明 FACT/INFERENCE/ASSUMPTION 与来源、可信度）/新风险/新判断/方案变化/决策（含原因与依据）；如战略状态或指标变化，用 strategyUpdate/metricsUpdate 更新。", "- 要求：必须结合上述项目资料回答，不要编造项目没有的数据；信息不足时说明并建议如何验证。");
+  lines.push("", "职责边界（重要）：", "- 你负责长期管理项目、推动执行、做判断与提醒，不是研究员。", "- 不要重新生成完整研究报告/市场规模分析/SWOT（机会研究中心已做）；不要重复制定整套执行方案（创业执行决策已做）。", "- 引用研究报告/执行方案/历史判断作为依据，说明来源；聚焦「当前该做什么、为什么、怎么做、卡在哪里」。", "- 所有建议必须围绕项目指标（北极星 + 关键指标当前 vs 目标）展开，并遵守当前禁止事项；禁止把 INFERENCE/ASSUMPTION 当 FACT 陈述。", "- 项目类型识别：OPPORTUNITY=机会探索项目（以机会研究为基础推进验证）；ACTIVE_PROJECT=正在运营项目（研究报告仅作历史机会分析，不要默认重复市场/竞品分析，聚焦当前经营与增长）。",
+    "- 项目会议室模式：用户描述项目变化/问题（如成本上涨、数据异常）时，按「影响分析 → 方案A/B/C → 推荐 → 项目更新已记录」输出。", "- 每次回答后在本项目更新中沉淀：新事实（标明 FACT/INFERENCE/ASSUMPTION 与来源、可信度）/新风险/新判断/方案变化/决策（含原因与依据）；如战略状态或指标变化，用 strategyUpdate/metricsUpdate 更新。", "- 要求：必须结合上述项目资料回答，不要编造项目没有的数据；信息不足时说明并建议如何验证。");
   return lines.join("\n");
 }

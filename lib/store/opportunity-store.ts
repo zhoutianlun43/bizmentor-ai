@@ -1,7 +1,8 @@
 import { mockOpportunities } from "../data/mock/opportunities";
 import { readJSON, writeJSON, uid } from "./storage";
 import { parseRadarNotes, pickPoolFields } from "../radar/service";
-import type { Opportunity, OpportunityInput } from "@/lib/types";
+import { DEFAULT_PROJECT_TYPE, normalizeProjectType } from "../types";
+import type { Opportunity, OpportunityInput } from "../types";
 
 const KEY = "opportunities";
 
@@ -11,9 +12,15 @@ const KEY = "opportunities";
  */
 export function loadOpportunities(): Opportunity[] {
   const existing = readJSON<Opportunity[] | null>(KEY, null);
-  if (existing) return existing;
-  writeJSON(KEY, mockOpportunities);
-  return mockOpportunities;
+  if (existing) {
+    // V2.0：旧数据无 projectType → 默认 OPPORTUNITY（兼容老项目，数据不丢失）
+    const normalized = existing.map((o) => ({ ...o, projectType: normalizeProjectType(o.projectType) }));
+    if (normalized.some((o, i) => o.projectType !== existing[i].projectType)) writeJSON(KEY, normalized);
+    return normalized;
+  }
+  const seeded = mockOpportunities.map((o) => ({ ...o, projectType: DEFAULT_PROJECT_TYPE }));
+  writeJSON(KEY, seeded);
+  return seeded;
 }
 
 /** 保存商机列表 */
@@ -32,6 +39,7 @@ export function addOpportunity(input: OpportunityInput): Opportunity {
     description: input.description.trim(),
     source: input.source,
     status: input.status ?? (input.source === "ai" ? "discovered" : "researching"),
+    projectType: normalizeProjectType(input.projectType),
     createdAt: new Date().toISOString(),
     notes: input.notes?.trim() || undefined,
     radar: input.radar,

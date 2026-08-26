@@ -72,6 +72,7 @@ export function buildRows(data: ParsedMigrationData, userId = "local-user"): Mig
     status: o.status,
     score: o.score ?? null,
     notes: o.notes ?? null,
+    project_type: o.projectType ?? "OPPORTUNITY",
     created_at: o.createdAt,
     updated_at: o.createdAt,
   }));

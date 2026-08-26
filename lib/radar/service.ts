@@ -125,6 +125,7 @@ export async function saveRadarFindings(
       source: "ai",
       status: "discovered",
       opportunityStatus: "discovered",
+      projectType: "OPPORTUNITY",
       notes: buildRadarNotes(f, scanId),
       radar: { ...f, scanId },
     };

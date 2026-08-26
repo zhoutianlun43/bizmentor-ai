@@ -18,6 +18,22 @@ export type OpportunityPoolStatus =
   | "rejected" // 已放弃（保留原因/时间）
   | "deleted"; // 软删除（保留 deletedAt，禁止物理删除）
 
+/** 项目类型（V2.0）：商业机会探索 / 已有运营项目 */
+export type ProjectType = "OPPORTUNITY" | "ACTIVE_PROJECT";
+
+/** 缺省项目类型（V2.0：旧数据无 projectType 时默认商机探索） */
+export const DEFAULT_PROJECT_TYPE: ProjectType = "OPPORTUNITY";
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  OPPORTUNITY: "商业机会探索",
+  ACTIVE_PROJECT: "已有运营项目",
+};
+
+/** 归一化项目类型（脏数据/旧数据 → OPPORTUNITY） */
+export function normalizeProjectType(v: unknown): ProjectType {
+  return v === "ACTIVE_PROJECT" ? "ACTIVE_PROJECT" : "OPPORTUNITY";
+}
+
 /** 商机状态：已发现 / 收集中 / 研究中 / 验证中 / 已验证 / 已放弃 */
 export type OpportunityStatus =
   | "discovered"
@@ -67,6 +83,8 @@ export interface Opportunity {
   sourceType?: OpportunitySourceType;
   /** 所属雷达扫描（V1.2.1：scanId） */
   scanId?: string;
+  /** 项目类型（V2.0）：OPPORTUNITY=商业机会探索 / ACTIVE_PROJECT=已有运营项目；旧数据缺省 OPPORTUNITY */
+  projectType?: ProjectType;
   /** 机会池状态（V1.3：discovered/favorite/researching/promoting/rejected/deleted） */
   opportunityStatus?: OpportunityPoolStatus;
   /** 统一收藏（V1.x：所有来源商机共享） */
@@ -93,6 +111,8 @@ export interface OpportunityInput {
   status?: OpportunityStatus;
   /** 机会池状态（V1.3） */
   opportunityStatus?: OpportunityPoolStatus;
+  /** 项目类型（V2.0）：缺省 OPPORTUNITY */
+  projectType?: ProjectType;
   isFavorite?: boolean;
   favoriteAt?: string;
   promotedAt?: string;

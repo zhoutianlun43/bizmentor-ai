@@ -77,6 +77,11 @@ export interface ProjectCognitionProfile {
     northStarMetric: string;
     keyMetrics: Array<{ name: string; current: string; target: string }>;
   };
+  /** 项目类型（V2.0）：OPPORTUNITY=商业机会探索 / ACTIVE_PROJECT=已有运营项目 */
+  projectType: "OPPORTUNITY" | "ACTIVE_PROJECT";
+  projectTypeLabel: string;
+  /** 研究报告角色（V2.0）：ACTIVE_PROJECT → 历史机会分析（不作为当前项目状态）；OPPORTUNITY → 当前研究基础 */
+  researchRole: "历史机会分析" | "当前研究基础";
   updatedAt: string;
 }
 
