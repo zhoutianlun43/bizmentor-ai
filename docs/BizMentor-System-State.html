@@ -710,4 +710,23 @@ Repository Provider（lib/repository：Supabase / Local 切换）
 <li><strong>Supabase 迁移（待执行，代码已降级兼容）</strong>：在 Supabase SQL Editor 执行<br><code>alter table public.opportunities add column if not exists project_type text not null default &#39;OPPORTUNITY&#39;;</code></li>
 <li><strong>下一阶段建议</strong>：创建/编辑页加入类型选择器；AI 主理人按类型差异化运营（已运营项目接真实经营数据）；历史机会分析归档视图。</li>
 </ul>
+<hr>
+<h2>41. Personal AI Life OS V1.0 完成记录（个人成长中心）</h2>
+<ul>
+<li><strong>目标</strong>：将 AI 从「商业项目助手」扩展为「个人长期成长 CEO」；与项目主理人系统独立，数据逻辑完全分开，不影响现有商业系统。</li>
+<li><strong>新入口</strong>：一级页面 <code>/growth</code>「个人成长中心」（Personal AI Life OS）+ 底部导航新增「成长」；页面含 5 Tab：AI人生CEO / 个人画像 / 成长记录 / 成长报告 / 成长知识库；顶部「个人成长状态卡」（成长阶段/成长评分/核心目标/当前最大问题/今日成长建议）。</li>
+<li><strong>Personal AI Life CEO Agent</strong>：融合 7 位专家（心理成长/人生战略/商业财富/学习科学/执行力/健康精力/沟通关系），由「人生CEO」综合输出；强制结构化输出（卡片/表格/时间线/评分），禁止连续长文（复用 agent-output 结构化渲染）。</li>
+<li><strong>首次启动建模</strong>：六阶段 AI 访谈（人生经历→性格思维→事业财富→能力结构→生活方式→价值观愿景）→ 生成《个人成长战略蓝图 V1.0》（个人画像/核心优势/限制因素/人生阶段判断/核心成长方向/12个月升级路线）→ 自动填充 人格档案/人生战略/能力模型/动力模型（LLM 失败时有确定性兜底，保证画像有数据）。</li>
+<li><strong>Personal Growth Brain</strong>（.data/personal-growth.json 文件持久化，跨重启/刷新存活）：personality / strategy / abilities / motivation / insights / dailyReviews / reports / knowledge（01-07 分类）。</li>
+<li><strong>每日成长系统</strong>：每日复盘（计划/执行/复盘/情绪/问题）→ AI 生成 今日深度分析 + 专家委员会（心理/战略/执行/学习/人生CEO）+ 明日最重要 3 件事 + <strong>成长评分</strong>（100 分制 6 维度，LLM 结构化评分 + 确定性兜底 computeFallbackScore）。</li>
+<li><strong>周期报告</strong>：周报/月报（本周成长/核心问题/能力变化/关键突破/下周重点；确定性聚合 + LLM 润色）。</li>
+<li><strong>主动成长模式</strong>：AI 主动扫描（被忽略的问题/成长机会/潜在风险/应学能力/应改习惯）→ 沉淀 insights + 知识库。</li>
+<li><strong>知识沉淀</strong>：重要交流自动沉淀到成长知识库（自动分类 01 人格档案 / 02 人生战略 / 03 能力成长 / 04 学习记录 / 05 每日复盘 / 06 决策记录 / 07 人生洞察）。</li>
+<li><strong>数据架构</strong>：lib/personal-growth/（types/store/agent/prompt/questions/score/report + tests）；API /api/growth（chat / start-modeling / modeling-answer / daily-review / report / proactive / save-profile）。</li>
+<li><strong>验证</strong>（生产浏览器 + API）：/growth 首页与 5 Tab 正常；六阶段建模完成 → 蓝图生成 → 个人画像（人格/战略/能力/动力）有数据；每日复盘 → 深度分析 + 5 专家 + 明日 3 件事 + 评分 78；周报生成；知识库/洞察显示；刷新后数据保留。</li>
+<li><strong>测试</strong>：378/378（新增 10：建模阶段/存储持久化/空大脑/蓝图兜底/知识分类/评分兜底/评分钳制/周报聚合/知识常量/知识条目）、lint 0、tsc/build 通过。</li>
+<li><strong>部署</strong>：bizmentor.top（BUILD_ID oh_tVK88F8icGbI_H4084）。</li>
+<li><strong>截图</strong>：outputs/screenshots/lifeos/（v1.0-growth-report.png / v1.0-records-knowledge.png）。</li>
+<li><strong>当前限制</strong>：与项目主理人共享用户画像尚未接通（数据已独立，未来共享商业/决策/学习能力画像）；主动提醒为进入页面后触发（可接定时任务）；语音/多模态后续可扩展。</li>
+</ul>
 </body></html>

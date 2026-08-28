@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Lightbulb, MessageCircle, Sparkles, User } from "lucide-react";
+import { Home, Lightbulb, MessageCircle, Sparkles, TrendingUp, User } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "首页", icon: Home },
   { href: "/chat", label: "AI", icon: MessageCircle },
   { href: "/opportunities", label: "商机", icon: Lightbulb },
+  { href: "/growth", label: "成长", icon: TrendingUp },
   { href: "/skills", label: "技能", icon: Sparkles },
   { href: "/profile", label: "我的", icon: User },
 ];
